@@ -354,15 +354,15 @@
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // 🔧 Firebase 콘솔에서 복사한 구성값
-    const firebaseConfig = {
-      apiKey: "AIzaSyCviwzde4jsszi7CEz-rrMmnBrn-S6brdIE",
-      authDomain: "comicschedule-dfec7.firebaseapp.com",
-      projectId: "comicschedule-dfec7",
-      storageBucket: "comicschedule-dfec7.appspot.com",
-      messagingSenderId: "1084611276816",
-      appId: "1:1084611276816:web:aca83237bafa971ed1fa95",
-      measurementId: "G-ZNZZQRJZF9"
-    };
+   const firebaseConfig = {
+  apiKey: "AIzaSyCiwzde40jszi7CEz-rrMmnBrn-S6brdIE", // ← 정확히 이 값
+  authDomain: "comicschedule-dfec7.firebaseapp.com",
+  projectId: "comicschedule-dfec7",
+  storageBucket: "comicschedule-dfec7.appspot.com",
+  messagingSenderId: "1084611276816",
+  appId: "1:1084611276816:web:aca83237bafa971ed1fa95",
+  measurementId: "G-ZNZZQRJZF9"
+};
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
