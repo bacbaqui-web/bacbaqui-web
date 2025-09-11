@@ -167,7 +167,6 @@
 
       cancelBtn.addEventListener('click', closeModal);
       saveTaskBtn.addEventListener('click', saveTask);
-      // 🔧 여기서 항상 모듈 SDK의 최신 deleteTask를 호출
       deleteTaskBtn.addEventListener('click', () => window.deleteTask && window.deleteTask());
 
       taskModal.addEventListener('click', (e) => { if (e.target === taskModal) closeModal(); });
@@ -220,7 +219,13 @@
 
           const key = `${fullDate}_바퀴멘터리 ${episodeNumber}화`;
           if (taskStatus[key]) epItem.classList.add('complete');
-          epItem.addEventListener('click', async (e) => { e.stopPropagation(); if (!window.ensureLogin || !window.ensureLogin()) return; taskStatus[key] = !taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar(); });
+          epItem.addEventListener('click', async (e) => { 
+            e.stopPropagation(); 
+            if (!window.ensureLogin || !window.ensureLogin()) return; 
+            taskStatus[key] = !taskStatus[key]; 
+            await window.cloudSaveStateOnly(); 
+            renderCalendar(); 
+          });
 
           dayDiv.appendChild(epItem);
         }
@@ -232,7 +237,13 @@
             t.textContent = sch.title;
             const key = `${fullDate}_${sch.title}`;
             if (taskStatus[key]) t.classList.add('complete');
-            t.addEventListener('click', async (e) => { e.stopPropagation(); if (!window.ensureLogin || !window.ensureLogin()) return; taskStatus[key] = !taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar(); });
+            t.addEventListener('click', async (e) => { 
+              e.stopPropagation(); 
+              if (!window.ensureLogin || !window.ensureLogin()) return; 
+              taskStatus[key] = !taskStatus[key]; 
+              await window.cloudSaveStateOnly(); 
+              renderCalendar(); 
+            });
             dayDiv.appendChild(t);
           }
         });
@@ -291,6 +302,11 @@
     // 저장
     const saveTask = async () => {
       if (!window.ensureLogin || !window.ensureLogin()) return;
+
+      // ✅ 기본값 방어
+      if (!window.customTasks) window.customTasks = [];
+      if (!window.taskStatus) window.taskStatus = {};
+
       const title = taskTitleInput.value.trim();
       const description = taskDescriptionInput.value.trim();
       const date = taskDateInput.value;
@@ -353,16 +369,16 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // 🔧 Firebase 콘솔에서 복사한 구성값
-   const firebaseConfig = {
-  apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE", // ← 정확히 이 값
-  authDomain: "comicschedule-dfec7.firebaseapp.com",
-  projectId: "comicschedule-dfec7",
-  storageBucket: "comicschedule-dfec7.appspot.com",
-  messagingSenderId: "1084611276816",
-  appId: "1:1084611276816:web:aca83237bafa971ed1fa95",
-  measurementId: "G-ZNZZQRJZF9"
-};
+    // 🔧 Firebase 콘솔에서 복사한 구성값 (사용자님 값 유지)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
+      authDomain: "comicschedule-dfec7.firebaseapp.com",
+      projectId: "comicschedule-dfec7",
+      storageBucket: "comicschedule-dfec7.appspot.com",
+      messagingSenderId: "1084611276816",
+      appId: "1:1084611276816:web:aca83237bafa971ed1fa95",
+      measurementId: "G-ZNZZQRJZF9"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -404,21 +420,24 @@
       return true;
     };
 
+    // ====== 로드 ======
     window.cloudLoadAll = async () => {
       if (!ensureLogin()) return;
       const { tasksCol, stateDoc } = await cloudRefs();
 
       const tasksSnap = await getDocs(tasksCol);
-      window.customTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      window.customTasks = (tasksSnap.docs.map(d => ({ id: d.id, ...d.data() })) || []);
 
       const st = await getDoc(stateDoc);
-      if (st.exists()){
-        const data = st.data() || {};
-        window.taskStatus = data.taskStatus || {};
-        const notesArea = document.getElementById('notesArea');
-        const allNotes = data.notesTabs || {};
-        if (notesArea) notesArea.value = allNotes[window.activeTab] || '';
-      }
+      const data = st.exists() ? (st.data() || {}) : {};
+
+      // ✅ 기본값 보장
+      window.taskStatus = data.taskStatus || {};
+
+      const notesArea = document.getElementById('notesArea');
+      const allNotes = data.notesTabs || {};
+      if (notesArea) notesArea.value = allNotes[window.activeTab] || '';
+
       if (typeof renderCalendar === 'function') renderCalendar();
     };
 
@@ -427,22 +446,37 @@
       const { stateDoc } = await cloudRefs();
       const st = await getDoc(stateDoc);
       const data = st.exists() ? (st.data()||{}) : {};
+      const notesTabs = data.notesTabs || {};   // ✅ 기본값
       const notesArea = document.getElementById('notesArea');
-      const notesTabs = data.notesTabs || {};
       if (notesArea) notesArea.value = notesTabs[window.activeTab] || '';
     };
 
+    // ====== 저장 ======
     window.cloudSaveAll = async () => {
       if (!ensureLogin()) return;
       const { tasksCol, stateDoc } = await cloudRefs();
+
+      // ✅ 기본값 보장
+      if (!window.taskStatus) window.taskStatus = {};
+      if (!window.customTasks) window.customTasks = [];
+
+      // 상태 저장
       await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge:true });
-      const ops = (window.customTasks||[]).map(t => setDoc(doc(tasksCol, String(t.id)), t, { merge:true }));
+
+      // 작업들 저장
+      const ops = window.customTasks.map(t =>
+        setDoc(doc(tasksCol, String(t.id)), t, { merge:true })
+      );
       await Promise.all(ops);
     };
 
     window.cloudSaveStateOnly = async () => {
       if (!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
+
+      // ✅ 기본값 보장
+      if (!window.taskStatus) window.taskStatus = {};
+
       await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge:true });
     };
 
@@ -450,16 +484,21 @@
       if (!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
       const notesArea = document.getElementById('notesArea');
+
       const st = await getDoc(stateDoc);
       const prev = st.exists() ? (st.data()||{}) : {};
-      const notesTabs = prev.notesTabs || {};
-      notesTabs[window.activeTab] = notesArea.value;
+      const notesTabs = prev.notesTabs || {};   // ✅ 기본값
+      notesTabs[window.activeTab] = notesArea?.value ?? ''; // ✅ undefined 방지
+
       await setDoc(stateDoc, { notesTabs }, { merge:true });
     };
 
-    // 모듈 버전 deleteTask (버튼은 앱 스크립트에서 window.deleteTask를 호출)
+    // 모듈 버전 deleteTask
     window.deleteTask = async () => {
-      if (!ensureLogin() || !window.currentTask?.id) { if (typeof closeModal==='function') closeModal(); return; }
+      if (!ensureLogin() || !window.currentTask?.id) { 
+        if (typeof closeModal==='function') closeModal(); 
+        return; 
+      }
       const { tasksCol } = await cloudRefs();
       await deleteDoc(doc(tasksCol, String(window.currentTask.id)));
       window.customTasks = (window.customTasks||[]).filter(t => t.id !== window.currentTask.id);
@@ -472,11 +511,13 @@
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
-        signInBtn.classList.add('hidden');  signOutBtn.classList.remove('hidden');
+        signInBtn.classList.add('hidden');  
+        signOutBtn.classList.remove('hidden');
         await window.cloudLoadAll();
       } else {
         userInfoEl.textContent = '';
-        signOutBtn.classList.add('hidden'); signInBtn.classList.remove('hidden');
+        signOutBtn.classList.add('hidden'); 
+        signInBtn.classList.remove('hidden');
       }
     });
   </script>
