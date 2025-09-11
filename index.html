@@ -10,9 +10,8 @@
     body{font-family:'Noto Sans KR',sans-serif;background:#000;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;flex-direction:column;gap:2rem}
     .notepad-section,.calendar-section{background:#2a2a2a;border-radius:12px;padding:24px;box-shadow:inset 0 0 10px rgba(0,0,0,.3);text-align:center;width:100%;max-width:1200px}
     .notepad-section{display:flex;flex-direction:column;padding-bottom:12px;padding-top:12px}
-    .notepad-tabs{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    .tab-container{display:flex;justify-content:space-around;flex-grow:1}
-    .notepad-tab{background:#333;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;background-color;font-weight:700}
+    .notepad-tabs{display:flex;justify-content:center;align-items:center;margin-bottom:12px;gap:1rem}
+    .notepad-tab{background:#333;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700}
     .notepad-tab.active{background:#1a1a1a}
     .notepad-tab:hover{background:#444}
     .notepad-section textarea{background:#1a1a1a;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;min-height:900px;resize:vertical}
@@ -33,7 +32,6 @@
     .add-task-btn:hover{background:#777;transform:scale(1.02)}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
     .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
-    @media (max-width:768px){body{padding:16px;gap:1.5rem}.calendar-day{min-height:100px;padding-top:28px}.day-number{font-size:1rem}.task-item{font-size:.7rem}.calendar-grid,.calendar-header{gap:4px}.add-task-btn{width:100%}}
   </style>
 </head>
 <body class="text-white">
@@ -45,6 +43,7 @@
     <button id="signOutBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded hidden">로그아웃</button>
   </div>
 
+  <!-- 캘린더 -->
   <div id="calendar-section" class="calendar-section">
     <div class="flex justify-between items-center mb-4">
       <button id="prevMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">&lt; 이전 달</button>
@@ -61,17 +60,13 @@
     </div>
   </div>
 
+  <!-- 메모장 -->
   <div id="notepad-section" class="notepad-section mt-8">
     <div class="notepad-tabs">
-      <div class="tab-container">
-        <button class="notepad-tab active" data-tab="바퀴멘터리">바퀴멘터리</button>
-        <button class="notepad-tab" data-tab="짐승육아">짐승육아</button>
-        <button class="notepad-tab" data-tab="그거아세요">그거아세요</button>
-        <button class="notepad-tab" data-tab="메모">메모</button>
-      </div>
-      <button id="generateIdeaBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full ml-4 whitespace-nowrap">
-        아이디어 생성 ✨
-      </button>
+      <button class="notepad-tab active" data-tab="바퀴멘터리">바퀴멘터리</button>
+      <button class="notepad-tab" data-tab="짐승육아">짐승육아</button>
+      <button class="notepad-tab" data-tab="그거아세요">그거아세요</button>
+      <button class="notepad-tab" data-tab="메모">메모</button>
     </div>
     <textarea id="notesArea" class="flex-grow"></textarea>
   </div>
@@ -81,287 +76,18 @@
     <div class="modal-content">
       <h2 id="modalTitle" class="text-2xl font-bold mb-4">새 작업</h2>
       <label for="taskTitle" class="block mb-2">제목:</label>
-      <input type="text" id="taskTitle" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 mb-4">
+      <input type="text" id="taskTitle" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
       <label for="taskDescription" class="block mb-2">설명:</label>
-      <textarea id="taskDescription" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 mb-4 h-24"></textarea>
+      <textarea id="taskDescription" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24"></textarea>
       <label for="taskDate" class="block mb-2">날짜:</label>
-      <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 mb-4">
+      <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
       <div class="flex justify-end gap-2">
-        <button id="saveTaskBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition">저장</button>
-        <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition">취소</button>
-        <button id="deleteTaskBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg transition hidden">삭제</button>
+        <button id="saveTaskBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
+        <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
+        <button id="deleteTaskBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hidden">삭제</button>
       </div>
     </div>
   </div>
-
-  <!-- ===== 앱 스크립트 (UI/로직) ===== -->
-  <script>
-    // 상태
-    let customTasks = [];
-    let taskStatus = {};
-    let currentDate = new Date();
-    let currentTask = null;
-    let activeTab = '바퀴멘터리';
-
-    // 고정 스케줄(요일: 0=일~6=토)
-    const fixedSchedules = [
-      { title: '쇼츠', daysOfWeek: [1,3,5], colorClass: 'recurring-shorts' },
-      { title: '웹툰', daysOfWeek: [2,4,6], colorClass: 'recurring-instatoon' }
-    ];
-
-    // DOM
-    const taskModal = document.getElementById('taskModal');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const saveTaskBtn = document.getElementById('saveTaskBtn');
-    const deleteTaskBtn = document.getElementById('deleteTaskBtn');
-    const taskTitleInput = document.getElementById('taskTitle');
-    const taskDescriptionInput = document.getElementById('taskDescription');
-    const taskDateInput = document.getElementById('taskDate');
-    const generateIdeaBtn = document.getElementById('generateIdeaBtn');
-
-    // 토스트
-    const showFeedbackMessage = (message) => {
-      const el = document.createElement('div');
-      el.textContent = message;
-      el.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;max-width:90%";
-      document.body.appendChild(el);
-      setTimeout(()=>el.remove(),2000);
-    };
-
-    // 평일 수 계산(일~목)
-    function countWeekdaysBetween(startDate, endDate) {
-      let count = 0;
-      const start = new Date(Math.min(startDate, endDate));
-      const end   = new Date(Math.max(startDate, endDate));
-      const cur = new Date(start);
-      while (cur <= end) {
-        const d = cur.getDay();
-        if (d >= 0 && d <= 4) count++;
-        cur.setDate(cur.getDate()+1);
-      }
-      return count;
-    }
-
-    // 이벤트 연결
-    const attachEventListeners = () => {
-      const prevMonthBtn = document.getElementById('prevMonthBtn');
-      const nextMonthBtn = document.getElementById('nextMonthBtn');
-      const addTaskBtn  = document.getElementById('addTaskBtn');
-      const notepadTabs = document.querySelectorAll('.notepad-tab');
-      const notesArea   = document.getElementById('notesArea');
-
-      prevMonthBtn?.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
-      nextMonthBtn?.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
-      addTaskBtn?.addEventListener('click', () => openModal());
-
-      notepadTabs?.forEach(tab => {
-        tab.addEventListener('click', () => {
-          notepadTabs.forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          activeTab = tab.dataset.tab;
-          if (window.cloudLoadNotes) window.cloudLoadNotes();
-        });
-      });
-
-      notesArea?.addEventListener('input', () => window.cloudSaveNotesDebounced && window.cloudSaveNotesDebounced());
-
-      cancelBtn.addEventListener('click', closeModal);
-      saveTaskBtn.addEventListener('click', saveTask);
-      deleteTaskBtn.addEventListener('click', () => window.deleteTask && window.deleteTask());
-
-      taskModal.addEventListener('click', (e) => { if (e.target === taskModal) closeModal(); });
-
-      generateIdeaBtn?.addEventListener('click', generateIdea);
-    };
-
-    // 달력 렌더
-    const renderCalendar = () => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const currentMonthYear = document.getElementById('currentMonthYear');
-      const calendarGrid = document.getElementById('calendarGrid');
-      if (!currentMonthYear || !calendarGrid) return;
-
-      currentMonthYear.textContent = `${year}년 ${month+1}월`;
-      calendarGrid.innerHTML = '';
-
-      const firstDay = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month+1, 0).getDate();
-
-      for (let i=0;i<firstDay;i++) calendarGrid.appendChild(Object.assign(document.createElement('div'),{className:'calendar-day'}));
-
-      for (let day=1; day<=daysInMonth; day++){
-        const dayDiv = document.createElement('div');
-        dayDiv.classList.add('calendar-day','relative');
-
-        const fullDate = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const today = new Date();
-        if (year===today.getFullYear() && month===today.getMonth() && day===today.getDate()) dayDiv.classList.add('today');
-
-        const dayNumberSpan = document.createElement('span');
-        dayNumberSpan.classList.add('day-number');
-        dayNumberSpan.textContent = day;
-        dayDiv.appendChild(dayNumberSpan);
-
-        const dayOfWeek = new Date(year, month, day).getDay();
-        if (dayOfWeek >= 0 && dayOfWeek <= 4) {
-          const milestoneDate = new Date('2025-09-01');
-          const milestoneEpisode = 2014;
-          const current = new Date(year, month, day);
-          const weekdaysBetween = countWeekdaysBetween(milestoneDate.getTime(), current.getTime());
-          const episodeNumber = (current >= milestoneDate)
-              ? milestoneEpisode + weekdaysBetween - 1
-              : milestoneEpisode - (weekdaysBetween - 1);
-
-          const epItem = document.createElement('div');
-          epItem.classList.add('task-item','episode-task');
-          epItem.textContent = `${episodeNumber}화`;
-
-          const key = `${fullDate}_바퀴멘터리 ${episodeNumber}화`;
-          if (taskStatus[key]) epItem.classList.add('complete');
-          epItem.addEventListener('click', async (e) => { 
-            e.stopPropagation(); 
-            if (!window.ensureLogin || !window.ensureLogin()) return; 
-            taskStatus[key] = !taskStatus[key]; 
-            await window.cloudSaveStateOnly(); 
-            renderCalendar(); 
-          });
-
-          dayDiv.appendChild(epItem);
-        }
-
-        fixedSchedules.forEach(sch => {
-          if (sch.daysOfWeek.includes(dayOfWeek)) {
-            const t = document.createElement('div');
-            t.classList.add('task-item', sch.colorClass);
-            t.textContent = sch.title;
-            const key = `${fullDate}_${sch.title}`;
-            if (taskStatus[key]) t.classList.add('complete');
-            t.addEventListener('click', async (e) => { 
-              e.stopPropagation(); 
-              if (!window.ensureLogin || !window.ensureLogin()) return; 
-              taskStatus[key] = !taskStatus[key]; 
-              await window.cloudSaveStateOnly(); 
-              renderCalendar(); 
-            });
-            dayDiv.appendChild(t);
-          }
-        });
-
-        customTasks.filter(t => t.date===fullDate).forEach(task => {
-          const el = document.createElement('div');
-          el.classList.add('task-item','custom-task');
-          el.textContent = task.title;
-          if (task.complete) el.classList.add('complete');
-          el.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (e.detail===1){
-              if (!window.ensureLogin || !window.ensureLogin()) return;
-              task.complete = !task.complete;
-              await window.cloudSaveAll();
-              renderCalendar();
-            } else if (e.detail===2){
-              openModal(task);
-            }
-          });
-          dayDiv.appendChild(el);
-        });
-
-        dayDiv.addEventListener('click', (e)=>{
-          if (e.target.classList.contains('calendar-day') || e.target.classList.contains('day-number')){
-            openModal({ date: fullDate });
-          }
-        });
-
-        calendarGrid.appendChild(dayDiv);
-      }
-    };
-
-    // 모달
-    const openModal = (task=null) => {
-      currentTask = task;
-      if (task && task.id){
-        document.getElementById('modalTitle').textContent = '작업 수정';
-        taskTitleInput.value = task.title;
-        taskDescriptionInput.value = task.description || '';
-        taskDateInput.value = task.date || '';
-        deleteTaskBtn.classList.remove('hidden');
-      } else if (task && task.date){
-        document.getElementById('modalTitle').textContent = '새 작업';
-        taskTitleInput.value = ''; taskDescriptionInput.value = ''; taskDateInput.value = task.date;
-        deleteTaskBtn.classList.add('hidden');
-      } else {
-        document.getElementById('modalTitle').textContent = '새 작업';
-        taskTitleInput.value = ''; taskDescriptionInput.value = ''; taskDateInput.value = '';
-        deleteTaskBtn.classList.add('hidden');
-      }
-      taskModal.style.display = 'flex';
-    };
-    const closeModal = () => { taskModal.style.display = 'none'; };
-
-    // 저장
-    const saveTask = async () => {
-      if (!window.ensureLogin || !window.ensureLogin()) return;
-
-      // ✅ 기본값 방어
-      if (!window.customTasks) window.customTasks = [];
-      if (!window.taskStatus) window.taskStatus = {};
-
-      const title = taskTitleInput.value.trim();
-      const description = taskDescriptionInput.value.trim();
-      const date = taskDateInput.value;
-      if (!title){ showFeedbackMessage('제목을 입력해주세요.'); return; }
-
-      const data = {
-        id: currentTask && currentTask.id ? currentTask.id : Date.now(),
-        title, description, date,
-        complete: currentTask?.complete ?? false
-      };
-
-      const idx = customTasks.findIndex(t => t.id === data.id);
-      if (idx > -1) customTasks[idx] = data; else customTasks.push(data);
-
-      await window.cloudSaveAll();
-      closeModal();
-      renderCalendar();
-    };
-
-    // 아이디어 생성 버튼(선택기능)
-    const generateIdea = async () => {
-      const notesArea = document.getElementById('notesArea');
-      const btn = document.getElementById('generateIdeaBtn');
-      const original = btn.textContent;
-      const notes = notesArea.value.trim();
-      if (notes.length < 50){ showFeedbackMessage('아이디어를 생성하려면 최소 50자 이상의 메모가 필요합니다.'); return; }
-      btn.textContent = '생성 중...'; btn.disabled = true;
-
-      const apiKey = ""; // 필요 시 입력
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-      const systemPrompt = "당신은 세계적인 만화가이자 스토리텔러입니다. 다음 메모를 기반으로 창의적이고 흥미로운 만화 아이디어, 캐릭터 설정, 혹은 줄거리 전개에 대한 제안을 200자 내외로 3가지 이상 제시해 주세요. 제안은 '- '로 시작하는 목록 형태로 작성하고, 내용은 최대한 간결하게 작성해주세요.";
-
-      const payload = { contents:[{ parts:[{ text: notes }]}], systemInstruction:{ parts:[{ text: systemPrompt }] } };
-
-      try {
-        const res = await fetch(apiUrl,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text){
-          notesArea.value += '\n\n--- 아이디어 제안 ---\n' + text;
-          if (window.cloudSaveNotes) await window.cloudSaveNotes();
-          showFeedbackMessage('새로운 아이디어가 추가되었습니다!');
-        } else { throw new Error('No content'); }
-      } catch (e){
-        console.error(e);
-        showFeedbackMessage('아이디어 생성에 실패했습니다.');
-      } finally {
-        btn.textContent = original; btn.disabled = false;
-      }
-    };
-
-    // 초기 렌더
-    (function init(){ attachEventListeners(); renderCalendar(); })();
-  </script>
 
   <!-- ===== Firebase SDKs & 연동 코드 (모듈) ===== -->
   <script type="module">
@@ -369,7 +95,7 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // 🔧 Firebase 콘솔에서 복사한 구성값 (사용자님 값 유지)
+    // Firebase 설정
     const firebaseConfig = {
       apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
       authDomain: "comicschedule-dfec7.firebaseapp.com",
@@ -406,7 +132,7 @@
     signInBtn.onclick  = () => doSignIn();
     signOutBtn.onclick = () => signOut(auth);
 
-    // Firestore 헬퍼
+    // Firestore 연동
     window.cloudRefs = async () => {
       const uid = auth.currentUser.uid;
       return {
@@ -420,24 +146,20 @@
       return true;
     };
 
-    // ====== 로드 ======
     window.cloudLoadAll = async () => {
       if (!ensureLogin()) return;
       const { tasksCol, stateDoc } = await cloudRefs();
-
       const tasksSnap = await getDocs(tasksCol);
-      window.customTasks = (tasksSnap.docs.map(d => ({ id: d.id, ...d.data() })) || []);
+      window.customTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       const st = await getDoc(stateDoc);
-      const data = st.exists() ? (st.data() || {}) : {};
-
-      // ✅ 기본값 보장
-      window.taskStatus = data.taskStatus || {};
-
-      const notesArea = document.getElementById('notesArea');
-      const allNotes = data.notesTabs || {};
-      if (notesArea) notesArea.value = allNotes[window.activeTab] || '';
-
+      if (st.exists()){
+        const data = st.data() || {};
+        window.taskStatus = data.taskStatus || {};
+        const notesArea = document.getElementById('notesArea');
+        const allNotes = data.notesTabs || {};
+        if (notesArea) notesArea.value = allNotes[window.activeTab] || '';
+      }
       if (typeof renderCalendar === 'function') renderCalendar();
     };
 
@@ -446,37 +168,22 @@
       const { stateDoc } = await cloudRefs();
       const st = await getDoc(stateDoc);
       const data = st.exists() ? (st.data()||{}) : {};
-      const notesTabs = data.notesTabs || {};   // ✅ 기본값
       const notesArea = document.getElementById('notesArea');
+      const notesTabs = data.notesTabs || {};
       if (notesArea) notesArea.value = notesTabs[window.activeTab] || '';
     };
 
-    // ====== 저장 ======
     window.cloudSaveAll = async () => {
       if (!ensureLogin()) return;
       const { tasksCol, stateDoc } = await cloudRefs();
-
-      // ✅ 기본값 보장
-      if (!window.taskStatus) window.taskStatus = {};
-      if (!window.customTasks) window.customTasks = [];
-
-      // 상태 저장
       await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge:true });
-
-      // 작업들 저장
-      const ops = window.customTasks.map(t =>
-        setDoc(doc(tasksCol, String(t.id)), t, { merge:true })
-      );
+      const ops = (window.customTasks||[]).map(t => setDoc(doc(tasksCol, String(t.id)), t, { merge:true }));
       await Promise.all(ops);
     };
 
     window.cloudSaveStateOnly = async () => {
       if (!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
-
-      // ✅ 기본값 보장
-      if (!window.taskStatus) window.taskStatus = {};
-
       await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge:true });
     };
 
@@ -484,26 +191,20 @@
       if (!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
       const notesArea = document.getElementById('notesArea');
-
       const st = await getDoc(stateDoc);
       const prev = st.exists() ? (st.data()||{}) : {};
-      const notesTabs = prev.notesTabs || {};   // ✅ 기본값
-      notesTabs[window.activeTab] = notesArea?.value ?? ''; // ✅ undefined 방지
-
+      const notesTabs = prev.notesTabs || {};
+      notesTabs[window.activeTab] = notesArea.value;
       await setDoc(stateDoc, { notesTabs }, { merge:true });
     };
 
-    // 모듈 버전 deleteTask
     window.deleteTask = async () => {
-      if (!ensureLogin() || !window.currentTask?.id) { 
-        if (typeof closeModal==='function') closeModal(); 
-        return; 
-      }
+      if (!ensureLogin() || !window.currentTask?.id) { closeModal(); return; }
       const { tasksCol } = await cloudRefs();
       await deleteDoc(doc(tasksCol, String(window.currentTask.id)));
       window.customTasks = (window.customTasks||[]).filter(t => t.id !== window.currentTask.id);
       await window.cloudSaveAll();
-      if (typeof closeModal==='function') closeModal();
+      closeModal();
       if (typeof renderCalendar==='function') renderCalendar();
     };
 
@@ -520,6 +221,12 @@
         signInBtn.classList.remove('hidden');
       }
     });
+
+    // 달력 초기화 실행
+    (function init(){ 
+      if (typeof attachEventListeners === 'function') attachEventListeners();
+      if (typeof renderCalendar === 'function') renderCalendar();
+    })();
   </script>
 </body>
 </html>
