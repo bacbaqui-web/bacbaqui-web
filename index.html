@@ -32,6 +32,7 @@
     .add-task-btn:hover{background:#777;transform:scale(1.02)}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
     .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
+    @media (max-width:768px){body{padding:16px;gap:1.5rem}.calendar-day{min-height:100px;padding-top:28px}.day-number{font-size:1rem}.task-item{font-size:.7rem}.calendar-grid,.calendar-header{gap:4px}.add-task-btn{width:100%}}
   </style>
 </head>
 <body class="text-white">
@@ -89,13 +90,254 @@
     </div>
   </div>
 
-  <!-- ===== Firebase SDKs & 연동 코드 (모듈) ===== -->
+  <!-- ===== 앱 스크립트 (UI/로직) : 기능 그대로, 아이디어 생성만 제거 ===== -->
+  <script>
+    // 상태
+    let customTasks = [];
+    let taskStatus = {};
+    let currentDate = new Date();
+    let currentTask = null;
+    let activeTab = '바퀴멘터리';
+
+    // 고정 스케줄(요일: 0=일~6=토)
+    const fixedSchedules = [
+      { title: '쇼츠', daysOfWeek: [1,3,5], colorClass: 'recurring-shorts' },
+      { title: '웹툰', daysOfWeek: [2,4,6], colorClass: 'recurring-instatoon' }
+    ];
+
+    // 공용 DOM
+    const taskModal = document.getElementById('taskModal');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const saveTaskBtn = document.getElementById('saveTaskBtn');
+    const deleteTaskBtn = document.getElementById('deleteTaskBtn');
+    const taskTitleInput = document.getElementById('taskTitle');
+    const taskDescriptionInput = document.getElementById('taskDescription');
+    const taskDateInput = document.getElementById('taskDate');
+
+    // 토스트
+    const showFeedbackMessage = (message) => {
+      const el = document.createElement('div');
+      el.textContent = message;
+      el.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;max-width:90%";
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(),2000);
+    };
+
+    // 평일 수 계산(일~목)
+    function countWeekdaysBetween(startDate, endDate) {
+      let count = 0;
+      const start = new Date(Math.min(startDate, endDate));
+      const end   = new Date(Math.max(startDate, endDate));
+      const cur = new Date(start);
+      while (cur <= end) {
+        const d = cur.getDay();
+        if (d >= 0 && d <= 4) count++;
+        cur.setDate(cur.getDate()+1);
+      }
+      return count;
+    }
+
+    // 이벤트 연결
+    const attachEventListeners = () => {
+      const prevMonthBtn = document.getElementById('prevMonthBtn');
+      const nextMonthBtn = document.getElementById('nextMonthBtn');
+      const addTaskBtn  = document.getElementById('addTaskBtn');
+      const notepadTabs = document.querySelectorAll('.notepad-tab');
+      const notesArea   = document.getElementById('notesArea');
+
+      prevMonthBtn?.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
+      nextMonthBtn?.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
+      addTaskBtn?.addEventListener('click', () => openModal());
+
+      notepadTabs?.forEach(tab => {
+        tab.addEventListener('click', () => {
+          notepadTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          activeTab = tab.dataset.tab;
+          if (window.__notesTabs) {
+            const notesArea = document.getElementById('notesArea');
+            notesArea.value = window.__notesTabs[activeTab] || '';
+          } else if (window.cloudLoadNotes) {
+            window.cloudLoadNotes();
+          }
+        });
+      });
+
+      // 메모 자동 저장(디바운스 + blur 백업)
+      if (notesArea) {
+        notesArea.addEventListener('input', () => window.cloudSaveNotesDebounced && window.cloudSaveNotesDebounced());
+        notesArea.addEventListener('blur',  () => window.cloudSaveNotes && window.cloudSaveNotes());
+      }
+
+      cancelBtn.addEventListener('click', closeModal);
+      saveTaskBtn.addEventListener('click', saveTask);
+      deleteTaskBtn.addEventListener('click', () => window.deleteTask && window.deleteTask());
+      taskModal.addEventListener('click', (e) => { if (e.target === taskModal) closeModal(); });
+    };
+
+    // 달력 렌더
+    const renderCalendar = () => {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const currentMonthYear = document.getElementById('currentMonthYear');
+      const calendarGrid = document.getElementById('calendarGrid');
+      if (!currentMonthYear || !calendarGrid) return;
+
+      currentMonthYear.textContent = `${year}년 ${month+1}월`;
+      calendarGrid.innerHTML = '';
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month+1, 0).getDate();
+
+      for (let i=0;i<firstDay;i++) calendarGrid.appendChild(Object.assign(document.createElement('div'),{className:'calendar-day'}));
+
+      for (let day=1; day<=daysInMonth; day++){
+        const dayDiv = document.createElement('div');
+        dayDiv.classList.add('calendar-day','relative');
+
+        const fullDate = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const today = new Date();
+        if (year===today.getFullYear() && month===today.getMonth() && day===today.getDate()) dayDiv.classList.add('today');
+
+        const dayNumberSpan = document.createElement('span');
+        dayNumberSpan.classList.add('day-number');
+        dayNumberSpan.textContent = day;
+        dayDiv.appendChild(dayNumberSpan);
+
+        const dayOfWeek = new Date(year, month, day).getDay();
+        if (dayOfWeek >= 0 && dayOfWeek <= 4) {
+          const milestoneDate = new Date('2025-09-01');
+          const milestoneEpisode = 2014;
+          const current = new Date(year, month, day);
+          const weekdaysBetween = countWeekdaysBetween(milestoneDate.getTime(), current.getTime());
+          const episodeNumber = (current >= milestoneDate)
+              ? milestoneEpisode + weekdaysBetween - 1
+              : milestoneEpisode - (weekdaysBetween - 1);
+
+          const epItem = document.createElement('div');
+          epItem.classList.add('task-item','episode-task');
+          epItem.textContent = `${episodeNumber}화`;
+
+          const key = `${fullDate}_바퀴멘터리 ${episodeNumber}화`;
+          if (taskStatus[key]) epItem.classList.add('complete');
+          epItem.addEventListener('click', async (e) => { 
+            e.stopPropagation(); 
+            if (!window.ensureLogin || !window.ensureLogin()) return; 
+            taskStatus[key] = !taskStatus[key]; 
+            await window.cloudSaveStateOnly(); 
+            renderCalendar(); 
+          });
+
+          dayDiv.appendChild(epItem);
+        }
+
+        fixedSchedules.forEach(sch => {
+          if (sch.daysOfWeek.includes(dayOfWeek)) {
+            const t = document.createElement('div');
+            t.classList.add('task-item', sch.colorClass);
+            t.textContent = sch.title;
+            const key = `${fullDate}_${sch.title}`;
+            if (taskStatus[key]) t.classList.add('complete');
+            t.addEventListener('click', async (e) => { 
+              e.stopPropagation(); 
+              if (!window.ensureLogin || !window.ensureLogin()) return; 
+              taskStatus[key] = !taskStatus[key]; 
+              await window.cloudSaveStateOnly(); 
+              renderCalendar(); 
+            });
+            dayDiv.appendChild(t);
+          }
+        });
+
+        customTasks.filter(t => t.date===fullDate).forEach(task => {
+          const el = document.createElement('div');
+          el.classList.add('task-item','custom-task');
+          el.textContent = task.title;
+          if (task.complete) el.classList.add('complete');
+          el.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (e.detail===1){
+              if (!window.ensureLogin || !window.ensureLogin()) return;
+              task.complete = !task.complete;
+              await window.cloudSaveAll();
+              renderCalendar();
+            } else if (e.detail===2){
+              openModal(task);
+            }
+          });
+          dayDiv.appendChild(el);
+        });
+
+        dayDiv.addEventListener('click', (e)=>{
+          if (e.target.classList.contains('calendar-day') || e.target.classList.contains('day-number')){
+            openModal({ date: fullDate });
+          }
+        });
+
+        calendarGrid.appendChild(dayDiv);
+      }
+    };
+
+    // 모달
+    const openModal = (task=null) => {
+      currentTask = task;
+      if (task && task.id){
+        document.getElementById('modalTitle').textContent = '작업 수정';
+        taskTitleInput.value = task.title;
+        taskDescriptionInput.value = task.description || '';
+        taskDateInput.value = task.date || '';
+        deleteTaskBtn.classList.remove('hidden');
+      } else if (task && task.date){
+        document.getElementById('modalTitle').textContent = '새 작업';
+        taskTitleInput.value = ''; taskDescriptionInput.value = ''; taskDateInput.value = task.date;
+        deleteTaskBtn.classList.add('hidden');
+      } else {
+        document.getElementById('modalTitle').textContent = '새 작업';
+        taskTitleInput.value = ''; taskDescriptionInput.value = ''; taskDateInput.value = '';
+        deleteTaskBtn.classList.add('hidden');
+      }
+      taskModal.style.display = 'flex';
+    };
+    const closeModal = () => { taskModal.style.display = 'none'; };
+
+    // 저장
+    const saveTask = async () => {
+      if (!window.ensureLogin || !window.ensureLogin()) return;
+
+      // 기본값 방어
+      if (!window.customTasks) window.customTasks = [];
+      if (!window.taskStatus) window.taskStatus = {};
+
+      const title = taskTitleInput.value.trim();
+      const description = taskDescriptionInput.value.trim();
+      const date = taskDateInput.value;
+      if (!title){ showFeedbackMessage('제목을 입력해주세요.'); return; }
+
+      const data = {
+        id: currentTask && currentTask.id ? currentTask.id : Date.now(),
+        title, description, date,
+        complete: currentTask?.complete ?? false
+      };
+
+      const idx = customTasks.findIndex(t => t.id === data.id);
+      if (idx > -1) customTasks[idx] = data; else customTasks.push(data);
+
+      await window.cloudSaveAll();
+      closeModal();
+      renderCalendar();
+    };
+
+    // 초기 렌더
+    (function init(){ attachEventListeners(); renderCalendar(); })();
+  </script>
+
+  <!-- ===== Firebase SDKs & 연동 코드 (모듈) : 실시간 동기화 포함 ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Firebase 설정
+    // Firebase 설정 (사용자님의 값)
     const firebaseConfig = {
       apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
       authDomain: "comicschedule-dfec7.firebaseapp.com",
@@ -132,7 +374,7 @@
     signInBtn.onclick  = () => doSignIn();
     signOutBtn.onclick = () => signOut(auth);
 
-    // Firestore 연동
+    // Firestore 핸들러
     window.cloudRefs = async () => {
       const uid = auth.currentUser.uid;
       return {
@@ -146,20 +388,28 @@
       return true;
     };
 
+    // 메모 디바운스 저장
+    let notesTimer = null;
+    window.cloudSaveNotesDebounced = function () {
+      clearTimeout(notesTimer);
+      notesTimer = setTimeout(() => window.cloudSaveNotes && window.cloudSaveNotes(), 800);
+    };
+
+    // 단발 로드(백업용)
     window.cloudLoadAll = async () => {
       if (!ensureLogin()) return;
       const { tasksCol, stateDoc } = await cloudRefs();
+
       const tasksSnap = await getDocs(tasksCol);
-      window.customTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      window.customTasks = (tasksSnap.docs.map(d => ({ id: d.id, ...d.data() })) || []);
 
       const st = await getDoc(stateDoc);
-      if (st.exists()){
-        const data = st.data() || {};
-        window.taskStatus = data.taskStatus || {};
-        const notesArea = document.getElementById('notesArea');
-        const allNotes = data.notesTabs || {};
-        if (notesArea) notesArea.value = allNotes[window.activeTab] || '';
-      }
+      const data = st.exists() ? (st.data() || {}) : {};
+      window.taskStatus = data.taskStatus || {};
+      window.__notesTabs = data.notesTabs || {};
+
+      const notesArea = document.getElementById('notesArea');
+      if (notesArea) notesArea.value = window.__notesTabs?.[window.activeTab] || '';
       if (typeof renderCalendar === 'function') renderCalendar();
     };
 
@@ -168,22 +418,31 @@
       const { stateDoc } = await cloudRefs();
       const st = await getDoc(stateDoc);
       const data = st.exists() ? (st.data()||{}) : {};
+      window.__notesTabs = data.notesTabs || {};
       const notesArea = document.getElementById('notesArea');
-      const notesTabs = data.notesTabs || {};
-      if (notesArea) notesArea.value = notesTabs[window.activeTab] || '';
+      if (notesArea) notesArea.value = window.__notesTabs?.[window.activeTab] || '';
     };
 
     window.cloudSaveAll = async () => {
       if (!ensureLogin()) return;
       const { tasksCol, stateDoc } = await cloudRefs();
+      if (!window.taskStatus) window.taskStatus = {};
+      if (!window.customTasks) window.customTasks = [];
+
+      // 상태 저장
       await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge:true });
-      const ops = (window.customTasks||[]).map(t => setDoc(doc(tasksCol, String(t.id)), t, { merge:true }));
+
+      // 작업들 저장
+      const ops = window.customTasks.map(t =>
+        setDoc(doc(tasksCol, String(t.id)), t, { merge:true })
+      );
       await Promise.all(ops);
     };
 
     window.cloudSaveStateOnly = async () => {
       if (!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
+      if (!window.taskStatus) window.taskStatus = {};
       await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge:true });
     };
 
@@ -191,22 +450,56 @@
       if (!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
       const notesArea = document.getElementById('notesArea');
+
+      // 기존 데이터 가져와 병합
       const st = await getDoc(stateDoc);
       const prev = st.exists() ? (st.data()||{}) : {};
       const notesTabs = prev.notesTabs || {};
-      notesTabs[window.activeTab] = notesArea.value;
+      notesTabs[window.activeTab] = notesArea?.value ?? '';
+
       await setDoc(stateDoc, { notesTabs }, { merge:true });
     };
 
     window.deleteTask = async () => {
-      if (!ensureLogin() || !window.currentTask?.id) { closeModal(); return; }
+      if (!ensureLogin() || !window.currentTask?.id) { 
+        if (typeof closeModal==='function') closeModal(); 
+        return; 
+      }
       const { tasksCol } = await cloudRefs();
       await deleteDoc(doc(tasksCol, String(window.currentTask.id)));
       window.customTasks = (window.customTasks||[]).filter(t => t.id !== window.currentTask.id);
       await window.cloudSaveAll();
-      closeModal();
+      if (typeof closeModal==='function') closeModal();
       if (typeof renderCalendar==='function') renderCalendar();
     };
+
+    // ===== 실시간 동기화 =====
+    window.__unsubs = [];
+    async function setupRealtimeSync() {
+      const { tasksCol, stateDoc } = await window.cloudRefs();
+
+      // 기존 구독 해제
+      window.__unsubs.forEach(fn => { try { fn(); } catch(_){} });
+      window.__unsubs = [];
+
+      // 1) 개인 작업 실시간 반영
+      const unsubTasks = onSnapshot(tasksCol, (snap) => {
+        window.customTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (typeof renderCalendar === 'function') renderCalendar();
+      });
+      window.__unsubs.push(unsubTasks);
+
+      // 2) 상태/메모 실시간 반영
+      const unsubState = onSnapshot(stateDoc, (ds) => {
+        const data = ds.exists() ? (ds.data() || {}) : {};
+        window.taskStatus = data.taskStatus || {};
+        window.__notesTabs = data.notesTabs || {};
+        const notesArea = document.getElementById('notesArea');
+        if (notesArea) notesArea.value = window.__notesTabs?.[window.activeTab] || '';
+        if (typeof renderCalendar === 'function') renderCalendar();
+      });
+      window.__unsubs.push(unsubState);
+    }
 
     // 로그인 상태 변화
     onAuthStateChanged(auth, async (user) => {
@@ -214,19 +507,20 @@
         userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
         signInBtn.classList.add('hidden');  
         signOutBtn.classList.remove('hidden');
-        await window.cloudLoadAll();
+
+        // 실시간 구독 시작
+        await setupRealtimeSync();
+
       } else {
         userInfoEl.textContent = '';
         signOutBtn.classList.add('hidden'); 
         signInBtn.classList.remove('hidden');
+
+        // 구독 해제
+        window.__unsubs.forEach(fn => { try { fn(); } catch(_){} });
+        window.__unsubs = [];
       }
     });
-
-    // 달력 초기화 실행
-    (function init(){ 
-      if (typeof attachEventListeners === 'function') attachEventListeners();
-      if (typeof renderCalendar === 'function') renderCalendar();
-    })();
   </script>
 </body>
 </html>
