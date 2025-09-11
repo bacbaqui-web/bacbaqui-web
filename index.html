@@ -32,7 +32,23 @@
     .add-task-btn:hover{background:#777;transform:scale(1.02)}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
     .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
-    @media (max-width:768px){body{padding:16px;gap:1.5rem}.calendar-day{min-height:100px;padding-top:28px}.day-number{font-size:1rem}.task-item{font-size:.7rem}.calendar-grid,.calendar-header{gap:4px}.add-task-btn{width:100%}}
+    /* ✅ 모바일 최적화 수정 */
+    @media (max-width:768px){
+      body{padding:16px;gap:1.5rem}
+      .calendar-day{
+        min-height:unset; /* 고정된 최소 높이 제거 */
+        padding-top: 2rem; /* 날짜 번호를 위한 공간 */
+        padding-bottom: 0.5rem; /* 아래쪽 패딩 추가 */
+      }
+      .day-number{
+        font-size:1rem;
+        top:0.5rem;
+        left:0.5rem;
+      }
+      .task-item{font-size:.7rem}
+      .calendar-grid,.calendar-header{gap:4px}
+      .add-task-btn{width:100%}
+    }
   </style>
 </head>
 <body class="text-white">
@@ -198,8 +214,8 @@
         dayDiv.classList.add('calendar-day','relative');
 
         const thisDate = new Date(year, month, day);
-        const fullDate = ymdKST(thisDate);                // ✅ KST 기준 키
-        const dayOfWeek = toKST(thisDate).getDay();       // ✅ KST 기준 요일
+        const fullDate = ymdKST(thisDate);          // ✅ KST 기준 키
+        const dayOfWeek = toKST(thisDate).getDay();     // ✅ KST 기준 요일
 
         const today = toKST(new Date());
         const isToday = (ymdKST(thisDate) === ymdKST(today));
