@@ -162,6 +162,7 @@
         window.imageBookmarks = window.imageBookmarks || [];
         window.currentTask = null;
         let currentDate = new Date();
+        window.isAuthReady = false; // Firebase 인증 상태 로딩 여부
 
         // UI 요소
         const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
@@ -557,6 +558,7 @@
         const signInBtn = document.getElementById('signInBtn');
         const signOutBtn = document.getElementById('signOutBtn');
         const userInfoEl = document.getElementById('userInfo');
+        const loadingOverlay = document.getElementById('loading-overlay');
 
         const provider = new GoogleAuthProvider();
 
@@ -585,11 +587,15 @@
                 imagesCol: collection(db, `${userPath}/images`),
             };
         };
-
+        
+        // 로그인 상태와 데이터 로딩이 모두 완료되었는지 확인하는 함수
         window.ensureLogin = () => {
+            if (!window.isAuthReady) {
+                showAlert('데이터 로딩 중입니다. 잠시만 기다려 주세요.');
+                return false;
+            }
             if (!auth.currentUser) {
-                document.getElementById('modal-message').textContent = '로그인 후 이용해 주세요.';
-                document.getElementById('alert-modal').classList.remove('hidden');
+                showAlert('로그인 후 이용해 주세요.');
                 return false;
             }
             return true;
@@ -685,6 +691,9 @@
         }
 
         onAuthStateChanged(auth, async (user) => {
+            loadingOverlay.classList.remove('hidden'); // 로딩 시작
+            window.isAuthReady = false;
+
             if (user) {
                 userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
                 signInBtn.classList.add('hidden');
@@ -704,6 +713,10 @@
                 renderImageBookmarks();
                 if(notesArea) notesArea.value = '';
             }
+            
+            // 모든 초기화가 끝나면 로딩 상태를 해제
+            loadingOverlay.classList.add('hidden');
+            window.isAuthReady = true;
         });
     </script>
 </body>
