@@ -228,63 +228,6 @@
             });
         });
 
-        // 드래그&드롭 기능 추가
-        dragArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dragArea.classList.add('active');
-        });
-        dragArea.addEventListener('dragleave', () => {
-            dragArea.classList.remove('active');
-        });
-        dragArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dragArea.classList.remove('active');
-            const files = e.dataTransfer.files;
-            if (files?.length) {
-                showAlert('파일 업로드는 미지원입니다. 웹의 이미지 URL을 드래그하세요.');
-                return;
-            }
-            const url = e.dataTransfer.getData('URL');
-            const html = e.dataTransfer.getData('text/html');
-            const parsed = new DOMParser().parseFromString(html || '', 'text/html');
-            const img = parsed.querySelector('img');
-
-            if (img?.src) {
-                addImage(img.src);
-            } else if (url) {
-                if (/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url)) addImage(url);
-                else showAlert('유효한 이미지 URL이 아닙니다.');
-            } else {
-                showAlert('이미지를 드래그하거나 유효한 이미지 URL을 드롭하세요.');
-            }
-        });
-        document.addEventListener('paste', (e) => {
-            const items = e.clipboardData?.items || [];
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
-                    e.preventDefault();
-                    showAlert('캡처 이미지는 URL이 없어 저장 불가합니다. 웹에 올린 뒤 링크를 사용하세요.');
-                    break;
-                }
-            }
-        });
-
-        // 이미지 북마크 추가
-        async function addImage(imageUrl) {
-            if (!window.ensureLogin()) return;
-            try {
-                const { imagesCol } = await window.cloudRefs();
-                await addDoc(imagesCol, {
-                    url: imageUrl,
-                    timestamp: new Date()
-                });
-                showFeedbackMessage('이미지 북마크에 추가되었습니다!');
-            } catch (err) {
-                console.error("Error adding document: ", err);
-                showAlert('이미지 추가에 실패했습니다. 로그인 상태를 확인하세요.');
-            }
-        }
-
         // 서울 시간(Asia/Seoul) 고정 키/요일 계산
         const TZ = 'Asia/Seoul';
         function ymdKST(date) {
@@ -559,6 +502,8 @@
         const signOutBtn = document.getElementById('signOutBtn');
         const userInfoEl = document.getElementById('userInfo');
         const loadingOverlay = document.getElementById('loading-overlay');
+        const dragArea = document.getElementById('drag-area');
+        const imageGrid = document.getElementById('image-grid');
 
         const provider = new GoogleAuthProvider();
 
@@ -656,6 +601,66 @@
             await deleteDoc(doc(imagesCol, id));
             renderImageBookmarks();
         };
+
+        // 이미지 북마크 관련 함수를 모듈 스크립트로 이동
+        async function addImage(imageUrl) {
+            if (!window.isAuthReady || !auth.currentUser) {
+                showAlert('로그인 후 이용해 주세요.');
+                return;
+            }
+            try {
+                const { imagesCol } = await window.cloudRefs();
+                await addDoc(imagesCol, {
+                    url: imageUrl,
+                    timestamp: new Date()
+                });
+                showFeedbackMessage('이미지 북마크에 추가되었습니다!');
+            } catch (err) {
+                console.error("Error adding document: ", err);
+                showAlert('이미지 추가에 실패했습니다. 로그인 상태를 확인하세요.');
+            }
+        }
+
+        // 드래그&드롭 이벤트 리스너를 모듈 스크립트로 이동
+        dragArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dragArea.classList.add('active');
+        });
+        dragArea.addEventListener('dragleave', () => {
+            dragArea.classList.remove('active');
+        });
+        dragArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dragArea.classList.remove('active');
+            const files = e.dataTransfer.files;
+            if (files?.length) {
+                showAlert('파일 업로드는 미지원입니다. 웹의 이미지 URL을 드래그하세요.');
+                return;
+            }
+            const url = e.dataTransfer.getData('URL');
+            const html = e.dataTransfer.getData('text/html');
+            const parsed = new DOMParser().parseFromString(html || '', 'text/html');
+            const img = parsed.querySelector('img');
+
+            if (img?.src) {
+                addImage(img.src);
+            } else if (url) {
+                if (/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url)) addImage(url);
+                else showAlert('유효한 이미지 URL이 아닙니다.');
+            } else {
+                showAlert('이미지를 드래그하거나 유효한 이미지 URL을 드롭하세요.');
+            }
+        });
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items || [];
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+                    e.preventDefault();
+                    showAlert('캡처 이미지는 URL이 없어 저장 불가합니다. 웹에 올린 뒤 링크를 사용하세요.');
+                    break;
+                }
+            }
+        });
 
         window.__unsubs = [];
         async function setupRealtimeSync() {
