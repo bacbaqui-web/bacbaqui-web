@@ -17,7 +17,7 @@
         .section-card { background: #2a2a2a; border-radius: 0 0 12px 12px; padding: 24px; box-shadow: inset 0 0 10px rgba(0,0,0,.3); text-align: center; width: 100%; max-width: 800px; }
         .notepad-tabs { display: flex; justify-content: center; align-items: center; gap: 1rem; width: 100%; max-width: 800px; }
         /* 선택되지 않은 탭 스타일 변경 */
-        .notepad-tab { background: #1a1a1a; padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; transition: .2s; font-weight: 700; color: #737373; }
+        .notepad-tab { background: #1a1a1a; padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; transition: .2s; font-weight: 700; color: #737373; font-size: 0.85rem; }
         /* 선택된 탭과 동일한 배경색, 글자색으로 변경 */
         .notepad-tab.active { background: #2a2a2a; color: #fff; }
         .notepad-tab:hover { background: #2a2a2a; color: #fff; }
@@ -38,11 +38,11 @@
         .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 24px; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
         .day-label, .calendar-day { text-align: center; padding: 8px; border-radius: 8px; background: #2a2a2a; position: relative; overflow: hidden; word-wrap: break-word; }
-        .day-label { background: #444; font-weight: 700; color: #fff; }
+        .day-label { background: #444; font-weight: 700; color: #fff; font-size: 0.8rem; }
         .calendar-day { min-height: 120px; padding-top: 16px; }
         .calendar-day.today { border: 2px solid #ccc; }
-        .day-number { position: absolute; top: 8px; left: 8px; font-size: 1rem; font-weight: 700; color: #aaa; }
-        .task-item { font-size: .75rem; padding: 4px; border-radius: 4px; margin-top: 4px; word-wrap: break-word; cursor: pointer; }
+        .day-number { position: absolute; top: 8px; left: 8px; font-size: 0.85rem; font-weight: 700; color: #aaa; }
+        .task-item { font-size: 0.65rem; padding: 4px; border-radius: 4px; margin-top: 4px; word-wrap: break-word; cursor: pointer; }
         .task-item.custom-task { background: #4c78a8; }
         .task-item.episode-task { background: #444; color: #ddd; cursor: pointer; }
         .task-item.recurring-shorts { background: #7d4040; cursor: pointer; }
@@ -73,8 +73,8 @@
         @media (max-width: 768px) {
             body { padding: 16px; gap: 0; }
             .calendar-day { min-height: unset; padding-top: 2rem; padding-bottom: 0.5rem; }
-            .day-number { font-size: 1rem; top: 0.5rem; left: 0.5rem; }
-            .task-item { font-size: .7rem; }
+            .day-number { font-size: 0.75rem; top: 0.5rem; left: 0.5rem; }
+            .task-item { font-size: 0.55rem; }
             .calendar-grid, .calendar-header { gap: 4px; }
             .add-task-btn { width: 100%; }
         }
@@ -111,7 +111,7 @@
     <div id="calendar-section" class="section-card tab-content active">
         <div class="flex justify-between items-center mb-4">
             <button id="prevMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">&lt; 이전 달</button>
-            <h2 id="currentMonthYear" class="text-xl font-bold"></h2>
+            <h2 id="currentMonthYear" class="text-lg font-bold"></h2>
             <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
         </div>
         <div class="calendar-header mb-2">
