@@ -65,6 +65,14 @@
             .calendar-grid, .calendar-header { gap: 4px; }
             .add-task-btn { width: 100%; }
         }
+
+        /* 이미지 뷰어 모달 스타일 */
+        #imageModal .modal-content {
+            background-color: transparent;
+            padding: 0;
+            max-width: 90%;
+            max-height: 90%;
+        }
     </style>
 </head>
 <body class="text-white">
@@ -135,6 +143,18 @@
         </div>
     </div>
     
+    <!-- 이미지 뷰어 모달 -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content relative">
+            <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            <img id="modalImage" src="" alt="확대 이미지" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"/>
+        </div>
+    </div>
+
     <!-- 경고 모달 -->
     <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
@@ -172,6 +192,10 @@
         const dragArea = document.getElementById('drag-area');
         const imageGrid = document.getElementById('image-grid');
 
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const closeImageModalBtn = document.getElementById('closeImageModalBtn');
+
         // 모달 및 피드백
         const showFeedbackMessage = (message) => {
             const el = document.createElement('div');
@@ -188,6 +212,15 @@
             document.getElementById('alert-modal').classList.add('hidden');
         };
         document.getElementById('modal-close-btn').addEventListener('click', hideAlert);
+
+        // 이미지 모달 열기/닫기
+        const openImageModal = (imageUrl) => {
+            modalImage.src = imageUrl;
+            imageModal.style.display = 'flex';
+        };
+        const closeImageModal = () => {
+            imageModal.style.display = 'none';
+        };
 
         // 탭 제어 함수
         function showTab(tabId) {
@@ -280,6 +313,13 @@
             saveTaskBtn.addEventListener('click', saveTask);
             deleteTaskBtn.addEventListener('click', () => window.deleteTask && window.deleteTask());
             taskModal.addEventListener('click', (e) => { if (e.target === taskModal) closeModal(); });
+
+            closeImageModalBtn.addEventListener('click', closeImageModal);
+            imageModal.addEventListener('click', (e) => {
+                if (e.target === imageModal || e.target === modalImage) {
+                    closeImageModal();
+                }
+            });
         };
 
         const renderCalendar = () => {
@@ -395,15 +435,20 @@
                 const card = document.createElement('div');
                 card.className = 'image-card relative group cursor-pointer';
                 card.innerHTML = `
-                    <a href="${imageUrl}" target="_blank" class="block w-full h-full">
+                    <div class="block w-full h-full">
                         <img src="${imageUrl}" alt="북마크된 이미지" class="w-full h-40 object-cover rounded-lg shadow-md"/>
-                    </a>
+                    </div>
                     <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${d.id}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>`;
                 imageGrid.appendChild(card);
+
+                // 클릭 이벤트 리스너 추가
+                card.addEventListener('click', () => {
+                    openImageModal(imageUrl);
+                });
             });
             imageGrid.querySelectorAll('button[data-id]').forEach(btn => {
                 btn.onclick = async (e) => {
