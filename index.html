@@ -70,13 +70,47 @@
             transform: translateY(-5px);
         }
 
+        /* 모바일 화면 (768px 이하)에 대한 CSS */
         @media (max-width: 768px) {
-            body { padding: 16px; gap: 0; }
-            .calendar-day { min-height: unset; padding-top: 2rem; padding-bottom: 0.5rem; }
-            .day-number { font-size: 0.75rem; top: 0.5rem; left: 0.5rem; }
-            .task-item { font-size: 0.55rem; }
-            .calendar-grid, .calendar-header { gap: 4px; }
-            .add-task-btn { width: 100%; }
+            body { 
+                padding: 16px; 
+                gap: 0; 
+            }
+            .section-card {
+                padding: 16px;
+                border-radius: 0;
+            }
+            .notepad-tabs {
+                gap: 0.5rem;
+            }
+            .notepad-tab {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            .calendar-day { 
+                min-height: unset; 
+                padding-top: 2rem; 
+                padding-bottom: 0.5rem; 
+            }
+            .day-number { 
+                font-size: 0.75rem; 
+                top: 0.5rem; 
+                left: 0.5rem; 
+            }
+            .task-item { 
+                font-size: 0.55rem; 
+            }
+            .calendar-grid, .calendar-header { 
+                gap: 4px; 
+            }
+            .add-task-btn { 
+                width: 100%; 
+                font-size: 0.9rem;
+            }
+            .modal-content {
+                padding: 16px;
+                width: 95%;
+            }
         }
 
         /* 이미지 뷰어 모달 스타일 */
