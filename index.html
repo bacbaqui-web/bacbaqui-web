@@ -189,8 +189,9 @@
     </div>
 
     <div id="bookmarks-section" class="section-card tab-content text-left">
+        <!-- '드래그 앤 드롭'뿐만 아니라 '붙여넣기'도 가능함을 안내합니다. -->
         <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999999] font-medium cursor-pointer mt-6">
-            <div></div>
+            <div>이미지를 드래그하거나 이미지 URL을 붙여넣으세요 (Ctrl+V)</div>
         </section>
         <section id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6"></section>
     </div>
@@ -734,6 +735,15 @@
                 showAlert('이미지 추가에 실패했습니다. 로그인 상태를 확인하세요.');
             }
         }
+        
+        function isValidUrl(url) {
+            try {
+                new URL(url);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
 
         // 드래그&드롭 이벤트 리스너를 모듈 스크립트로 이동
         dragArea.addEventListener('dragover', (e) => {
@@ -765,6 +775,18 @@
                 showAlert('이미지를 드래그하거나 유효한 이미지 URL을 드롭하세요.');
             }
         });
+
+        // ⭐ 새롭게 추가된 부분: 붙여넣기 기능
+        dragArea.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pastedText = e.clipboardData?.getData('text/plain');
+            if (pastedText && isValidUrl(pastedText)) {
+                addImage(pastedText);
+            } else {
+                showAlert('유효한 URL이 아닙니다.');
+            }
+        });
+        
         document.addEventListener('paste', (e) => {
             const items = e.clipboardData?.items || [];
             for (let i = 0; i < items.length; i++) {
