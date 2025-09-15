@@ -817,11 +817,12 @@
             }
         });
 
-        // ⭐ 붙여넣기 기능 개선: 이미지 파일 처리
+        // ⭐ 붙여넣기 기능 개선: 맥북 캡처 이미지 처리
         dragArea.addEventListener('paste', async (e) => {
             e.preventDefault();
-            const items = e.clipboardData?.items;
+            const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
             let imageFound = false;
+            let textFound = false;
 
             if (items) {
                 for (let i = 0; i < items.length; i++) {
@@ -834,19 +835,30 @@
                             break;
                         }
                     }
+                    if (item.kind === 'string' && item.type === 'text/uri-list') {
+                        const url = e.clipboardData.getData('text/uri-list');
+                        if (url && isValidUrl(url)) {
+                             if (/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url)) {
+                                addImage(url, url);
+                                imageFound = true;
+                                break;
+                             }
+                        }
+                    }
                 }
             }
-
             if (!imageFound) {
                 const pastedText = e.clipboardData?.getData('text/plain');
                 if (pastedText && isValidUrl(pastedText)) {
                     addImage(pastedText, pastedText);
-                } else {
-                    showAlert('붙여넣기한 항목에 유효한 이미지가 없습니다.');
+                    textFound = true;
                 }
             }
+            if (!imageFound && !textFound) {
+                showAlert('붙여넣기한 항목에 유효한 이미지가 없습니다.');
+            }
         });
-        
+
         window.__unsubs = [];
         async function setupRealtimeSync() {
             const { tasksCol, stateDoc, imagesCol } = await window.cloudRefs();
@@ -887,7 +899,7 @@
             if (user) {
                 userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
                 signInBtn.classList.add('hidden');
-                signOutBtn.classList.remove('hidden');
+                signOutBtn.classList.classList.remove('hidden');
                 await setupRealtimeSync();
             } else {
                 userInfoEl.textContent = '';
