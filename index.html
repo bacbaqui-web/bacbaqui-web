@@ -43,9 +43,39 @@
       .calendar-grid,.calendar-header{gap:0}.add-task-btn{width:100%;font-size:.9rem}
       .modal-content{padding:16px;width:95%}
     }
-    #imageModal .modal-content{background-color:transparent;padding:0;max-width:90%;max-height:90%;display:flex;justify-content:center;align-items:center}
     .calendar-grid{grid-gap:4px}
     @media (max-width:768px){.calendar-grid{grid-gap:0}}
+
+    /* Fullscreen Image Modal */
+    #imageModal.modal {
+        background: rgba(0, 0, 0, 1);
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 9999; /* Higher than other modals */
+    }
+    #imageModal .modal-content {
+        background-color: transparent;
+        padding: 0;
+        box-shadow: none;
+        width: auto;
+        max-width: 100%;
+        height: auto;
+        max-height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    #modalImage {
+        width: auto;
+        height: auto;
+        max-width: 100vw;
+        max-height: 100vh;
+        object-fit: contain;
+    }
   </style>
 </head>
 <body class="text-white">
@@ -116,7 +146,7 @@
       <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
-      <img id="modalImage" src="" alt="확대 이미지" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"/>
+      <img id="modalImage" src="" alt="확대 이미지" />
       <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">원본 페이지로 이동</button>
     </div>
   </div>
@@ -175,26 +205,8 @@
       if (pageUrl){ goToPageBtn.style.display='block'; goToPageBtn.onclick=()=>window.open(pageUrl,'_blank'); }
       else goToPageBtn.style.display='none';
       imageModal.style.display='flex';
-      // 이미지 크기를 창 크기에 맞춰 조정
-      adjustImageSize();
     };
     const closeImageModal = () => { imageModal.style.display = 'none'; };
-
-    // 이미지 크기를 창 크기에 맞춰 조정하는 함수
-    const adjustImageSize = () => {
-      const modalContent = document.querySelector('#imageModal .modal-content');
-      const modalImage = document.getElementById('modalImage');
-      if (modalContent && modalImage) {
-        const maxWidth = modalContent.offsetWidth * 0.9;
-        const maxHeight = modalContent.offsetHeight * 0.9;
-        
-        modalImage.style.maxWidth = `${maxWidth}px`;
-        modalImage.style.maxHeight = `${maxHeight}px`;
-      }
-    };
-    // 창 크기 변경 시 이미지 크기 조정
-    window.addEventListener('resize', adjustImageSize);
-
 
     function showTab(tabId){
       tabContents.forEach(c=>c.classList.remove('active'));
@@ -244,7 +256,7 @@
       taskModal.addEventListener('click',(e)=>{ if(e.target===taskModal) closeModal(); });
 
       closeImageModalBtn.addEventListener('click', closeImageModal);
-      imageModal.addEventListener('click',(e)=>{ if(e.target===imageModal||e.target===modalImage) closeImageModal(); });
+      imageModal.addEventListener('click',(e)=>{ if(e.target===imageModal) closeImageModal(); });
     };
 
     const renderCalendar=()=>{
