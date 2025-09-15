@@ -1,924 +1,544 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>만화 일정 관리</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
-        /* 세로 정렬을 상단으로 변경, 전체 여백을 줄여 더 촘촘하게 만듦 */
-        body { font-family: 'Noto Sans KR', sans-serif; background: #000; color: #fff; display: flex; justify-content: flex-start; align-items: center; min-height: 100vh; padding: 16px; flex-direction: column; gap: 0; }
-        .tab-content { display: none; }
-        .tab-content.active { display: flex; flex-direction: column; flex-grow: 1; }
-        /* 패딩을 줄여 더 촘촘하게 만듦 */
-        .section-card { background: #2a2a2a; border-radius: 12px; padding: 20px; box-shadow: inset 0 0 10px rgba(0,0,0,.3); text-align: center; width: 100%; max-width: 800px; }
-        .notepad-tabs { display: flex; justify-content: center; align-items: center; gap: 1rem; width: 100%; max-width: 800px; }
-        /* 선택되지 않은 탭 스타일 변경 */
-        .notepad-tab { background: #1a1a1a; padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; transition: .2s; font-weight: 700; color: #737373; font-size: 0.85rem; }
-        /* 선택된 탭과 동일한 배경색, 글자색으로 변경 */
-        .notepad-tab.active { background: #2a2a2a; color: #fff; }
-        .notepad-tab:hover { background: #2a2a2a; color: #fff; }
-        .notes-area { flex-grow: 1; resize: vertical; }
-
-        /* 메모장 스크롤바 스타일 */
-        textarea#notesArea::-webkit-scrollbar {
-            width: 8px;
-            background-color: #2a2a2a; /* 스크롤바 배경 */
-            border-radius: 10px;
-        }
-
-        textarea#notesArea::-webkit-scrollbar-thumb {
-            background-color: #555; /* 스크롤바 드래그 부분 */
-            border-radius: 10px;
-        }
-
-        /* 둥근 모서리 달력 스타일 */
-        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        /* 캘린더 칸의 세로 여백을 더 길게 변경 */
-        .day-label, .calendar-day { text-align: center; padding: 8px 2px; border-radius: 8px; background: #2a2a2a; position: relative; overflow: hidden; word-wrap: break-word; }
-        /* 요일 칸 가로 크기 줄이기 */
-        .day-label { background: #444; font-weight: 700; color: #fff; font-size: 0.8rem; padding: 8px 0; }
-        .calendar-day { min-height: 160px; padding-top: 16px; padding-left: 2px; padding-right: 2px; display: flex; flex-direction: column; gap: 2px; }
-        .calendar-day.today { border: 2px solid #ccc; }
-        .day-number { position: absolute; top: 8px; left: 8px; font-size: 0.85rem; font-weight: 700; color: #aaa; z-index: 10; }
-        /* 마일스톤도 둥근 모서리, 여백 더 넓게 수정 */
-        .task-item { font-size: 0.85rem; padding: 5px 6px; border-radius: 8px; margin-top: 4px; word-wrap: break-word; cursor: pointer; text-align: left; }
-        .task-item.custom-task { background: #4c78a8; }
-        .task-item.episode-task { background: #444; color: #ddd; cursor: pointer; }
-        .task-item.recurring-shorts { background: #7d4040; cursor: pointer; }
-        .task-item.recurring-instatoon { background: #999966; cursor: pointer; }
-        .task-item.complete { background: #888; text-decoration: line-through; color: #ccc; }
-        .add-task-btn { background: #666; transition: .2s; }
-        .add-task-btn:hover { background: #777; transform: scale(1.02); }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #1a1a1a; border-radius: 12px; padding: 24px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,.5); position: relative; }
-        
-        /* 이미지 북마크 스타일 추가, 드래그 영역 패딩 줄여 더 촘촘하게 */
-        .drag-area {
-            border: 2px dashed #4b4b4b;
-            transition: all 0.3s ease;
-            padding: 24px;
-        }
-        .drag-area.active {
-            border-color: #6b6b6b;
-            background-color: #2a2a2a;
-        }
-        .image-card {
-            position: relative;
-            transition: transform 0.2s ease-in-out;
-        }
-        .image-card:hover {
-            transform: translateY(-5px);
-        }
-
-        /* 모바일 화면 (768px 이하)에 대한 CSS */
-        @media (max-width: 768px) {
-            body { 
-                padding: 12px; 
-                gap: 0; 
-            }
-            .section-card {
-                padding: 12px;
-                border-radius: 0;
-            }
-            .notepad-tabs {
-                gap: 0.5rem;
-            }
-            .notepad-tab {
-                padding: 6px 12px;
-                font-size: 0.8rem;
-            }
-            /* 모바일 달력 칸 높이를 더 유동적으로 조정 */
-            .calendar-day { 
-                min-height: 120px; 
-                padding: 1.5rem 0.2rem 0.2rem; /* 패딩을 줄여 더 촘촘하게 */
-                gap: 1px; /* 아이템 간 간격 최소화 */
-            }
-            .day-number { 
-                font-size: 0.75rem; 
-                top: 0.5rem; 
-                left: 0.5rem; 
-            }
-            /* 마일스톤 글자 크기 다시 조정, 여백 최소화 */
-            .task-item { 
-                font-size: 0.85rem; 
-                padding: 2px 4px;
-                margin-top: 2px;
-            }
-            /* 모바일에서 요일과 날짜 칸 사이의 간격을 없앰 */
-            .calendar-grid, .calendar-header { 
-                gap: 0; 
-            }
-            .add-task-btn { 
-                width: 100%; 
-                font-size: 0.9rem;
-            }
-            .modal-content {
-                padding: 16px;
-                width: 95%;
-            }
-        }
-
-        /* 이미지 뷰어 모달 스타일 */
-        #imageModal .modal-content {
-            background-color: transparent;
-            padding: 0;
-            max-width: 90%;
-            max-height: 90%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        /* 1일과 2일 간격이 월화요일 간격과 같도록 수정 */
-        .calendar-grid {
-            grid-gap: 4px; /* 기존 4px 유지 */
-        }
-        @media (max-width: 768px) {
-            .calendar-grid {
-                grid-gap: 0;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>만화 일정 관리</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+    body{font-family:'Noto Sans KR',sans-serif;background:#000;color:#fff;display:flex;justify-content:flex-start;align-items:center;min-height:100vh;padding:16px;flex-direction:column;gap:0}
+    .tab-content{display:none}.tab-content.active{display:flex;flex-direction:column;flex-grow:1}
+    .section-card{background:#2a2a2a;border-radius:12px;padding:20px;box-shadow:inset 0 0 10px rgba(0,0,0,.3);text-align:center;width:100%;max-width:800px}
+    .notepad-tabs{display:flex;justify-content:center;align-items:center;gap:1rem;width:100%;max-width:800px}
+    .notepad-tab{background:#1a1a1a;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700;color:#737373;font-size:.85rem}
+    .notepad-tab.active{background:#2a2a2a;color:#fff}.notepad-tab:hover{background:#2a2a2a;color:#fff}
+    .notes-area{flex-grow:1;resize:vertical}
+    textarea#notesArea::-webkit-scrollbar{width:8px;background-color:#2a2a2a;border-radius:10px}
+    textarea#notesArea::-webkit-scrollbar-thumb{background-color:#555;border-radius:10px}
+    .calendar-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+    .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .day-label,.calendar-day{text-align:center;padding:8px 2px;border-radius:8px;background:#2a2a2a;position:relative;overflow:hidden;word-wrap:break-word}
+    .day-label{background:#444;font-weight:700;color:#fff;font-size:.8rem;padding:8px 0}
+    .calendar-day{min-height:160px;padding-top:16px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;gap:2px}
+    .calendar-day.today{border:2px solid #ccc}
+    .day-number{position:absolute;top:8px;left:8px;font-size:.85rem;font-weight:700;color:#aaa;z-index:10}
+    .task-item{font-size:.85rem;padding:5px 6px;border-radius:8px;margin-top:4px;word-wrap:break-word;cursor:pointer;text-align:left}
+    .task-item.custom-task{background:#4c78a8}.task-item.episode-task{background:#444;color:#ddd;cursor:pointer}
+    .task-item.recurring-shorts{background:#7d4040;cursor:pointer}.task-item.recurring-instatoon{background:#999966;cursor:pointer}
+    .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
+    .add-task-btn{background:#666;transition:.2s}.add-task-btn:hover{background:#777;transform:scale(1.02)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
+    .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
+    .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
+    .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
+    .image-card{position:relative;transition:transform .2s ease-in-out}.image-card:hover{transform:translateY(-5px)}
+    @media (max-width:768px){
+      body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
+      .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
+      .calendar-day{min-height:120px;padding:1.5rem .2rem .2rem;gap:1px}
+      .day-number{font-size:.75rem;top:.5rem;left:.5rem}
+      .task-item{font-size:.85rem;padding:2px 4px;margin-top:2px}
+      .calendar-grid,.calendar-header{gap:0}.add-task-btn{width:100%;font-size:.9rem}
+      .modal-content{padding:16px;width:95%}
+    }
+    #imageModal .modal-content{background-color:transparent;padding:0;max-width:90%;max-height:90%;display:flex;justify-content:center;align-items:center}
+    .calendar-grid{grid-gap:4px}
+    @media (max-width:768px){.calendar-grid{grid-gap:0}}
+  </style>
 </head>
 <body class="text-white">
+  <div id="authBar" class="w-full max-w-2xl mx-auto flex items-center justify-end gap-2 mb-4">
+    <span id="userInfo" class="text-sm opacity-80"></span>
+    <button id="signInBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Google 로그인</button>
+    <button id="signOutBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded hidden">로그아웃</button>
+  </div>
 
-    <!-- 로그인 바 -->
-    <div id="authBar" class="w-full max-w-2xl mx-auto flex items-center justify-end gap-2 mb-4">
-        <span id="userInfo" class="text-sm opacity-80"></span>
-        <button id="signInBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Google 로그인</button>
-        <button id="signOutBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded hidden">로그아웃</button>
+  <div id="main-tabs" class="notepad-tabs mx-auto">
+    <button class="notepad-tab active" data-tab="calendar">달력</button>
+    <button class="notepad-tab" data-tab="notes">메모</button>
+    <button class="notepad-tab" data-tab="bookmarks">북마크</button>
+  </div>
+  
+  <div id="calendar-section" class="section-card tab-content active">
+    <div class="flex justify-between items-center mb-4">
+      <button id="prevMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">&lt; 이전 달</button>
+      <h2 id="currentMonthYear" class="text-lg font-bold"></h2>
+      <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
     </div>
-
-    <!-- 탭 메뉴 -->
-    <div id="main-tabs" class="notepad-tabs mx-auto">
-        <button class="notepad-tab active" data-tab="calendar">달력</button>
-        <button class="notepad-tab" data-tab="notes">메모</button>
-        <button class="notepad-tab" data-tab="bookmarks">북마크</button>
+    <div class="calendar-header mb-2">
+      <div class="day-label">일</div><div class="day-label">월</div><div class="day-label">화</div>
+      <div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div>
     </div>
-    
-    <!-- 탭 내용 -->
-    <div id="calendar-section" class="section-card tab-content active">
-        <div class="flex justify-between items-center mb-4">
-            <button id="prevMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">&lt; 이전 달</button>
-            <h2 id="currentMonthYear" class="text-lg font-bold"></h2>
-            <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
-        </div>
-        <div class="calendar-header mb-2">
-            <div class="day-label">일</div><div class="day-label">월</div><div class="day-label">화</div>
-            <div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div>
-        </div>
-        <div id="calendarGrid" class="calendar-grid"></div>
-        <div class="mt-8 text-center">
-            <button id="addTaskBtn" class="add-task-btn px-6 py-3 rounded-full font-bold text-white shadow-md">+ 개인 작업 추가</button>
-        </div>
+    <div id="calendarGrid" class="calendar-grid"></div>
+    <div class="mt-8 text-center">
+      <button id="addTaskBtn" class="add-task-btn px-6 py-3 rounded-full font-bold text-white shadow-md">+ 개인 작업 추가</button>
     </div>
+  </div>
 
-    <div id="notes-section" class="section-card tab-content">
-        <div class="notepad-tabs">
-            <button class="notepad-tab active" data-tab="바퀴멘터리">바퀴멘터리</button>
-            <button class="notepad-tab" data-tab="짐승육아">짐승육아</button>
-            <button class="notepad-tab" data-tab="그거아세요">그거아세요</button>
-            <button class="notepad-tab" data-tab="메모">메모</button>
-        </div>
-        <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg"></textarea>
+  <div id="notes-section" class="section-card tab-content">
+    <div class="notepad-tabs">
+      <button class="notepad-tab active" data-tab="바퀴멘터리">바퀴멘터리</button>
+      <button class="notepad-tab" data-tab="짐승육아">짐승육아</button>
+      <button class="notepad-tab" data-tab="그거아세요">그거아세요</button>
+      <button class="notepad-tab" data-tab="메모">메모</button>
     </div>
+    <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg"></textarea>
+  </div>
 
-    <div id="bookmarks-section" class="section-card tab-content text-left">
-        <!-- '드래그 앤 드롭'뿐만 아니라 '붙여넣기'도 가능함을 안내합니다. -->
-        <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999999] font-medium cursor-pointer mt-6">
-            <div>이미지 URL을 드래그하거나, 캡쳐/복사 이미지를 붙여넣으세요 (Ctrl+V)</div>
-        </section>
-        <section id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6"></section>
+  <div id="bookmarks-section" class="section-card tab-content text-left">
+    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999999] font-medium cursor-pointer mt-6" tabindex="0" role="button" aria-label="이미지 붙여넣기 영역">
+      <div>이미지 URL을 드래그하거나, 캡쳐/복사 이미지를 붙여넣으세요 (Ctrl/Cmd+V)</div>
+    </section>
+    <section id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6"></section>
+  </div>
+  
+  <!-- 이미지 뷰어 모달 -->
+  <div id="imageModal" class="modal">
+    <div class="modal-content relative">
+      <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+      <img id="modalImage" src="" alt="확대 이미지" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"/>
+      <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">원본 페이지로 이동</button>
     </div>
-    
-    <!-- 모달 -->
-    <div id="taskModal" class="modal">
-        <div class="modal-content">
-            <h2 id="modalTitle" class="text-2xl font-bold mb-4">새 작업</h2>
-            <label for="taskTitle" class="block mb-2">제목:</label>
-            <input type="text" id="taskTitle" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
-            <label for="taskDescription" class="block mb-2">설명:</label>
-            <textarea id="taskDescription" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24"></textarea>
-            <label for="taskDate" class="block mb-2">날짜:</label>
-            <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
-            <div class="flex justify-end gap-2">
-                <button id="saveTaskBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
-                <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-                <button id="deleteTaskBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hidden">삭제</button>
-            </div>
-        </div>
+  </div>
+
+  <!-- 경고 모달 -->
+  <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
+      <p id="modal-message" class="text-white text-lg text-center font-medium"></p>
+      <div class="mt-4 flex justify-center">
+        <button id="modal-close-btn" class="px-4 py-2 bg-[#424242] text-white rounded-md hover:bg-[#525252] focus:outline-none">확인</button>
+      </div>
     </div>
-    
-    <!-- 이미지 뷰어 모달 -->
-    <div id="imageModal" class="modal">
-        <div class="modal-content relative">
-            <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
-            <img id="modalImage" src="" alt="확대 이미지" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"/>
-            <!-- 추가된 버튼: 원본 페이지로 이동 -->
-            <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">
-                원본 페이지로 이동
-            </button>
-        </div>
+  </div>
+
+  <!-- 로딩 오버레이 -->
+  <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-[1001] flex items-center justify-center hidden">
+    <div class="flex flex-col items-center">
+      <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+      <p class="text-white mt-4 text-lg">데이터를 불러오는 중...</p>
     </div>
+  </div>
 
-    <!-- 경고 모달 -->
-    <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
-            <p id="modal-message" class="text-white text-lg text-center font-medium"></p>
-            <div class="mt-4 flex justify-center">
-                <button id="modal-close-btn" class="px-4 py-2 bg-[#424242] text-white rounded-md hover:bg-[#525252] focus:outline-none">확인</button>
-            </div>
-        </div>
-    </div>
+  <!-- ===== 앱 스크립트 (UI/로직) ===== -->
+  <script>
+    // 전역 상태
+    window.customTasks = window.customTasks || [];
+    window.taskStatus = window.taskStatus || {};
+    window.__notesTabs = window.__notesTabs || {};
+    window.imageBookmarks = window.imageBookmarks || [];
+    window.currentTask = null;
+    let currentDate = new Date();
+    window.isAuthReady = false;
 
-    <!-- 로딩 오버레이 (캘린더용) -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-[1001] flex items-center justify-center hidden">
-        <div class="flex flex-col items-center">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
-            <p class="text-white mt-4 text-lg">데이터를 불러오는 중...</p>
-        </div>
-    </div>
+    // UI 요소
+    const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const mainNotepadTabs = document.querySelectorAll('#notes-section .notepad-tabs .notepad-tab');
+    const notesArea = document.getElementById('notesArea');
+    const dragArea = document.getElementById('drag-area');
+    const imageGrid = document.getElementById('image-grid');
+    const imageModal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const closeImageModalBtn = document.getElementById('closeImageModalBtn');
+    const goToPageBtn = document.getElementById('goToPageBtn');
 
-    <!-- ===== 앱 스크립트 (UI/로직) ===== -->
-    <script>
-        // 전역 상태(동기화 기준은 window.*로 통일)
-        window.customTasks = window.customTasks || [];
-        window.taskStatus = window.taskStatus || {};
-        window.__notesTabs = window.__notesTabs || {};
-        window.imageBookmarks = window.imageBookmarks || [];
-        window.currentTask = null;
-        let currentDate = new Date();
-        window.isAuthReady = false; // Firebase 인증 상태 로딩 여부
+    // 모달 및 피드백(전역으로 노출)
+    window.showFeedbackMessage = (message) => {
+      const el = document.createElement('div');
+      el.textContent = message;
+      el.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;max-width:90%;";
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2000);
+    };
+    window.showAlert = (msg) => {
+      document.getElementById('modal-message').textContent = msg;
+      document.getElementById('alert-modal').classList.remove('hidden');
+    };
+    window.hideAlert = () => {
+      document.getElementById('alert-modal').classList.add('hidden');
+    };
+    document.getElementById('modal-close-btn').addEventListener('click', window.hideAlert);
 
-        // UI 요소
-        const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
-        const tabContents = document.querySelectorAll('.tab-content');
-        const mainNotepadTabs = document.querySelectorAll('#notes-section .notepad-tabs .notepad-tab');
-        const notesArea = document.getElementById('notesArea');
-        const dragArea = document.getElementById('drag-area');
-        const imageGrid = document.getElementById('image-grid');
+    // 이미지 모달
+    const openImageModal = (imageUrl, pageUrl) => {
+      modalImage.src = imageUrl;
+      if (pageUrl) {
+        goToPageBtn.style.display = 'block';
+        goToPageBtn.onclick = () => window.open(pageUrl, '_blank');
+      } else {
+        goToPageBtn.style.display = 'none';
+      }
+      imageModal.style.display = 'flex';
+    };
+    const closeImageModal = () => { imageModal.style.display = 'none'; };
 
-        const imageModal = document.getElementById('imageModal');
-        const modalImage = document.getElementById('modalImage');
-        const closeImageModalBtn = document.getElementById('closeImageModalBtn');
-        const goToPageBtn = document.getElementById('goToPageBtn'); // 추가된 버튼
+    // 탭 제어
+    function showTab(tabId){
+      tabContents.forEach(c=>c.classList.remove('active'));
+      tabButtons.forEach(b=>b.classList.remove('active'));
+      document.getElementById(`${tabId}-section`).classList.add('active');
+      document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`)?.classList.add('active');
+    }
+    showTab('calendar');
+    tabButtons.forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.tab)));
 
-        // 모달 및 피드백
-        const showFeedbackMessage = (message) => {
-            const el = document.createElement('div');
-            el.textContent = message;
-            el.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;max-width:90%;";
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 2000);
-        };
-        const showAlert = (msg) => {
-            document.getElementById('modal-message').textContent = msg;
-            document.getElementById('alert-modal').classList.remove('hidden');
-        };
-        const hideAlert = () => {
-            document.getElementById('alert-modal').classList.add('hidden');
-        };
-        document.getElementById('modal-close-btn').addEventListener('click', hideAlert);
+    // 메모 탭
+    mainNotepadTabs.forEach(tab=>{
+      tab.addEventListener('click',()=>{
+        mainNotepadTabs.forEach(t=>t.classList.remove('active'));
+        tab.classList.add('active');
+        window.activeTab = tab.dataset.tab;
+        if (window.__notesTabs) notesArea.value = window.__notesTabs[window.activeTab] || '';
+      });
+    });
 
-        // 이미지 모달 열기/닫기
-        const openImageModal = (imageUrl, pageUrl) => {
-            modalImage.src = imageUrl;
-            // 원본 페이지 URL이 있을 때만 버튼을 보이게 함
-            if (pageUrl) {
-                goToPageBtn.style.display = 'block';
-                goToPageBtn.onclick = () => window.open(pageUrl, '_blank');
-            } else {
-                goToPageBtn.style.display = 'none';
-            }
-            imageModal.style.display = 'flex';
-        };
-        const closeImageModal = () => {
-            imageModal.style.display = 'none';
-        };
+    // KST 유틸
+    const TZ='Asia/Seoul';
+    function ymdKST(date){return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date)}
+    function toKST(date){return new Date(date.toLocaleString('en-US',{timeZone:TZ}))}
+    function countWeekdaysBetweenKST(startTime,endTime){
+      let count=0;const start=toKST(new Date(Math.min(startTime,endTime)));
+      const end=toKST(new Date(Math.max(startTime,endTime)));const cur=new Date(start);
+      while(cur<=end){const d=cur.getDay();if(d>=0&&d<=4)count++;cur.setDate(cur.getDate()+1)}return count;
+    }
 
-        // 탭 제어 함수
-        function showTab(tabId) {
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-            });
-            tabButtons.forEach(button => {
-                button.classList.remove('active');
-            });
-            document.getElementById(`${tabId}-section`).classList.add('active');
-            const buttonToActivate = document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`);
-            if (buttonToActivate) {
-                buttonToActivate.classList.add('active');
-            }
+    const fixedSchedules=[
+      {title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},
+      {title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}
+    ];
+
+    const taskModal=document.getElementById('taskModal');
+    const cancelBtn=document.getElementById('cancelBtn');
+    const saveTaskBtn=document.getElementById('saveTaskBtn');
+    const deleteTaskBtn=document.getElementById('deleteTaskBtn');
+    const taskTitleInput=document.getElementById('taskTitle');
+    const taskDescriptionInput=document.getElementById('taskDescription');
+    const taskDateInput=document.getElementById('taskDate');
+
+    const attachEventListeners=()=>{
+      document.getElementById('prevMonthBtn')?.addEventListener('click',()=>{currentDate.setMonth(currentDate.getMonth()-1);renderCalendar()});
+      document.getElementById('nextMonthBtn')?.addEventListener('click',()=>{currentDate.setMonth(currentDate.getMonth()+1);renderCalendar()});
+      document.getElementById('addTaskBtn')?.addEventListener('click',()=>openModal());
+      if(notesArea){
+        notesArea.addEventListener('input',()=>window.cloudSaveNotesDebounced&&window.cloudSaveNotesDebounced());
+        notesArea.addEventListener('blur',()=>window.cloudSaveNotes&&window.cloudSaveNotes());
+      }
+      cancelBtn.addEventListener('click',closeModal);
+      saveTaskBtn.addEventListener('click',saveTask);
+      deleteTaskBtn.addEventListener('click',()=>window.deleteTask&&window.deleteTask());
+      taskModal.addEventListener('click',(e)=>{if(e.target===taskModal)closeModal()});
+      closeImageModalBtn.addEventListener('click',closeImageModal);
+      imageModal.addEventListener('click',(e)=>{if(e.target===imageModal||e.target===modalImage)closeImageModal()});
+
+      // 붙여넣기 영역 포커스
+      dragArea.addEventListener('click',()=>dragArea.focus());
+    };
+
+    const renderCalendar=()=>{
+      const year=currentDate.getFullYear();const month=currentDate.getMonth();
+      const currentMonthYear=document.getElementById('currentMonthYear');
+      const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
+      currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
+      const firstDay=toKST(new Date(year,month,1)).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
+      for(let i=0;i<firstDay;i++){const empty=document.createElement('div');empty.className='calendar-day';calendarGrid.appendChild(empty)}
+      for(let day=1;day<=daysInMonth;day++){
+        const dayDiv=document.createElement('div');dayDiv.classList.add('calendar-day','relative');
+        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=toKST(thisDate).getDay();
+        const today=toKST(new Date()); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
+        const dayNumberSpan=document.createElement('span');dayNumberSpan.classList.add('day-number');dayNumberSpan.textContent=day;dayDiv.appendChild(dayNumberSpan);
+
+        if(dayOfWeek>=0&&dayOfWeek<=4){
+          const milestoneDate=new Date('2025-09-01');const current=thisDate;
+          const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(),current.getTime());
+          const milestoneEpisode=2014;
+          const episodeNumber=(toKST(current)>=toKST(milestoneDate))?milestoneEpisode+weekdaysBetween-1:milestoneEpisode-(weekdaysBetween-1);
+          const epItem=document.createElement('div');epItem.classList.add('task-item','episode-task');
+          epItem.textContent=`${episodeNumber}화`;
+          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`;
+          if((window.taskStatus||{})[key]) epItem.classList.add('complete');
+          epItem.addEventListener('click',async(e)=>{e.stopPropagation();if(!window.ensureLogin||!window.ensureLogin())return;window.taskStatus=window.taskStatus||{};window.taskStatus[key]=!window.taskStatus[key];await window.cloudSaveStateOnly();renderCalendar()});
+          dayDiv.appendChild(epItem);
         }
 
-        // 초기 실행: 달력 탭 활성화
-        showTab('calendar');
-
-        // 탭 버튼 이벤트 리스너
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                showTab(button.dataset.tab);
-            });
+        fixedSchedules.forEach(sch=>{
+          if(sch.daysOfWeek.includes(dayOfWeek)){
+            const t=document.createElement('div');t.classList.add('task-item',sch.colorClass);t.textContent=sch.title;
+            const key=`${fullDate}_${sch.title}`; if((window.taskStatus||{})[key]) t.classList.add('complete');
+            t.addEventListener('click',async(e)=>{e.stopPropagation();if(!window.ensureLogin||!window.ensureLogin())return;window.taskStatus=window.taskStatus||{};window.taskStatus[key]=!window.taskStatus[key];await window.cloudSaveStateOnly();renderCalendar()});
+            dayDiv.appendChild(t);
+          }
         });
 
-        // 메모 탭 내부의 탭 이벤트 리스너
-        mainNotepadTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                mainNotepadTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                window.activeTab = tab.dataset.tab;
-                if (window.__notesTabs) {
-                    notesArea.value = window.__notesTabs[window.activeTab] || '';
-                } else if (window.cloudLoadNotes) {
-                    window.cloudLoadNotes();
-                }
-            });
+        (window.customTasks||[]).filter(t=>t.date===fullDate).forEach(task=>{
+          const el=document.createElement('div');el.classList.add('task-item','custom-task');el.textContent=task.title;if(task.complete) el.classList.add('complete');
+          el.addEventListener('click',async(e)=>{if(e.detail===1){if(!window.ensureLogin||!window.ensureLogin())return;task.complete=!task.complete;await window.cloudSaveAll();renderCalendar()}else if(e.detail===2){openModal(task)}});
+          dayDiv.appendChild(el);
         });
 
-        // 서울 시간(Asia/Seoul) 고정 키/요일 계산
-        const TZ = 'Asia/Seoul';
-        function ymdKST(date) {
-            return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+        dayDiv.addEventListener('click',(e)=>{if(e.target.classList.contains('calendar-day')||e.target.classList.contains('day-number')) openModal({date:fullDate})});
+        calendarGrid.appendChild(dayDiv);
+      }
+    };
+
+    const renderImageBookmarks=()=>{
+      imageGrid.innerHTML='';
+      (window.imageBookmarks||[]).forEach(d=>{
+        const imageUrl=d.url; const pageUrl=d.pageUrl; if(!imageUrl) return;
+        const card=document.createElement('div');card.className='image-card relative group cursor-pointer';
+        card.innerHTML=`<div class="block w-full h-40"><img src="${imageUrl}" alt="북마크된 이미지" class="w-full h-full object-cover rounded-lg shadow-md"/></div>
+          <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${d.id}" data-file-path="${d.filePath||''}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>`;
+        imageGrid.appendChild(card);
+        card.addEventListener('click',()=>openImageModal(imageUrl,pageUrl));
+      });
+      imageGrid.querySelectorAll('button[data-id]').forEach(btn=>{
+        btn.onclick=async(e)=>{e.stopPropagation();const id=e.currentTarget.dataset.id;const filePath=e.currentTarget.dataset.filePath;try{if(window.deleteImage) await window.deleteImage(id,filePath)}catch(err){console.error(err);window.showAlert('이미지 삭제 중 오류가 발생했습니다.')}};
+      });
+    };
+
+    const openModal=(task=null)=>{
+      window.currentTask=task;
+      if(task&&task.id){
+        document.getElementById('modalTitle').textContent='작업 수정';
+        taskTitleInput.value=task.title;taskDescriptionInput.value=task.description||'';taskDateInput.value=task.date||'';deleteTaskBtn.classList.remove('hidden');
+      }else if(task&&task.date){
+        document.getElementById('modalTitle').textContent='새 작업';
+        taskTitleInput.value='';taskDescriptionInput.value='';taskDateInput.value=task.date;deleteTaskBtn.classList.add('hidden');
+      }else{
+        document.getElementById('modalTitle').textContent='새 작업';
+        taskTitleInput.value='';taskDescriptionInput.value='';taskDateInput.value='';deleteTaskBtn.classList.add('hidden');
+      }
+      taskModal.style.display='flex';
+    };
+    const closeModal=()=>{taskModal.style.display='none'};
+
+    const saveTask=async ()=>{
+      if(!window.ensureLogin||!window.ensureLogin()) return;
+      window.customTasks=window.customTasks||[]; window.taskStatus=window.taskStatus||{};
+      const title=taskTitleInput.value.trim(); const description=taskDescriptionInput.value.trim(); const date=taskDateInput.value;
+      if(!title){window.showFeedbackMessage('제목을 입력해주세요.');return}
+      const data={id:window.currentTask&&window.currentTask.id?window.currentTask.id:Date.now(),title,description,date,complete:window.currentTask?.complete??false};
+      const idx=window.customTasks.findIndex(t=>t.id===data.id); if(idx>-1) window.customTasks[idx]=data; else window.customTasks.push(data);
+      await window.cloudSaveAll(); closeModal(); renderCalendar();
+    };
+
+    // 붙여넣기 보강
+    function isValidUrl(url){try{new URL(url);return true}catch(e){return false}}
+    async function handlePaste(e){
+      const cd=e.clipboardData||e.originalEvent?.clipboardData; if(!cd) return;
+
+      if(cd.files?.length){
+        for(const f of cd.files){ if(f.type?.startsWith('image/')){ await addImage(f,null); e.preventDefault(); return; } }
+      }
+      const items=cd.items||[];
+      for(const it of items){
+        if(it.kind==='file'&&it.type?.startsWith('image/')){ const file=it.getAsFile?.(); if(file){ await addImage(file,null); e.preventDefault(); return; } }
+      }
+      const txt=cd.getData?.('text/uri-list')||cd.getData?.('text/plain')||'';
+      const looksImg=txt.startsWith('data:image/')||/\.(jpe?g|png|gif|webp|svg)(\?|#|$)/i.test(txt);
+      if(txt&&looksImg){ await addImage(txt,txt); e.preventDefault(); return; }
+      window.showAlert('붙여넣기한 항목에 유효한 이미지가 없습니다.');
+    }
+
+    // 드래그&드롭
+    dragArea.addEventListener('dragover',(e)=>{e.preventDefault();dragArea.classList.add('active')});
+    dragArea.addEventListener('dragleave',()=>{dragArea.classList.remove('active')});
+    dragArea.addEventListener('drop',(e)=>{
+      e.preventDefault();dragArea.classList.remove('active');
+      const url=e.dataTransfer.getData('URL'); const html=e.dataTransfer.getData('text/html');
+      const parsed=new DOMParser().parseFromString(html||'','text/html'); const img=parsed.querySelector('img');
+      if(img?.src){const pageUrl=e.dataTransfer.getData('text/uri-list')||null; addImage(img.src,pageUrl)}
+      else if(url){ if(/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url)) addImage(url,url); else window.showAlert('유효한 이미지 URL이 아닙니다.')}
+      else{window.showAlert('이미지를 드래그하거나 유효한 이미지 URL을 드롭하세요.')}
+    });
+    // 붙여넣기 이벤트 등록
+    dragArea.addEventListener('paste',handlePaste);
+    document.addEventListener('paste',handlePaste,true);
+
+    (function init(){attachEventListeners();renderCalendar()})();
+  </script>
+
+  <!-- ===== Firebase SDKs & 연동 코드 (모듈) ===== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, deleteObject, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
+      authDomain: "comicschedule-dfec7.firebaseapp.com",
+      projectId: "comicschedule-dfec7",
+      storageBucket: "comicschedule-dfec7.appspot.com",
+      messagingSenderId: "1084611276816",
+      appId: "1:1084611276816:web:aca83237bafa971ed1fa95",
+      measurementId: "G-ZNZZQRJZF9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    const signInBtn = document.getElementById('signInBtn');
+    const signOutBtn = document.getElementById('signOutBtn');
+    const userInfoEl = document.getElementById('userInfo');
+    const loadingOverlay = document.getElementById('loading-overlay');
+
+    const provider = new GoogleAuthProvider();
+
+    async function doSignIn(){
+      try{ await signInWithPopup(auth, provider); }
+      catch(e){
+        console.error('Popup sign-in failed:', e);
+        if(e.code==='auth/popup-blocked' || e.code==='auth/unauthorized-domain'){ await signInWithRedirect(auth, provider); }
+        else{ window.showAlert('로그인 오류: ' + (e.message || e.code)); }
+      }
+    }
+    getRedirectResult(auth).catch(e=>console.error('Redirect sign-in error:', e));
+
+    signInBtn.onclick=()=>doSignIn();
+    signOutBtn.onclick=()=>signOut(auth);
+
+    window.cloudRefs = async () => {
+      const uid = auth.currentUser.uid;
+      const userPath = `users/${uid}`;
+      return {
+        tasksCol: collection(db, `${userPath}/customTasks`),
+        stateDoc: doc(db, `${userPath}/meta/appState`),
+        imagesCol: collection(db, `${userPath}/images`),
+      };
+    };
+
+    window.ensureLogin = () => {
+      if (!window.isAuthReady) { window.showAlert('데이터 로딩 중입니다. 잠시만 기다려 주세요.'); return false; }
+      if (!auth.currentUser) { window.showAlert('로그인 후 이용해 주세요.'); return false; }
+      return true;
+    };
+
+    let notesTimer=null;
+    window.cloudSaveNotesDebounced=function(){ clearTimeout(notesTimer); notesTimer=setTimeout(()=>window.cloudSaveNotes&&window.cloudSaveNotes(),800); };
+
+    window.cloudSaveAll = async () => {
+      if (!ensureLogin()) return;
+      const { tasksCol, stateDoc } = await cloudRefs();
+      window.taskStatus = window.taskStatus || {};
+      window.customTasks = window.customTasks || [];
+      await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge: true });
+      const ops = window.customTasks.map(t => setDoc(doc(tasksCol, String(t.id)), t, { merge: true }));
+      await Promise.all(ops);
+    };
+
+    window.cloudSaveStateOnly = async () => {
+      if (!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      window.taskStatus = window.taskStatus || {};
+      await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge: true });
+    };
+
+    window.cloudSaveNotes = async () => {
+      if (!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const notesArea = document.getElementById('notesArea');
+      const st = await getDoc(stateDoc);
+      const prev = st.exists() ? (st.data() || {}) : {};
+      const notesTabs = prev.notesTabs || {};
+      const activeTabButton = document.querySelector('#notes-section .notepad-tab.active');
+      if (activeTabButton) notesTabs[activeTabButton.dataset.tab] = notesArea?.value ?? '';
+      await setDoc(stateDoc, { notesTabs }, { merge: true });
+    };
+
+    window.deleteTask = async () => {
+      if (!ensureLogin() || !window.currentTask?.id) { if (typeof closeModal==='function') closeModal(); return; }
+      const { tasksCol } = await cloudRefs();
+      await deleteDoc(doc(tasksCol, String(window.currentTask.id)));
+      window.customTasks = (window.customTasks || []).filter(t => t.id !== window.currentTask.id);
+      if (typeof closeModal==='function') closeModal();
+      if (typeof renderCalendar==='function') renderCalendar();
+    };
+
+    window.deleteImage = async (id, filePath) => {
+      if (!ensureLogin()) return;
+      try{
+        const { imagesCol } = await cloudRefs();
+        await deleteDoc(doc(imagesCol, id));
+        if (filePath) await deleteObject(ref(storage, filePath));
+        window.showFeedbackMessage('이미지가 삭제되었습니다.');
+      }catch(err){
+        console.error("Error deleting image: ", err);
+        window.showAlert('이미지 삭제 중 오류가 발생했습니다.');
+      }
+    };
+
+    async function addImage(fileOrUrl, pageUrl){
+      if (!window.isAuthReady || !auth.currentUser) { window.showAlert('로그인 후 이용해 주세요.'); return; }
+      try{
+        const { imagesCol } = await window.cloudRefs();
+        let url; let filePath=null;
+        if (typeof fileOrUrl === 'string'){ url = fileOrUrl; }
+        else{
+          const uid = auth.currentUser.uid;
+          const fileName = `${uid}/${Date.now()}-${fileOrUrl.name || 'clipboard-image.png'}`;
+          filePath = `images/${fileName}`;
+          const fileRef = ref(storage, filePath);
+          await uploadBytes(fileRef, fileOrUrl);
+          url = await getDownloadURL(fileRef);
+          window.showFeedbackMessage('이미지가 성공적으로 업로드되었습니다!');
         }
-        function toKST(date) {
-            return new Date(date.toLocaleString('en-US', { timeZone: TZ }));
+        await addDoc(imagesCol, { url, pageUrl: pageUrl || null, filePath, timestamp: new Date() });
+        if (typeof fileOrUrl === 'string') window.showFeedbackMessage('이미지 북마크에 추가되었습니다!');
+      }catch(err){
+        console.error("Error adding document: ", err);
+        window.showAlert('이미지 추가에 실패했습니다. 로그인 상태를 확인하세요.');
+      }
+    }
+    window.addImage = addImage; // 비모듈 스크립트에서 호출 가능하도록
+
+    let __unsubs=[];
+    async function setupRealtimeSync(){
+      const { tasksCol, stateDoc, imagesCol } = await window.cloudRefs();
+      __unsubs.forEach(fn=>{ try{fn()}catch{} }); __unsubs=[];
+      const unsubTasks = onSnapshot(tasksCol,(snap)=>{ window.customTasks = snap.docs.map(d=>({id:d.id,...d.data()})); if (typeof renderCalendar==='function') renderCalendar(); });
+      __unsubs.push(unsubTasks);
+      const unsubState = onSnapshot(stateDoc,(ds)=>{ const data = ds.exists() ? (ds.data()||{}) : {}; window.taskStatus = data.taskStatus || {}; window.__notesTabs = data.notesTabs || {}; const notesArea = document.getElementById('notesArea'); const activeTabButton = document.querySelector('#notes-section .notepad-tab.active'); if (notesArea && activeTabButton) notesArea.value = window.__notesTabs[activeTabButton.dataset.tab] || ''; if (typeof renderCalendar==='function') renderCalendar(); });
+      __unsubs.push(unsubState);
+      const unsubImages = onSnapshot(imagesCol,(snap)=>{ window.imageBookmarks = snap.docs.map(d=>({id:d.id,...d.data()})); if (typeof renderImageBookmarks==='function') renderImageBookmarks(); });
+      __unsubs.push(unsubImages);
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      try{
+        loadingOverlay.classList.remove('hidden');
+        window.isAuthReady = false;
+        if (user){
+          userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
+          signInBtn.classList.add('hidden');
+          signOutBtn.classList.remove('hidden');   // 오타 수정
+          await setupRealtimeSync();
+        } else {
+          userInfoEl.textContent = '';
+          signOutBtn.classList.add('hidden');
+          signInBtn.classList.remove('hidden');
+          __unsubs.forEach(fn=>{ try{fn()}catch{} }); __unsubs=[];
+          window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={};
+          if (typeof renderCalendar==='function') renderCalendar();
+          if (typeof renderImageBookmarks==='function') renderImageBookmarks();
+          const notesArea = document.getElementById('notesArea'); if(notesArea) notesArea.value='';
         }
-        function countWeekdaysBetweenKST(startTime, endTime) {
-            let count = 0;
-            const start = toKST(new Date(Math.min(startTime, endTime)));
-            const end = toKST(new Date(Math.max(startTime, endTime)));
-            const cur = new Date(start);
-            while (cur <= end) {
-                const d = cur.getDay();
-                if (d >= 0 && d <= 4) count++;
-                cur.setDate(cur.getDate() + 1);
-            }
-            return count;
-        }
-
-        const fixedSchedules = [
-            { title: '쇼츠', daysOfWeek: [1, 3, 5], colorClass: 'recurring-shorts' },
-            { title: '웹툰', daysOfWeek: [2, 4, 6], colorClass: 'recurring-instatoon' }
-        ];
-
-        const taskModal = document.getElementById('taskModal');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const saveTaskBtn = document.getElementById('saveTaskBtn');
-        const deleteTaskBtn = document.getElementById('deleteTaskBtn');
-        const taskTitleInput = document.getElementById('taskTitle');
-        const taskDescriptionInput = document.getElementById('taskDescription');
-        const taskDateInput = document.getElementById('taskDate');
-
-        const attachEventListeners = () => {
-            const prevMonthBtn = document.getElementById('prevMonthBtn');
-            const nextMonthBtn = document.getElementById('nextMonthBtn');
-            const addTaskBtn = document.getElementById('addTaskBtn');
-
-            prevMonthBtn?.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
-            nextMonthBtn?.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
-            addTaskBtn?.addEventListener('click', () => openModal());
-
-            if (notesArea) {
-                notesArea.addEventListener('input', () => window.cloudSaveNotesDebounced && window.cloudSaveNotesDebounced());
-                notesArea.addEventListener('blur', () => window.cloudSaveNotes && window.cloudSaveNotes());
-            }
-
-            cancelBtn.addEventListener('click', closeModal);
-            saveTaskBtn.addEventListener('click', saveTask);
-            deleteTaskBtn.addEventListener('click', () => window.deleteTask && window.deleteTask());
-            taskModal.addEventListener('click', (e) => { if (e.target === taskModal) closeModal(); });
-
-            closeImageModalBtn.addEventListener('click', closeImageModal);
-            imageModal.addEventListener('click', (e) => {
-                if (e.target === imageModal || e.target === modalImage) {
-                    closeImageModal();
-                }
-            });
-        };
-
-        const renderCalendar = () => {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const currentMonthYear = document.getElementById('currentMonthYear');
-            const calendarGrid = document.getElementById('calendarGrid');
-            if (!currentMonthYear || !calendarGrid) return;
-
-            currentMonthYear.textContent = `${year}년 ${month + 1}월`;
-            calendarGrid.innerHTML = '';
-
-            const firstDay = toKST(new Date(year, month, 1)).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            for (let i = 0; i < firstDay; i++) {
-                const empty = document.createElement('div');
-                empty.className = 'calendar-day';
-                calendarGrid.appendChild(empty);
-            }
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.classList.add('calendar-day', 'relative');
-
-                const thisDate = new Date(year, month, day);
-                const fullDate = ymdKST(thisDate);
-                const dayOfWeek = toKST(thisDate).getDay();
-
-                const today = toKST(new Date());
-                const isToday = (ymdKST(thisDate) === ymdKST(today));
-                if (isToday) dayDiv.classList.add('today');
-
-                const dayNumberSpan = document.createElement('span');
-                dayNumberSpan.classList.add('day-number');
-                dayNumberSpan.textContent = day;
-                dayDiv.appendChild(dayNumberSpan);
-
-                if (dayOfWeek >= 0 && dayOfWeek <= 4) {
-                    const milestoneDate = new Date('2025-09-01');
-                    const current = thisDate;
-                    const weekdaysBetween = countWeekdaysBetweenKST(milestoneDate.getTime(), current.getTime());
-                    const milestoneEpisode = 2014;
-                    const episodeNumber = (toKST(current) >= toKST(milestoneDate)) ? milestoneEpisode + weekdaysBetween - 1 : milestoneEpisode - (weekdaysBetween - 1);
-                    const epItem = document.createElement('div');
-                    epItem.classList.add('task-item', 'episode-task');
-                    epItem.textContent = `${episodeNumber}화`;
-                    const key = `${fullDate}_바퀴멘터리 ${episodeNumber}화`;
-                    if ((window.taskStatus || {})[key]) epItem.classList.add('complete');
-                    epItem.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        if (!window.ensureLogin || !window.ensureLogin()) return;
-                        window.taskStatus = window.taskStatus || {};
-                        window.taskStatus[key] = !window.taskStatus[key];
-                        await window.cloudSaveStateOnly();
-                        renderCalendar();
-                    });
-                    dayDiv.appendChild(epItem);
-                }
-
-                fixedSchedules.forEach(sch => {
-                    if (sch.daysOfWeek.includes(dayOfWeek)) {
-                        const t = document.createElement('div');
-                        t.classList.add('task-item', sch.colorClass);
-                        t.textContent = sch.title;
-                        const key = `${fullDate}_${sch.title}`;
-                        if ((window.taskStatus || {})[key]) t.classList.add('complete');
-                        t.addEventListener('click', async (e) => {
-                            e.stopPropagation();
-                            if (!window.ensureLogin || !window.ensureLogin()) return;
-                            window.taskStatus = window.taskStatus || {};
-                            window.taskStatus[key] = !window.taskStatus[key];
-                            await window.cloudSaveStateOnly();
-                            renderCalendar();
-                        });
-                        dayDiv.appendChild(t);
-                    }
-                });
-
-                (window.customTasks || []).filter(t => t.date === fullDate).forEach(task => {
-                    const el = document.createElement('div');
-                    el.classList.add('task-item', 'custom-task');
-                    el.textContent = task.title;
-                    if (task.complete) el.classList.add('complete');
-                    el.addEventListener('click', async (e) => {
-                        if (e.detail === 1) {
-                            if (!window.ensureLogin || !window.ensureLogin()) return;
-                            task.complete = !task.complete;
-                            await window.cloudSaveAll();
-                            renderCalendar();
-                        } else if (e.detail === 2) {
-                            openModal(task);
-                        }
-                    });
-                    dayDiv.appendChild(el);
-                });
-
-                dayDiv.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('calendar-day') || e.target.classList.contains('day-number')) {
-                        openModal({ date: fullDate });
-                    }
-                });
-                calendarGrid.appendChild(dayDiv);
-            }
-        };
-
-        const renderImageBookmarks = () => {
-            imageGrid.innerHTML = '';
-            (window.imageBookmarks || []).forEach(d => {
-                const imageUrl = d.url;
-                const pageUrl = d.pageUrl; // 원본 페이지 URL
-                if (!imageUrl) return;
-                const card = document.createElement('div');
-                card.className = 'image-card relative group cursor-pointer';
-                card.innerHTML = `
-                    <div class="block w-full h-40">
-                        <img src="${imageUrl}" alt="북마크된 이미지" class="w-full h-full object-cover rounded-lg shadow-md"/>
-                    </div>
-                    <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${d.id}" data-file-path="${d.filePath || ''}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>`;
-                imageGrid.appendChild(card);
-
-                // 클릭 이벤트 리스너 추가
-                card.addEventListener('click', () => {
-                    openImageModal(imageUrl, pageUrl); // URL과 함께 원본 페이지 URL 전달
-                });
-            });
-            imageGrid.querySelectorAll('button[data-id]').forEach(btn => {
-                btn.onclick = async (e) => {
-                    e.stopPropagation();
-                    const id = e.currentTarget.dataset.id;
-                    const filePath = e.currentTarget.dataset.filePath;
-                    try {
-                        if (window.deleteImage) await window.deleteImage(id, filePath);
-                    } catch (err) {
-                        console.error(err);
-                        showAlert('이미지 삭제 중 오류가 발생했습니다.');
-                    }
-                };
-            });
-        }
-
-        const openModal = (task = null) => {
-            window.currentTask = task;
-            if (task && task.id) {
-                document.getElementById('modalTitle').textContent = '작업 수정';
-                taskTitleInput.value = task.title;
-                taskDescriptionInput.value = task.description || '';
-                taskDateInput.value = task.date || '';
-                deleteTaskBtn.classList.remove('hidden');
-            } else if (task && task.date) {
-                document.getElementById('modalTitle').textContent = '새 작업';
-                taskTitleInput.value = '';
-                taskDescriptionInput.value = '';
-                taskDateInput.value = task.date;
-                deleteTaskBtn.classList.add('hidden');
-            } else {
-                document.getElementById('modalTitle').textContent = '새 작업';
-                taskTitleInput.value = '';
-                taskDescriptionInput.value = '';
-                taskDateInput.value = '';
-                deleteTaskBtn.classList.add('hidden');
-            }
-            taskModal.style.display = 'flex';
-        };
-        const closeModal = () => { taskModal.style.display = 'none'; };
-
-        const saveTask = async () => {
-            if (!window.ensureLogin || !window.ensureLogin()) return;
-
-            window.customTasks = window.customTasks || [];
-            window.taskStatus = window.taskStatus || {};
-
-            const title = taskTitleInput.value.trim();
-            const description = taskDescriptionInput.value.trim();
-            const date = taskDateInput.value;
-            if (!title) { showFeedbackMessage('제목을 입력해주세요.'); return; }
-
-            const data = {
-                id: window.currentTask && window.currentTask.id ? window.currentTask.id : Date.now(),
-                title,
-                description,
-                date,
-                complete: window.currentTask?.complete ?? false
-            };
-
-            const idx = window.customTasks.findIndex(t => t.id === data.id);
-            if (idx > -1) window.customTasks[idx] = data;
-            else window.customTasks.push(data);
-
-            await window.cloudSaveAll();
-            closeModal();
-            renderCalendar();
-        };
-
-        (function init() {
-            attachEventListeners();
-            renderCalendar();
-        })();
-    </script>
-
-    <!-- ===== Firebase SDKs & 연동 코드 (모듈 / 실시간 동기화) ===== -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, deleteObject, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
-            authDomain: "comicschedule-dfec7.firebaseapp.com",
-            projectId: "comicschedule-dfec7",
-            storageBucket: "comicschedule-dfec7.appspot.com",
-            messagingSenderId: "1084611276816",
-            appId: "1:1084611276816:web:aca83237bafa971ed1fa95",
-            measurementId: "G-ZNZZQRJZF9"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const storage = getStorage(app); // Storage SDK 초기화
-
-        const signInBtn = document.getElementById('signInBtn');
-        const signOutBtn = document.getElementById('signOutBtn');
-        const userInfoEl = document.getElementById('userInfo');
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const dragArea = document.getElementById('drag-area');
-        const imageGrid = document.getElementById('image-grid');
-
-        const provider = new GoogleAuthProvider();
-
-        async function doSignIn() {
-            try { await signInWithPopup(auth, provider); } catch (e) {
-                console.error('Popup sign-in failed:', e);
-                if (e.code === 'auth/popup-blocked' || e.code === 'auth/unauthorized-domain') {
-                    await signInWithRedirect(auth, provider);
-                } else {
-                    document.getElementById('modal-message').textContent = '로그인 오류: ' + (e.message || e.code);
-                    document.getElementById('alert-modal').classList.remove('hidden');
-                }
-            }
-        }
-        getRedirectResult(auth).catch(e => console.error('Redirect sign-in error:', e));
-
-        signInBtn.onclick = () => doSignIn();
-        signOutBtn.onclick = () => signOut(auth);
-
-        window.cloudRefs = async () => {
-            const uid = auth.currentUser.uid;
-            const userPath = `users/${uid}`;
-            return {
-                tasksCol: collection(db, `${userPath}/customTasks`),
-                stateDoc: doc(db, `${userPath}/meta/appState`),
-                imagesCol: collection(db, `${userPath}/images`),
-            };
-        };
-        
-        // 로그인 상태와 데이터 로딩이 모두 완료되었는지 확인하는 함수
-        window.ensureLogin = () => {
-            if (!window.isAuthReady) {
-                showAlert('데이터 로딩 중입니다. 잠시만 기다려 주세요.');
-                return false;
-            }
-            if (!auth.currentUser) {
-                showAlert('로그인 후 이용해 주세요.');
-                return false;
-            }
-            return true;
-        };
-
-        let notesTimer = null;
-        window.cloudSaveNotesDebounced = function () {
-            clearTimeout(notesTimer);
-            notesTimer = setTimeout(() => window.cloudSaveNotes && window.cloudSaveNotes(), 800);
-        };
-
-        window.cloudSaveAll = async () => {
-            if (!ensureLogin()) return;
-            const { tasksCol, stateDoc } = await cloudRefs();
-            window.taskStatus = window.taskStatus || {};
-            window.customTasks = window.customTasks || [];
-            await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge: true });
-            const ops = window.customTasks.map(t => setDoc(doc(tasksCol, String(t.id)), t, { merge: true }));
-            await Promise.all(ops);
-        };
-
-        window.cloudSaveStateOnly = async () => {
-            if (!ensureLogin()) return;
-            const { stateDoc } = await cloudRefs();
-            window.taskStatus = window.taskStatus || {};
-            await setDoc(stateDoc, { taskStatus: window.taskStatus }, { merge: true });
-        };
-
-        window.cloudSaveNotes = async () => {
-            if (!ensureLogin()) return;
-            const { stateDoc } = await cloudRefs();
-            const notesArea = document.getElementById('notesArea');
-            const st = await getDoc(stateDoc);
-            const prev = st.exists() ? (st.data() || {}) : {};
-            const notesTabs = prev.notesTabs || {};
-            const activeTabButton = document.querySelector('#notes-section .notepad-tab.active');
-            if (activeTabButton) {
-                notesTabs[activeTabButton.dataset.tab] = notesArea?.value ?? '';
-            }
-            await setDoc(stateDoc, { notesTabs }, { merge: true });
-        };
-
-        window.deleteTask = async () => {
-            if (!ensureLogin() || !window.currentTask?.id) {
-                if (typeof closeModal === 'function') closeModal();
-                return;
-            }
-            const { tasksCol } = await cloudRefs();
-            await deleteDoc(doc(tasksCol, String(window.currentTask.id)));
-            window.customTasks = (window.customTasks || []).filter(t => t.id !== window.currentTask.id);
-            if (typeof closeModal === 'function') closeModal();
-            if (typeof renderCalendar === 'function') renderCalendar();
-        };
-
-        // 이미지 삭제 함수 수정: Firestore 문서와 Storage 파일 모두 삭제
-        window.deleteImage = async (id, filePath) => {
-            if (!ensureLogin()) return;
-            try {
-                const { imagesCol } = await cloudRefs();
-                await deleteDoc(doc(imagesCol, id));
-                if (filePath) {
-                    const fileRef = ref(storage, filePath);
-                    await deleteObject(fileRef);
-                }
-                showFeedbackMessage('이미지가 삭제되었습니다.');
-            } catch (err) {
-                console.error("Error deleting image: ", err);
-                showAlert('이미지 삭제 중 오류가 발생했습니다.');
-            }
-        };
-
-        // 이미지 북마크 관련 함수를 모듈 스크립트로 이동
-        async function addImage(fileOrUrl, pageUrl) {
-            if (!window.isAuthReady || !auth.currentUser) {
-                showAlert('로그인 후 이용해 주세요.');
-                return;
-            }
-            try {
-                const { imagesCol } = await window.cloudRefs();
-                let url;
-                let filePath = null;
-
-                if (typeof fileOrUrl === 'string') { // URL인 경우
-                    url = fileOrUrl;
-                } else { // File 객체인 경우 (캡처 이미지)
-                    const uid = auth.currentUser.uid;
-                    const fileName = `${uid}/${Date.now()}-${fileOrUrl.name || 'clipboard-image.png'}`;
-                    filePath = `images/${fileName}`;
-                    const fileRef = ref(storage, filePath);
-                    await uploadBytes(fileRef, fileOrUrl);
-                    url = await getDownloadURL(fileRef);
-                    showFeedbackMessage('이미지가 성공적으로 업로드되었습니다!');
-                }
-
-                await addDoc(imagesCol, {
-                    url: url,
-                    pageUrl: pageUrl || null,
-                    filePath: filePath, // Storage 파일 경로 저장
-                    timestamp: new Date()
-                });
-                if (typeof fileOrUrl === 'string') {
-                    showFeedbackMessage('이미지 북마크에 추가되었습니다!');
-                }
-            } catch (err) {
-                console.error("Error adding document: ", err);
-                showAlert('이미지 추가에 실패했습니다. 로그인 상태를 확인하세요.');
-            }
-        }
-        
-        function isValidUrl(url) {
-            try {
-                new URL(url);
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-
-        // 드래그&드롭 이벤트 리스너를 모듈 스크립트로 이동
-        dragArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dragArea.classList.add('active');
-        });
-        dragArea.addEventListener('dragleave', () => {
-            dragArea.classList.remove('active');
-        });
-        dragArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dragArea.classList.remove('active');
-            const url = e.dataTransfer.getData('URL');
-            const html = e.dataTransfer.getData('text/html');
-            const parsed = new DOMParser().parseFromString(html || '', 'text/html');
-            const img = parsed.querySelector('img');
-
-            if (img?.src) {
-                const pageUrl = e.dataTransfer.getData('text/uri-list') || null;
-                addImage(img.src, pageUrl);
-            } else if (url) {
-                if (/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url)) addImage(url, url);
-                else showAlert('유효한 이미지 URL이 아닙니다.');
-            } else {
-                showAlert('이미지를 드래그하거나 유효한 이미지 URL을 드롭하세요.');
-            }
-        });
-
-        // ⭐ 붙여넣기 기능 개선: 맥북 캡처 이미지 처리
-        dragArea.addEventListener('paste', async (e) => {
-            e.preventDefault();
-            const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
-            let imageFound = false;
-
-            if (items) {
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
-                    if (item.kind === 'file' && item.type.startsWith('image/')) {
-                        const file = item.getAsFile();
-                        if (file) {
-                            await addImage(file, null);
-                            imageFound = true;
-                            break;
-                        }
-                    }
-                    if (item.kind === 'string' && (item.type === 'text/uri-list' || item.type === 'text/html')) {
-                        const url = e.clipboardData.getData('text/uri-list') || (item.type === 'text/html' ? new DOMParser().parseFromString(e.clipboardData.getData('text/html'), 'text/html').querySelector('img')?.src : null);
-                        if (url && isValidUrl(url)) {
-                             if (/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url)) {
-                                addImage(url, url);
-                                imageFound = true;
-                                break;
-                             }
-                        }
-                    }
-                }
-            }
-            if (!imageFound) {
-                const pastedText = e.clipboardData?.getData('text/plain');
-                if (pastedText && isValidUrl(pastedText)) {
-                    addImage(pastedText, pastedText);
-                    imageFound = true;
-                }
-            }
-            if (!imageFound) {
-                showAlert('붙여넣기한 항목에 유효한 이미지가 없습니다.');
-            }
-        });
-
-        window.__unsubs = [];
-        async function setupRealtimeSync() {
-            const { tasksCol, stateDoc, imagesCol } = await window.cloudRefs();
-
-            window.__unsubs.forEach(fn => { try { fn(); } catch (_) {} });
-            window.__unsubs = [];
-
-            const unsubTasks = onSnapshot(tasksCol, (snap) => {
-                window.customTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (typeof renderCalendar === 'function') renderCalendar();
-            });
-            window.__unsubs.push(unsubTasks);
-
-            const unsubState = onSnapshot(stateDoc, (ds) => {
-                const data = ds.exists() ? (ds.data() || {}) : {};
-                window.taskStatus = data.taskStatus || {};
-                window.__notesTabs = data.notesTabs || {};
-                const notesArea = document.getElementById('notesArea');
-                const activeTabButton = document.querySelector('#notes-section .notepad-tab.active');
-                if (notesArea && activeTabButton) {
-                    notesArea.value = window.__notesTabs[activeTabButton.dataset.tab] || '';
-                }
-                if (typeof renderCalendar === 'function') renderCalendar();
-            });
-            window.__unsubs.push(unsubState);
-            
-            const unsubImages = onSnapshot(imagesCol, (snap) => {
-                window.imageBookmarks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (typeof renderImageBookmarks === 'function') renderImageBookmarks();
-            });
-            window.__unsubs.push(unsubImages);
-        }
-
-        onAuthStateChanged(auth, async (user) => {
-            loadingOverlay.classList.remove('hidden'); // 로딩 시작
-            window.isAuthReady = false;
-
-            if (user) {
-                userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
-                signInBtn.classList.add('hidden');
-                signOutBtn.classList.classList.remove('hidden');
-                await setupRealtimeSync();
-            } else {
-                userInfoEl.textContent = '';
-                signOutBtn.classList.add('hidden');
-                signInBtn.classList.remove('hidden');
-                window.__unsubs.forEach(fn => { try { fn(); } catch (_) {} });
-                window.__unsubs = [];
-                window.customTasks = [];
-                window.taskStatus = {};
-                window.imageBookmarks = [];
-                window.__notesTabs = {};
-                renderCalendar();
-                renderImageBookmarks();
-                if(notesArea) notesArea.value = '';
-            }
-            
-            // 모든 초기화가 끝나면 로딩 상태를 해제
-            loadingOverlay.classList.add('hidden');
-            window.isAuthReady = true;
-        });
-    </script>
+      } finally {
+        loadingOverlay.classList.add('hidden');
+        window.isAuthReady = true;
+      }
+    });
+  </script>
 </body>
 </html>
