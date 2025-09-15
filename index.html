@@ -223,6 +223,10 @@
                 </svg>
             </button>
             <img id="modalImage" src="" alt="확대 이미지" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"/>
+            <!-- 추가된 버튼: 원본 페이지로 이동 -->
+            <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">
+                원본 페이지로 이동
+            </button>
         </div>
     </div>
 
@@ -266,6 +270,7 @@
         const imageModal = document.getElementById('imageModal');
         const modalImage = document.getElementById('modalImage');
         const closeImageModalBtn = document.getElementById('closeImageModalBtn');
+        const goToPageBtn = document.getElementById('goToPageBtn'); // 추가된 버튼
 
         // 모달 및 피드백
         const showFeedbackMessage = (message) => {
@@ -285,8 +290,15 @@
         document.getElementById('modal-close-btn').addEventListener('click', hideAlert);
 
         // 이미지 모달 열기/닫기
-        const openImageModal = (imageUrl) => {
+        const openImageModal = (imageUrl, pageUrl) => {
             modalImage.src = imageUrl;
+            // 원본 페이지 URL이 있을 때만 버튼을 보이게 함
+            if (pageUrl) {
+                goToPageBtn.style.display = 'block';
+                goToPageBtn.onclick = () => window.open(pageUrl, '_blank');
+            } else {
+                goToPageBtn.style.display = 'none';
+            }
             imageModal.style.display = 'flex';
         };
         const closeImageModal = () => {
@@ -501,6 +513,7 @@
             imageGrid.innerHTML = '';
             (window.imageBookmarks || []).forEach(d => {
                 const imageUrl = d.url;
+                const pageUrl = d.pageUrl; // 원본 페이지 URL
                 if (!imageUrl) return;
                 const card = document.createElement('div');
                 card.className = 'image-card relative group cursor-pointer';
@@ -517,7 +530,7 @@
 
                 // 클릭 이벤트 리스너 추가
                 card.addEventListener('click', () => {
-                    openImageModal(imageUrl);
+                    openImageModal(imageUrl, pageUrl); // URL과 함께 원본 페이지 URL 전달
                 });
             });
             imageGrid.querySelectorAll('button[data-id]').forEach(btn => {
@@ -718,7 +731,7 @@
         };
 
         // 이미지 북마크 관련 함수를 모듈 스크립트로 이동
-        async function addImage(imageUrl) {
+        async function addImage(imageUrl, pageUrl) {
             if (!window.isAuthReady || !auth.currentUser) {
                 showAlert('로그인 후 이용해 주세요.');
                 return;
@@ -727,6 +740,7 @@
                 const { imagesCol } = await window.cloudRefs();
                 await addDoc(imagesCol, {
                     url: imageUrl,
+                    pageUrl: pageUrl || null, // 원본 페이지 URL 저장
                     timestamp: new Date()
                 });
                 showFeedbackMessage('이미지 북마크에 추가되었습니다!');
@@ -767,9 +781,11 @@
             const img = parsed.querySelector('img');
 
             if (img?.src) {
-                addImage(img.src);
+                // 원본 페이지 URL 추가
+                const pageUrl = e.dataTransfer.getData('text/uri-list') || null;
+                addImage(img.src, pageUrl);
             } else if (url) {
-                if (/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url)) addImage(url);
+                if (/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url)) addImage(url, url);
                 else showAlert('유효한 이미지 URL이 아닙니다.');
             } else {
                 showAlert('이미지를 드래그하거나 유효한 이미지 URL을 드롭하세요.');
@@ -780,8 +796,15 @@
         dragArea.addEventListener('paste', (e) => {
             e.preventDefault();
             const pastedText = e.clipboardData?.getData('text/plain');
-            if (pastedText && isValidUrl(pastedText)) {
-                addImage(pastedText);
+            const pastedHtml = e.clipboardData?.getData('text/html');
+            const parsed = pastedHtml ? new DOMParser().parseFromString(pastedHtml, 'text/html') : null;
+            const img = parsed?.querySelector('img');
+
+            if (img?.src) {
+                // 붙여넣기 시 원본 페이지 URL을 얻기 어려우므로 null로 저장
+                addImage(img.src, null);
+            } else if (pastedText && isValidUrl(pastedText)) {
+                addImage(pastedText, pastedText);
             } else {
                 showAlert('유효한 URL이 아닙니다.');
             }
