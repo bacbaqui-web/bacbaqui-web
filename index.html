@@ -191,7 +191,7 @@
     <div id="bookmarks-section" class="section-card tab-content text-left">
         <!-- '드래그 앤 드롭'뿐만 아니라 '붙여넣기'도 가능함을 안내합니다. -->
         <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999999] font-medium cursor-pointer mt-6">
-            <div>이미지를 드래그하거나 이미지 URL을 붙여넣으세요 (Ctrl+V)</div>
+            <div>이미지 URL을 드래그하거나, 캡쳐/복사 이미지를 붙여넣으세요 (Ctrl+V)</div>
         </section>
         <section id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6"></section>
     </div>
@@ -521,7 +521,7 @@
                     <div class="block w-full h-40">
                         <img src="${imageUrl}" alt="북마크된 이미지" class="w-full h-full object-cover rounded-lg shadow-md"/>
                     </div>
-                    <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${d.id}">
+                    <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${d.id}" data-file-path="${d.filePath || ''}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -537,8 +537,9 @@
                 btn.onclick = async (e) => {
                     e.stopPropagation();
                     const id = e.currentTarget.dataset.id;
+                    const filePath = e.currentTarget.dataset.filePath;
                     try {
-                        if (window.deleteImage) await window.deleteImage(id);
+                        if (window.deleteImage) await window.deleteImage(id, filePath);
                     } catch (err) {
                         console.error(err);
                         showAlert('이미지 삭제 중 오류가 발생했습니다.');
@@ -610,7 +611,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, deleteObject, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
@@ -625,6 +627,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app); // Storage SDK 초기화
 
         const signInBtn = document.getElementById('signInBtn');
         const signOutBtn = document.getElementById('signOutBtn');
@@ -723,27 +726,55 @@
             if (typeof renderCalendar === 'function') renderCalendar();
         };
 
-        window.deleteImage = async (id) => {
+        // 이미지 삭제 함수 수정: Firestore 문서와 Storage 파일 모두 삭제
+        window.deleteImage = async (id, filePath) => {
             if (!ensureLogin()) return;
-            const { imagesCol } = await cloudRefs();
-            await deleteDoc(doc(imagesCol, id));
-            renderImageBookmarks();
+            try {
+                const { imagesCol } = await cloudRefs();
+                await deleteDoc(doc(imagesCol, id));
+                if (filePath) {
+                    const fileRef = ref(storage, filePath);
+                    await deleteObject(fileRef);
+                }
+                showFeedbackMessage('이미지가 삭제되었습니다.');
+            } catch (err) {
+                console.error("Error deleting image: ", err);
+                showAlert('이미지 삭제 중 오류가 발생했습니다.');
+            }
         };
 
         // 이미지 북마크 관련 함수를 모듈 스크립트로 이동
-        async function addImage(imageUrl, pageUrl) {
+        async function addImage(fileOrUrl, pageUrl) {
             if (!window.isAuthReady || !auth.currentUser) {
                 showAlert('로그인 후 이용해 주세요.');
                 return;
             }
             try {
                 const { imagesCol } = await window.cloudRefs();
+                let url;
+                let filePath = null;
+
+                if (typeof fileOrUrl === 'string') { // URL인 경우
+                    url = fileOrUrl;
+                } else { // File 객체인 경우 (캡처 이미지)
+                    const uid = auth.currentUser.uid;
+                    const fileName = `${uid}/${Date.now()}-${fileOrUrl.name || 'clipboard-image'}`;
+                    filePath = `images/${fileName}`;
+                    const fileRef = ref(storage, filePath);
+                    await uploadBytes(fileRef, fileOrUrl);
+                    url = await getDownloadURL(fileRef);
+                    showFeedbackMessage('이미지가 성공적으로 업로드되었습니다!');
+                }
+
                 await addDoc(imagesCol, {
-                    url: imageUrl,
-                    pageUrl: pageUrl || null, // 원본 페이지 URL 저장
+                    url: url,
+                    pageUrl: pageUrl || null,
+                    filePath: filePath, // Storage 파일 경로 저장
                     timestamp: new Date()
                 });
-                showFeedbackMessage('이미지 북마크에 추가되었습니다!');
+                if (typeof fileOrUrl === 'string') {
+                    showFeedbackMessage('이미지 북마크에 추가되었습니다!');
+                }
             } catch (err) {
                 console.error("Error adding document: ", err);
                 showAlert('이미지 추가에 실패했습니다. 로그인 상태를 확인하세요.');
@@ -770,18 +801,12 @@
         dragArea.addEventListener('drop', (e) => {
             e.preventDefault();
             dragArea.classList.remove('active');
-            const files = e.dataTransfer.files;
-            if (files?.length) {
-                showAlert('파일 업로드는 미지원입니다. 웹의 이미지 URL을 드래그하세요.');
-                return;
-            }
             const url = e.dataTransfer.getData('URL');
             const html = e.dataTransfer.getData('text/html');
             const parsed = new DOMParser().parseFromString(html || '', 'text/html');
             const img = parsed.querySelector('img');
 
             if (img?.src) {
-                // 원본 페이지 URL 추가
                 const pageUrl = e.dataTransfer.getData('text/uri-list') || null;
                 addImage(img.src, pageUrl);
             } else if (url) {
@@ -792,35 +817,29 @@
             }
         });
 
-        // ⭐ 새롭게 추가된 부분: 붙여넣기 기능
-        dragArea.addEventListener('paste', (e) => {
+        // ⭐ 붙여넣기 기능 수정: 이미지 파일 처리
+        dragArea.addEventListener('paste', async (e) => {
             e.preventDefault();
-            const pastedText = e.clipboardData?.getData('text/plain');
-            const pastedHtml = e.clipboardData?.getData('text/html');
-            const parsed = pastedHtml ? new DOMParser().parseFromString(pastedHtml, 'text/html') : null;
-            const img = parsed?.querySelector('img');
-
-            if (img?.src) {
-                // 붙여넣기 시 원본 페이지 URL을 얻기 어려우므로 null로 저장
-                addImage(img.src, null);
-            } else if (pastedText && isValidUrl(pastedText)) {
-                addImage(pastedText, pastedText);
-            } else {
-                showAlert('유효한 URL이 아닙니다.');
-            }
-        });
-        
-        document.addEventListener('paste', (e) => {
             const items = e.clipboardData?.items || [];
+            let imageFound = false;
             for (let i = 0; i < items.length; i++) {
                 if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
-                    e.preventDefault();
-                    showAlert('캡처 이미지는 URL이 없어 저장 불가합니다. 웹에 올린 뒤 링크를 사용하세요.');
+                    const file = items[i].getAsFile();
+                    await addImage(file, null); // 파일 객체로 전달
+                    imageFound = true;
                     break;
                 }
             }
+            if (!imageFound) {
+                const pastedText = e.clipboardData?.getData('text/plain');
+                if (pastedText && isValidUrl(pastedText)) {
+                    addImage(pastedText, pastedText);
+                } else {
+                    showAlert('유효한 이미지나 URL이 아닙니다.');
+                }
+            }
         });
-
+        
         window.__unsubs = [];
         async function setupRealtimeSync() {
             const { tasksCol, stateDoc, imagesCol } = await window.cloudRefs();
