@@ -46,8 +46,8 @@
         .calendar-day { min-height: 160px; padding-top: 16px; padding-left: 2px; padding-right: 2px; display: flex; flex-direction: column; gap: 2px; }
         .calendar-day.today { border: 2px solid #ccc; }
         .day-number { position: absolute; top: 8px; left: 8px; font-size: 0.85rem; font-weight: 700; color: #aaa; z-index: 10; }
-        /* 마일스톤도 둥근 모서리, 더 촘촘한 간격 */
-        .task-item { font-size: 0.85rem; padding: 3px 6px; border-radius: 8px; margin-top: 2px; word-wrap: break-word; cursor: pointer; text-align: left; font-weight: bold; }
+        /* 마일스톤도 둥근 모서리, 여백 더 넓게 수정 */
+        .task-item { font-size: 0.85rem; padding: 5px 6px; border-radius: 8px; margin-top: 4px; word-wrap: break-word; cursor: pointer; text-align: left; }
         .task-item.custom-task { background: #4c78a8; }
         .task-item.episode-task { background: #444; color: #ddd; cursor: pointer; }
         .task-item.recurring-shorts { background: #7d4040; cursor: pointer; }
@@ -107,8 +107,8 @@
             /* 마일스톤 글자 크기 다시 조정, 여백 최소화 */
             .task-item { 
                 font-size: 0.85rem; 
-                padding: 1px 2px;
-                margin-top: 0;
+                padding: 2px 4px;
+                margin-top: 2px;
             }
             /* 모바일에서 요일과 날짜 칸 사이의 간격을 없앰 */
             .calendar-grid, .calendar-header { 
