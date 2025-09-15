@@ -758,7 +758,7 @@
                     url = fileOrUrl;
                 } else { // File 객체인 경우 (캡처 이미지)
                     const uid = auth.currentUser.uid;
-                    const fileName = `${uid}/${Date.now()}-${fileOrUrl.name || 'clipboard-image'}`;
+                    const fileName = `${uid}/${Date.now()}-${fileOrUrl.name || 'clipboard-image.png'}`;
                     filePath = `images/${fileName}`;
                     const fileRef = ref(storage, filePath);
                     await uploadBytes(fileRef, fileOrUrl);
@@ -817,25 +817,32 @@
             }
         });
 
-        // ⭐ 붙여넣기 기능 수정: 이미지 파일 처리
+        // ⭐ 붙여넣기 기능 개선: 이미지 파일 처리
         dragArea.addEventListener('paste', async (e) => {
             e.preventDefault();
-            const items = e.clipboardData?.items || [];
+            const items = e.clipboardData?.items;
             let imageFound = false;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
-                    const file = items[i].getAsFile();
-                    await addImage(file, null); // 파일 객체로 전달
-                    imageFound = true;
-                    break;
+
+            if (items) {
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.kind === 'file' && item.type.startsWith('image/')) {
+                        const file = item.getAsFile();
+                        if (file) {
+                            await addImage(file, null);
+                            imageFound = true;
+                            break;
+                        }
+                    }
                 }
             }
+
             if (!imageFound) {
                 const pastedText = e.clipboardData?.getData('text/plain');
                 if (pastedText && isValidUrl(pastedText)) {
                     addImage(pastedText, pastedText);
                 } else {
-                    showAlert('유효한 이미지나 URL이 아닙니다.');
+                    showAlert('붙여넣기한 항목에 유효한 이미지가 없습니다.');
                 }
             }
         });
