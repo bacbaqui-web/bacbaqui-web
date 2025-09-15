@@ -5,553 +5,186 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>만화 일정 관리</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
-    body{font-family:'Noto Sans KR',sans-serif;background:#000;color:#fff;display:flex;justify-content:flex-start;align-items:center;min-height:100vh;padding:16px;flex-direction:column;gap:0}
+    body{font-family:'Noto Sans KR',sans-serif;background:#000;color:#fff;padding:16px;display:flex;flex-direction:column;gap:0}
     .tab-content{display:none}.tab-content.active{display:flex;flex-direction:column;flex-grow:1}
     .section-card{background:#2a2a2a;border-radius:12px;padding:20px;box-shadow:inset 0 0 10px rgba(0,0,0,.3);text-align:center;width:100%;max-width:800px}
     .notepad-tabs{display:flex;justify-content:center;align-items:center;gap:1rem;width:100%;max-width:800px}
     .notepad-tab{background:#1a1a1a;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700;color:#737373;font-size:.85rem}
     .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
-    .notes-area{flex-grow:1;resize:vertical}
-    textarea#notesArea::-webkit-scrollbar{width:8px;background-color:#2a2a2a;border-radius:10px}
-    textarea#notesArea::-webkit-scrollbar-thumb{background-color:#555;border-radius:10px}
-    .calendar-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
-    .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-    .day-label,.calendar-day{text-align:center;padding:8px 2px;border-radius:8px;background:#2a2a2a;position:relative;overflow:hidden;word-wrap:break-word}
-    .day-label{background:#444;font-weight:700;color:#fff;font-size:.8rem;padding:8px 0}
-    .calendar-day{min-height:160px;padding-top:16px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;gap:2px}
-    .calendar-day.today{border:2px solid #ccc}
-    .day-number{position:absolute;top:8px;left:8px;font-size:.85rem;font-weight:700;color:#aaa;z-index:10}
-    .task-item{font-size:.85rem;padding:5px 6px;border-radius:8px;margin-top:4px;word-wrap:break-word;cursor:pointer;text-align:left}
-    .task-item.custom-task{background:#4c78a8}
-    .task-item.episode-task{background:#444;color:#ddd}
-    .task-item.recurring-shorts{background:#7d4040}
-    .task-item.recurring-instatoon{background:#999966}
-    .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
-    .add-task-btn{background:#666;transition:.2s}.add-task-btn:hover{background:#777;transform:scale(1.02)}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
-    .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
-    .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
+    .drag-area{border:2px dashed #4b4b4b;padding:24px;cursor:pointer}
     .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
-    .image-card{position:relative;transition:transform .2s ease-in-out}.image-card:hover{transform:translateY(-5px)}
-    @media (max-width:768px){
-      body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
-      .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
-      .calendar-day{min-height:120px;padding:1.5rem .2rem .2rem;gap:1px}.day-number{font-size:.75rem;top:.5rem;left:.5rem}
-      .task-item{font-size:.85rem;padding:2px 4px;margin-top:2px}
-      .calendar-grid,.calendar-header{gap:0}.add-task-btn{width:100%;font-size:.9rem}
-      .modal-content{padding:16px;width:95%}
+    .image-card img{border-radius:8px}
+    #imageModal .modal-content{
+      background-color:transparent;
+      padding:0;
+      max-width:95vw;
+      max-height:95vh;
+      width:95vw;
+      height:95vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
     }
-    #imageModal .modal-content{background-color:transparent;padding:0;max-width:90%;max-height:90%;display:flex;justify-content:center;align-items:center}
-    .calendar-grid{grid-gap:4px}
-    @media (max-width:768px){.calendar-grid{grid-gap:0}}
+    #modalImage{
+      width:95vw;
+      height:95vh;
+      object-fit:contain;
+    }
   </style>
 </head>
-<body class="text-white">
-  <div id="authBar" class="w-full max-w-2xl mx-auto flex items-center justify-end gap-2 mb-4">
+<body>
+  <div id="authBar" class="flex justify-end gap-2 mb-4">
     <span id="userInfo" class="text-sm opacity-80"></span>
     <button id="signInBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Google 로그인</button>
     <button id="signOutBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded hidden">로그아웃</button>
   </div>
 
-  <div id="main-tabs" class="notepad-tabs mx-auto">
+  <div class="notepad-tabs mb-3">
     <button class="notepad-tab active" data-tab="calendar">달력</button>
     <button class="notepad-tab" data-tab="notes">메모</button>
     <button class="notepad-tab" data-tab="bookmarks">북마크</button>
   </div>
 
-  <div id="calendar-section" class="section-card tab-content active">
-    <div class="flex justify-between items-center mb-4">
-      <button id="prevMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">&lt; 이전 달</button>
-      <h2 id="currentMonthYear" class="text-lg font-bold"></h2>
-      <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
-    </div>
-    <div class="calendar-header mb-2">
-      <div class="day-label">일</div><div class="day-label">월</div><div class="day-label">화</div>
-      <div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div>
-    </div>
-    <div id="calendarGrid" class="calendar-grid"></div>
-    <div class="mt-8 text-center">
-      <button id="addTaskBtn" class="add-task-btn px-6 py-3 rounded-full font-bold text-white shadow-md">+ 개인 작업 추가</button>
-    </div>
-  </div>
+  <section id="calendar-section" class="section-card tab-content active">
+    <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+  </section>
 
-  <div id="notes-section" class="section-card tab-content">
-    <div class="notepad-tabs">
-      <button class="notepad-tab active" data-tab="바퀴멘터리">바퀴멘터리</button>
-      <button class="notepad-tab" data-tab="짐승육아">짐승육아</button>
-      <button class="notepad-tab" data-tab="그거아세요">그거아세요</button>
-      <button class="notepad-tab" data-tab="메모">메모</button>
-    </div>
-    <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg"></textarea>
-  </div>
+  <section id="notes-section" class="section-card tab-content">
+    <textarea id="notesArea" class="w-full h-40 p-2 bg-black border border-gray-600 rounded"></textarea>
+  </section>
 
-  <div id="bookmarks-section" class="section-card tab-content text-left">
-    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer mt-6" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
-      <div>이미지 URL은 드래그. 캡쳐/이미지는 붙여넣기(Ctrl/Cmd+V).</div>
-    </section>
-    <section id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6"></section>
-  </div>
+  <section id="bookmarks-section" class="section-card tab-content">
+    <div id="drag-area" class="drag-area">이미지 URL을 드래그하거나 붙여넣으세요 (Ctrl/Cmd+V)</div>
+    <div id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4"></div>
+  </section>
 
-  <div id="taskModal" class="modal">
-    <div class="modal-content">
-      <h2 id="modalTitle" class="text-2xl font-bold mb-4">새 작업</h2>
-      <label class="block mb-2">제목:</label>
-      <input type="text" id="taskTitle" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
-      <label class="block mb-2">설명:</label>
-      <textarea id="taskDescription" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24"></textarea>
-      <label class="block mb-2">날짜:</label>
-      <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
-      <div class="flex justify-end gap-2">
-        <button id="saveTaskBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
-        <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-        <button id="deleteTaskBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hidden">삭제</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="imageModal" class="modal">
+  <!-- 이미지 모달 -->
+  <div id="imageModal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50">
     <div class="modal-content relative">
-      <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-      <img id="modalImage" src="" alt="확대 이미지" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"/>
-      <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">원본 페이지로 이동</button>
+      <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white">X</button>
+      <img id="modalImage" src="" alt="확대 이미지"/>
+      <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded">원본 페이지로 이동</button>
     </div>
   </div>
 
-  <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
-    <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
-      <p id="modal-message" class="text-white text-lg text-center font-medium"></p>
-      <div class="mt-4 flex justify-center">
-        <button id="modal-close-btn" class="px-4 py-2 bg-[#424242] text-white rounded-md hover:bg-[#525252]">확인</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-[1001] flex items-center justify-center hidden">
-    <div class="flex flex-col items-center">
-      <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
-      <p class="text-white mt-4 text-lg">데이터를 불러오는 중...</p>
-    </div>
-  </div>
-
-  <!-- ===== UI 스크립트 ===== -->
-  <script>
-    const IMGBB_API_KEY = "f64175972f4e4178332db9ae8559969b";
-
-    window.customTasks = window.customTasks || [];
-    window.taskStatus = window.taskStatus || {};
-    window.__notesTabs = window.__notesTabs || {};
-    window.imageBookmarks = window.imageBookmarks || [];
-    window.currentTask = null;
-    let currentDate = new Date();
-    window.isAuthReady = false;
-
-    const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
-    const tabContents = document.querySelectorAll('.tab-content');
-    const mainNotepadTabs = document.querySelectorAll('#notes-section .notepad-tabs .notepad-tab');
-    const notesArea = document.getElementById('notesArea');
-    const dragArea = document.getElementById('drag-area');
-    const imageGrid = document.getElementById('image-grid');
-    const imageModal = document.getElementById('imageModal');
-    const modalImage = document.getElementById('modalImage');
-    const closeImageModalBtn = document.getElementById('closeImageModalBtn');
-    const goToPageBtn = document.getElementById('goToPageBtn');
-
-    const showFeedbackMessage = (message) => {
-      const el = document.createElement('div');
-      el.textContent = message;
-      el.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;max-width:90%";
-      document.body.appendChild(el); setTimeout(()=>el.remove(),2000);
-    };
-    const showAlert = (msg) => { document.getElementById('modal-message').textContent = msg; document.getElementById('alert-modal').classList.remove('hidden'); };
-    const hideAlert = () => { document.getElementById('alert-modal').classList.add('hidden'); };
-    document.getElementById('modal-close-btn').addEventListener('click', hideAlert);
-
-    const openImageModal = (imageUrl, pageUrl) => {
-      modalImage.src = imageUrl;
-      if (pageUrl){ goToPageBtn.style.display='block'; goToPageBtn.onclick=()=>window.open(pageUrl,'_blank'); }
-      else goToPageBtn.style.display='none';
-      imageModal.style.display='flex';
-    };
-    const closeImageModal = () => { imageModal.style.display = 'none'; };
-
-    function showTab(tabId){
-      tabContents.forEach(c=>c.classList.remove('active'));
-      tabButtons.forEach(b=>b.classList.remove('active'));
-      document.getElementById(`${tabId}-section`).classList.add('active');
-      const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`); if(btn) btn.classList.add('active');
-    }
-    showTab('calendar');
-    tabButtons.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-    mainNotepadTabs.forEach(tab=>{
-      tab.addEventListener('click',()=>{
-        mainNotepadTabs.forEach(t=>t.classList.remove('active')); tab.classList.add('active');
-        window.activeTab = tab.dataset.tab;
-        notesArea.value = (window.__notesTabs||{})[window.activeTab] || '';
-      });
-    });
-
-    const TZ='Asia/Seoul';
-    function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
-    function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
-    function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=0&&d<=4)c++; cur.setDate(cur.getDate()+1);} return c;}
-
-    const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
-
-    const taskModal=document.getElementById('taskModal');
-    const cancelBtn=document.getElementById('cancelBtn');
-    const saveTaskBtn=document.getElementById('saveTaskBtn');
-    const deleteTaskBtn=document.getElementById('deleteTaskBtn');
-    const taskTitleInput=document.getElementById('taskTitle');
-    const taskDescriptionInput=document.getElementById('taskDescription');
-    const taskDateInput=document.getElementById('taskDate');
-
-    const attachEventListeners=()=>{
-      const prevMonthBtn=document.getElementById('prevMonthBtn');
-      const nextMonthBtn=document.getElementById('nextMonthBtn');
-      const addTaskBtn=document.getElementById('addTaskBtn');
-      prevMonthBtn?.addEventListener('click',()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
-      nextMonthBtn?.addEventListener('click',()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
-      addTaskBtn?.addEventListener('click',()=>openModal());
-      if(notesArea){
-        notesArea.addEventListener('input',()=>window.cloudSaveNotesDebounced&&window.cloudSaveNotesDebounced());
-        notesArea.addEventListener('blur',()=>window.cloudSaveNotes&&window.cloudSaveNotes());
-      }
-      cancelBtn.addEventListener('click',closeModal);
-      saveTaskBtn.addEventListener('click',saveTask);
-      deleteTaskBtn.addEventListener('click',()=>window.deleteTask&&window.deleteTask());
-      taskModal.addEventListener('click',(e)=>{ if(e.target===taskModal) closeModal(); });
-
-      closeImageModalBtn.addEventListener('click', closeImageModal);
-      imageModal.addEventListener('click',(e)=>{ if(e.target===imageModal||e.target===modalImage) closeImageModal(); });
-    };
-
-    const renderCalendar=()=>{
-      const year=currentDate.getFullYear(), month=currentDate.getMonth();
-      const currentMonthYear=document.getElementById('currentMonthYear');
-      const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
-      currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
-      const firstDay=toKST(new Date(year,month,1)).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
-      for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
-      for(let day=1;day<=daysInMonth;day++){
-        const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
-        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=toKST(thisDate).getDay();
-        const today=toKST(new Date()); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
-        const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
-
-        if(dayOfWeek>=0&&dayOfWeek<=4){
-          const milestoneDate=new Date('2025-09-01'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
-          const milestoneEpisode=2014; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
-          const epItem=document.createElement('div'); epItem.classList.add('task-item','episode-task'); epItem.textContent=`${episodeNumber}화`;
-          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; if((window.taskStatus||{})[key]) epItem.classList.add('complete');
-          epItem.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.ensureLogin||!window.ensureLogin()) return; window.taskStatus=window.taskStatus||{}; window.taskStatus[key]=!window.taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar();});
-          dayDiv.appendChild(epItem);
-        }
-
-        fixedSchedules.forEach(sch=>{
-          if(sch.daysOfWeek.includes(dayOfWeek)){
-            const t=document.createElement('div'); t.classList.add('task-item',sch.colorClass); t.textContent=sch.title;
-            const key=`${fullDate}_${sch.title}`; if((window.taskStatus||{})[key]) t.classList.add('complete');
-            t.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.ensureLogin||!window.ensureLogin()) return; window.taskStatus=window.taskStatus||{}; window.taskStatus[key]=!window.taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar();});
-            dayDiv.appendChild(t);
-          }
-        });
-
-        (window.customTasks||[]).filter(t=>t.date===fullDate).forEach(task=>{
-          const el=document.createElement('div'); el.classList.add('task-item','custom-task'); el.textContent=task.title;
-          if(task.complete) el.classList.add('complete');
-          el.addEventListener('click',async(e)=>{ if(e.detail===1){ if(!window.ensureLogin||!window.ensureLogin()) return; task.complete=!task.complete; await window.cloudSaveAll(); renderCalendar(); } else if(e.detail===2){ openModal(task); }});
-          dayDiv.appendChild(el);
-        });
-
-        dayDiv.addEventListener('click',(e)=>{ if(e.target.classList.contains('calendar-day')||e.target.classList.contains('day-number')) openModal({date:fullDate});});
-        calendarGrid.appendChild(dayDiv);
-      }
-    };
-
-    const renderImageBookmarks=()=>{
-      imageGrid.innerHTML='';
-      (window.imageBookmarks||[]).forEach(d=>{
-        const imageUrl=d.url; const pageUrl=d.pageUrl; if(!imageUrl) return;
-        const card=document.createElement('div');
-        card.className='image-card relative group cursor-pointer';
-        card.innerHTML=`
-          <div class="block w-full h-40"><img src="${imageUrl}" alt="북마크된 이미지" loading="lazy" decoding="async" class="w-full h-full object-cover rounded-lg shadow-md"/></div>
-          <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${d.id}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>`;
-        imageGrid.appendChild(card);
-        card.addEventListener('click',()=>openImageModal(imageUrl,pageUrl));
-      });
-      imageGrid.querySelectorAll('button[data-id]').forEach(btn=>{
-        btn.onclick=async(e)=>{ e.stopPropagation(); const id=e.currentTarget.dataset.id; try{ if(window.deleteImage) await window.deleteImage(id);}catch(err){ console.error(err); showAlert('이미지 삭제 중 오류가 발생했습니다.'); } };
-      });
-    };
-
-    const openModal=(task=null)=>{
-      window.currentTask=task;
-      if(task&&task.id){ document.getElementById('modalTitle').textContent='작업 수정'; taskTitleInput.value=task.title; taskDescriptionInput.value=task.description||''; taskDateInput.value=task.date||''; deleteTaskBtn.classList.remove('hidden'); }
-      else if(task&&task.date){ document.getElementById('modalTitle').textContent='새 작업'; taskTitleInput.value=''; taskDescriptionInput.value=''; taskDateInput.value=task.date; deleteTaskBtn.classList.add('hidden'); }
-      else{ document.getElementById('modalTitle').textContent='새 작업'; taskTitleInput.value=''; taskDescriptionInput.value=''; taskDateInput.value=''; deleteTaskBtn.classList.add('hidden'); }
-      taskModal.style.display='flex';
-    };
-    const closeModal=()=>{ taskModal.style.display='none'; };
-
-    const saveTask=async ()=>{
-      if(!window.ensureLogin||!window.ensureLogin()) return;
-      window.customTasks=window.customTasks||[]; window.taskStatus=window.taskStatus||{};
-      const title=taskTitleInput.value.trim(); const description=taskDescriptionInput.value.trim(); const date=taskDateInput.value;
-      if(!title){ showFeedbackMessage('제목을 입력해주세요.'); return; }
-      const data={ id: window.currentTask&&window.currentTask.id ? window.currentTask.id : Date.now(), title, description, date, complete: window.currentTask?.complete ?? false };
-      const idx=window.customTasks.findIndex(t=>t.id===data.id); if(idx>-1) window.customTasks[idx]=data; else window.customTasks.push(data);
-      await window.cloudSaveAll(); closeModal(); renderCalendar();
-    };
-
-    (function init(){ attachEventListeners(); renderCalendar(); })();
-
-    // ===== D&D/붙여넣기/클릭-자동붙여넣기 =====
-    function isImageUrl(u){
-      try{ new URL(u); }catch{ return false; }
-      return /\.(jpe?g|png|gif|webp|svg|avif)(\?|$)/i.test(u);
-    }
-    // 드래그앤드롭: URL만 저장. 파일 드롭 시 안내.
-    dragArea.addEventListener('dragover',(e)=>{ e.preventDefault(); dragArea.classList.add('active'); });
-    dragArea.addEventListener('dragleave',()=>{ dragArea.classList.remove('active'); });
-    dragArea.addEventListener('drop',async(e)=>{
-      e.preventDefault(); dragArea.classList.remove('active');
-      const dt=e.dataTransfer;
-      const html=dt.getData('text/html');
-      let url=null, pageUrl=null;
-      if(html){
-        const doc=new DOMParser().parseFromString(html,'text/html');
-        const img=doc.querySelector('img');
-        if(img?.src){ url=img.src; pageUrl=dt.getData('text/uri-list')||dt.getData('URL')||null; }
-      }
-      if(!url){ const u=dt.getData('text/uri-list')||dt.getData('URL')||dt.getData('text/plain'); if(u) { url=u; pageUrl=u; } }
-      if(url && isImageUrl(url)){ if(window.addRemoteImage){ await window.addRemoteImage(url,pageUrl); showFeedbackMessage('이미지 URL 북마크됨'); } return; }
-
-      const files=[...(dt.files||[])].filter(f=>f.type.startsWith('image/'));
-      if(files.length){ showAlert('파일 드롭은 업로드하지 않습니다. 캡쳐 이미지는 붙여넣기(Ctrl/Cmd+V)를 사용하세요.'); return; }
-
-      showAlert('이미지 URL을 찾지 못했습니다.');
-    });
-
-    // 클릭: 클립보드 접근. 이미지면 imgbb 업로드, 텍스트 URL이면 URL 저장.
-    dragArea.addEventListener('click', async ()=>{
-      try{
-        if(navigator.clipboard?.read){
-          const items=await navigator.clipboard.read();
-          for(const it of items){
-            for(const type of it.types){
-              if(type.startsWith('image/')){
-                const blob=await it.getType(type);
-                if(window.addImage){ await window.addImage(new File([blob],'clipboard-image',{type:blob.type}), null); showFeedbackMessage('클립보드 이미지 업로드됨'); return; }
-              }
-            }
-          }
-        }
-        const t = await navigator.clipboard.readText();
-        if(t && isImageUrl(t)){ if(window.addRemoteImage){ await window.addRemoteImage(t,t); showFeedbackMessage('클립보드 URL 북마크됨'); return; } }
-        showAlert('클립보드에서 이미지/URL을 읽지 못했습니다.');
-      }catch(e){ console.error(e); showAlert('클립보드 권한을 허용하세요.'); }
-    });
-
-    // 붙여넣기: 이미지 파일이면 imgbb, URL이면 URL 저장.
-    dragArea.addEventListener('paste', async (e)=>{
-      e.preventDefault();
-      const items=[...(e.clipboardData||e.originalEvent?.clipboardData)?.items||[]];
-      for(const item of items){
-        if(item.kind==='file' && item.type.startsWith('image/')){
-          const file=item.getAsFile(); if(file && window.addImage){ await window.addImage(file,null); showFeedbackMessage('이미지 업로드됨'); return; }
-        }
-        if(item.kind==='string'){
-          const txt=await new Promise(r=>item.getAsString(r));
-          if(txt && isImageUrl(txt)){ if(window.addRemoteImage){ await window.addRemoteImage(txt,txt); showFeedbackMessage('URL 북마크됨'); return; } }
-        }
-      }
-      const plain=e.clipboardData?.getData('text/plain');
-      if(plain && isImageUrl(plain)){ if(window.addRemoteImage){ await window.addRemoteImage(plain,plain); showFeedbackMessage('URL 북마크됨'); return; } }
-      showAlert('붙여넣기한 항목에 유효한 이미지가 없습니다.');
-    });
-  </script>
-
-  <!-- ===== Firebase & 동기화 ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    // Firebase 초기화
     const firebaseConfig = {
       apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
       authDomain: "comicschedule-dfec7.firebaseapp.com",
       projectId: "comicschedule-dfec7",
       storageBucket: "comicschedule-dfec7.appspot.com",
       messagingSenderId: "1084611276816",
-      appId: "1:1084611276816:web:aca83237bafa971ed1fa95",
-      measurementId: "G-ZNZZQRJZF9"
+      appId: "1:1084611276816:web:aca83237bafa971ed1fa95"
     };
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
-    const signInBtn=document.getElementById('signInBtn');
-    const signOutBtn=document.getElementById('signOutBtn');
-    const userInfoEl=document.getElementById('userInfo');
-    const loadingOverlay=document.getElementById('loading-overlay');
     const provider = new GoogleAuthProvider();
+    const IMGBB_API_KEY = "f64175972f4e4178332db9ae8559969b";
 
-    async function doSignIn(){
-      try{ await signInWithPopup(auth,provider); }
-      catch(e){
-        if(e.code==='auth/popup-blocked'||e.code==='auth/unauthorized-domain'){ await signInWithRedirect(auth,provider); }
-        else{ document.getElementById('modal-message').textContent='로그인 오류: '+(e.message||e.code); document.getElementById('alert-modal').classList.remove('hidden'); }
-      }
-    }
-    getRedirectResult(auth).catch(()=>{});
+    const signInBtn=document.getElementById("signInBtn");
+    const signOutBtn=document.getElementById("signOutBtn");
+    const userInfo=document.getElementById("userInfo");
+    const dragArea=document.getElementById("drag-area");
+    const imageGrid=document.getElementById("image-grid");
+    const imageModal=document.getElementById("imageModal");
+    const modalImage=document.getElementById("modalImage");
+    const closeImageModalBtn=document.getElementById("closeImageModalBtn");
+    const goToPageBtn=document.getElementById("goToPageBtn");
 
-    signInBtn.onclick=()=>doSignIn();
-    signOutBtn.onclick=()=>signOut(auth);
-
-    window.cloudRefs=async ()=>{
-      const uid=auth.currentUser.uid;
-      const userPath=`users/${uid}`;
-      return {
-        tasksCol: collection(db, `${userPath}/customTasks`),
-        stateDoc: doc(db, `${userPath}/meta/appState`),
-        imagesCol: collection(db, `${userPath}/images`),
-      };
-    };
-
-    window.ensureLogin=()=>{
-      if(!window.isAuthReady){ document.getElementById('modal-message').textContent='데이터 로딩 중입니다.'; document.getElementById('alert-modal').classList.remove('hidden'); return false; }
-      if(!auth.currentUser){ document.getElementById('modal-message').textContent='로그인 후 이용해 주세요.'; document.getElementById('alert-modal').classList.remove('hidden'); return false; }
+    function ensureLogin(){
+      if(!auth.currentUser){ alert("로그인 필요"); return false; }
       return true;
-    };
+    }
+    async function cloudRefs(){
+      const uid=auth.currentUser.uid;
+      return { imagesCol: collection(db, `users/${uid}/images`) };
+    }
 
-    let notesTimer=null;
-    window.cloudSaveNotesDebounced=function(){ clearTimeout(notesTimer); notesTimer=setTimeout(()=>window.cloudSaveNotes&&window.cloudSaveNotes(),800); };
-
-    window.cloudSaveAll=async ()=>{
-      if(!ensureLogin()) return;
-      const { tasksCol, stateDoc } = await cloudRefs();
-      window.taskStatus=window.taskStatus||{}; window.customTasks=window.customTasks||[];
-      await setDoc(stateDoc,{taskStatus:window.taskStatus},{merge:true});
-      const ops=window.customTasks.map(t=>setDoc(doc(tasksCol,String(t.id)),t,{merge:true}));
-      await Promise.all(ops);
-    };
-
-    window.cloudSaveStateOnly=async ()=>{
-      if(!ensureLogin()) return;
-      const { stateDoc } = await cloudRefs();
-      window.taskStatus=window.taskStatus||{};
-      await setDoc(stateDoc,{taskStatus:window.taskStatus},{merge:true});
-    };
-
-    window.cloudSaveNotes=async ()=>{
-      if(!ensureLogin()) return;
-      const { stateDoc } = await cloudRefs();
-      const st=await getDoc(stateDoc);
-      const prev=st.exists()?(st.data()||{}):{};
-      const notesTabs=prev.notesTabs||{};
-      const activeTabButton=document.querySelector('#notes-section .notepad-tab.active');
-      if(activeTabButton){ notesTabs[activeTabButton.dataset.tab]=document.getElementById('notesArea')?.value ?? ''; }
-      await setDoc(stateDoc,{notesTabs},{merge:true});
-    };
-
-    window.deleteTask=async ()=>{
-      if(!ensureLogin() || !window.currentTask?.id){ if(typeof closeModal==='function') closeModal(); return; }
-      const { tasksCol } = await cloudRefs();
-      await deleteDoc(doc(tasksCol,String(window.currentTask.id)));
-      window.customTasks=(window.customTasks||[]).filter(t=>t.id!==window.currentTask.id);
-      if(typeof renderCalendar==='function') renderCalendar();
-    };
-
-    // ===== 북마크 저장 로직 =====
-    // URL만 저장
-    window.addRemoteImage = async (url, pageUrl)=>{
+    // ---- 이미지 추가 ----
+    async function addUrlImage(url,pageUrl){
       if(!ensureLogin()) return;
       const { imagesCol } = await cloudRefs();
-      await addDoc(imagesCol,{ url, pageUrl: pageUrl||null, type:'remote', timestamp:new Date() });
-    };
-    // imgbb 업로드(붙여넣기/클립보드 이미지 전용)
-    window.addImage = async (fileOrUrl, pageUrl)=>{
+      await addDoc(imagesCol,{ url, pageUrl:pageUrl||null, type:"url", timestamp:new Date() });
+    }
+    async function addClipboardImage(file,pageUrl){
       if(!ensureLogin()) return;
-      try{
-        const { imagesCol } = await cloudRefs();
-        const form=new FormData();
-        if(typeof fileOrUrl==='string'){ form.append('image', fileOrUrl); }
-        else{ form.append('image', fileOrUrl); }
-        const res=await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,{method:'POST',body:form});
-        const json=await res.json();
-        if(!json.success) throw new Error(json?.error?.message || 'imgbb 업로드 실패');
-        const link=json.data?.url || json.data?.display_url;
-        const deleteUrl=json.data?.delete_url || null;
-        const deleteId = deleteUrl ? (deleteUrl.match(/\/image\/([^/?#]+)/)?.[1] || null) : null;
-
-        await addDoc(imagesCol,{ url:link, pageUrl:pageUrl||null, type:'imgbb', imgbb_delete_url:deleteUrl, imgbb_delete_id:deleteId, timestamp:new Date() });
-      }catch(err){
-        document.getElementById('modal-message').textContent='이미지 추가 실패: '+(err.message||'오류');
-        document.getElementById('alert-modal').classList.remove('hidden');
-      }
-    };
-
-    // 삭제: remote는 문서만 삭제, imgbb는 delete_url 호출 후 문서 삭제
-    window.deleteImage = async (id)=>{
+      const form=new FormData();
+      form.append("image",file);
+      const res=await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,{method:"POST",body:form});
+      const json=await res.json();
+      if(!json.success) throw new Error("imgbb 업로드 실패");
+      const link=json.data.url;
+      const { imagesCol }=await cloudRefs();
+      await addDoc(imagesCol,{ url:link,pageUrl:pageUrl||null,type:"imgbb",timestamp:new Date() });
+    }
+    async function deleteImage(id){
       if(!ensureLogin()) return;
-      try{
-        const { imagesCol } = await cloudRefs();
-        const row=(window.imageBookmarks||[]).find(d=>d.id===id);
-        if(row?.type==='remote'){
-          await deleteDoc(doc(imagesCol,id));
-          return;
-        }
-        if(row?.type==='imgbb'){
-          const delUrl=row.imgbb_delete_url||null;
-          let delId=row.imgbb_delete_id||null;
-          if(!delId && delUrl) delId = delUrl.match(/\/image\/([^/?#]+)/)?.[1] || null;
-          if(delUrl){ try{ await fetch(delUrl,{method:'GET'}); }catch(_){/* ignore */} }
-          await deleteDoc(doc(imagesCol,id));
-        }
-      }catch(e){
-        document.getElementById('modal-message').textContent='이미지 삭제 중 오류: '+(e?.message||'unknown');
-        document.getElementById('alert-modal').classList.remove('hidden');
-      }
-    };
-
-    // ===== 실시간 동기화 =====
-    window.__unsubs=[];
-    async function setupRealtimeSync(){
-      const { tasksCol, stateDoc, imagesCol } = await cloudRefs();
-      window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
-
-      const unsubTasks = onSnapshot(tasksCol,(snap)=>{ window.customTasks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderCalendar==='function') renderCalendar(); });
-      window.__unsubs.push(unsubTasks);
-
-      const unsubState = onSnapshot(stateDoc,(ds)=>{ const data=ds.exists()?(ds.data()||{}):{}; window.taskStatus=data.taskStatus||{}; window.__notesTabs=data.notesTabs||{}; const activeTabButton=document.querySelector('#notes-section .notepad-tab.active'); const notesAreaEl=document.getElementById('notesArea'); if(notesAreaEl&&activeTabButton){ notesAreaEl.value=window.__notesTabs[activeTabButton.dataset.tab]||''; } if(typeof renderCalendar==='function') renderCalendar(); });
-      window.__unsubs.push(unsubState);
-
-      const unsubImages = onSnapshot(imagesCol,(snap)=>{ window.imageBookmarks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); });
-      window.__unsubs.push(unsubImages);
+      const { imagesCol } = await cloudRefs();
+      await deleteDoc(doc(imagesCol,id));
     }
 
-    onAuthStateChanged(auth, async (user)=>{
-      loadingOverlay.classList.remove('hidden'); window.isAuthReady=false;
-      if(user){
-        userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
-        signInBtn.classList.add('hidden');
-        signOutBtn.classList.remove('hidden');
-        await setupRealtimeSync();
-      }else{
-        userInfoEl.textContent=''; signOutBtn.classList.add('hidden'); signInBtn.classList.remove('hidden');
-        window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
-        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={};
-        if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); const na=document.getElementById('notesArea'); if(na) na.value='';
+    function renderImageBookmarks(){
+      imageGrid.innerHTML="";
+      (window.imageBookmarks||[]).forEach(d=>{
+        const card=document.createElement("div");
+        card.className="image-card relative";
+        card.innerHTML=`<img src="${d.url}" class="w-full h-40 object-cover"/><button data-id="${d.id}" class="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded">삭제</button>`;
+        card.querySelector("img").onclick=()=>{ modalImage.src=d.url; goToPageBtn.onclick=()=>{ if(d.pageUrl) window.open(d.pageUrl,"_blank"); }; imageModal.classList.remove("hidden"); imageModal.classList.add("flex");};
+        card.querySelector("button").onclick=()=>deleteImage(d.id);
+        imageGrid.appendChild(card);
+      });
+    }
+
+    // ---- 이벤트 ----
+    dragArea.addEventListener("dragover",e=>{ e.preventDefault(); dragArea.classList.add("active"); });
+    dragArea.addEventListener("dragleave",()=>dragArea.classList.remove("active"));
+    dragArea.addEventListener("drop",async e=>{
+      e.preventDefault(); dragArea.classList.remove("active");
+      if(!ensureLogin()) return;
+      const url=e.dataTransfer.getData("URL");
+      const html=e.dataTransfer.getData("text/html");
+      const parsed=new DOMParser().parseFromString(html||"","text/html");
+      const img=parsed.querySelector("img");
+      if(img?.src){ await addUrlImage(img.src,img.src); return; }
+      if(url && /\.(jpe?g|png|gif|webp|svg)$/i.test(url)){ await addUrlImage(url,url); return; }
+      alert("유효한 이미지 URL을 드롭하세요.");
+    });
+    dragArea.addEventListener("paste",async e=>{
+      e.preventDefault();
+      if(!ensureLogin()) return;
+      const items=[...(e.clipboardData?.items||[])];
+      for(const it of items){
+        if(it.kind==="file" && it.type.startsWith("image/")){
+          const file=it.getAsFile();
+          await addClipboardImage(file,null);
+          return;
+        }
       }
-      loadingOverlay.classList.add('hidden'); window.isAuthReady=true;
+      alert("클립보드에 이미지가 없습니다.");
+    });
+    closeImageModalBtn.onclick=()=>imageModal.classList.add("hidden");
+
+    // ---- 로그인 ----
+    signInBtn.onclick=()=>signInWithPopup(auth,provider);
+    signOutBtn.onclick=()=>signOut(auth);
+
+    onAuthStateChanged(auth,async user=>{
+      if(user){
+        userInfo.textContent=user.email;
+        signInBtn.classList.add("hidden"); signOutBtn.classList.remove("hidden");
+        const { imagesCol }=await cloudRefs();
+        onSnapshot(imagesCol,snap=>{ window.imageBookmarks=snap.docs.map(d=>({id:d.id,...d.data()})); renderImageBookmarks(); });
+      }else{
+        userInfo.textContent=""; signInBtn.classList.remove("hidden"); signOutBtn.classList.add("hidden");
+        window.imageBookmarks=[]; renderImageBookmarks();
+      }
     });
   </script>
 </body>
