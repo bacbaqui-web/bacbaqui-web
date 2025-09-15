@@ -39,14 +39,15 @@
         /* 둥근 모서리 달력 스타일 */
         .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        /* 캘린더 칸의 세로 여백을 최소화 */
+        /* 캘린더 칸의 세로 여백을 더 길게 변경 */
         .day-label, .calendar-day { text-align: center; padding: 8px 2px; border-radius: 8px; background: #2a2a2a; position: relative; overflow: hidden; word-wrap: break-word; }
-        .day-label { background: #444; font-weight: 700; color: #fff; font-size: 0.8rem; }
-        .calendar-day { min-height: 120px; padding-top: 16px; padding-left: 2px; padding-right: 2px; display: flex; flex-direction: column; gap: 2px; }
+        /* 요일 칸 가로 크기 줄이기 */
+        .day-label { background: #444; font-weight: 700; color: #fff; font-size: 0.8rem; padding: 8px 0; }
+        .calendar-day { min-height: 160px; padding-top: 16px; padding-left: 2px; padding-right: 2px; display: flex; flex-direction: column; gap: 2px; }
         .calendar-day.today { border: 2px solid #ccc; }
         .day-number { position: absolute; top: 8px; left: 8px; font-size: 0.85rem; font-weight: 700; color: #aaa; z-index: 10; }
         /* 마일스톤도 둥근 모서리, 더 촘촘한 간격 */
-        .task-item { font-size: 0.65rem; padding: 3px 6px; border-radius: 12px; margin-top: 2px; word-wrap: break-word; cursor: pointer; text-align: left; }
+        .task-item { font-size: 0.85rem; padding: 3px 6px; border-radius: 8px; margin-top: 2px; word-wrap: break-word; cursor: pointer; text-align: left; font-weight: bold; }
         .task-item.custom-task { background: #4c78a8; }
         .task-item.episode-task { background: #444; color: #ddd; cursor: pointer; }
         .task-item.recurring-shorts { background: #7d4040; cursor: pointer; }
@@ -94,7 +95,7 @@
             }
             /* 모바일 달력 칸 높이를 더 유동적으로 조정 */
             .calendar-day { 
-                min-height: unset; 
+                min-height: 120px; 
                 padding: 1.5rem 0.2rem 0.2rem; /* 패딩을 줄여 더 촘촘하게 */
                 gap: 1px; /* 아이템 간 간격 최소화 */
             }
@@ -103,9 +104,9 @@
                 top: 0.5rem; 
                 left: 0.5rem; 
             }
-            /* 모바일에서 마일스톤 글자 크기와 여백 최소화 */
+            /* 마일스톤 글자 크기 다시 조정, 여백 최소화 */
             .task-item { 
-                font-size: 0.5rem; 
+                font-size: 0.85rem; 
                 padding: 1px 2px;
                 margin-top: 0;
             }
