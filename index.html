@@ -175,8 +175,26 @@
       if (pageUrl){ goToPageBtn.style.display='block'; goToPageBtn.onclick=()=>window.open(pageUrl,'_blank'); }
       else goToPageBtn.style.display='none';
       imageModal.style.display='flex';
+      // 이미지 크기를 창 크기에 맞춰 조정
+      adjustImageSize();
     };
     const closeImageModal = () => { imageModal.style.display = 'none'; };
+
+    // 이미지 크기를 창 크기에 맞춰 조정하는 함수
+    const adjustImageSize = () => {
+      const modalContent = document.querySelector('#imageModal .modal-content');
+      const modalImage = document.getElementById('modalImage');
+      if (modalContent && modalImage) {
+        const maxWidth = modalContent.offsetWidth * 0.9;
+        const maxHeight = modalContent.offsetHeight * 0.9;
+        
+        modalImage.style.maxWidth = `${maxWidth}px`;
+        modalImage.style.maxHeight = `${maxHeight}px`;
+      }
+    };
+    // 창 크기 변경 시 이미지 크기 조정
+    window.addEventListener('resize', adjustImageSize);
+
 
     function showTab(tabId){
       tabContents.forEach(c=>c.classList.remove('active'));
