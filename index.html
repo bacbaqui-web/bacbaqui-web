@@ -18,7 +18,7 @@
     textarea#notesArea::-webkit-scrollbar-thumb{background-color:#555;border-radius:10px}
     .calendar-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
     .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-    .day-label,.calendar-day{text-align:center;padding:8px 2px;border-radius:8px;background:#2a2a2a;position:relative;overflow:hidden;word-wrap:break-word}
+    .day-label,.calendar-day{text-align:center;padding:8px 2px;border-radius:8px;background:#2a2aa;position:relative;overflow:hidden;word-wrap:break-word}
     .day-label{background:#444;font-weight:700;color:#fff;font-size:.8rem;padding:8px 0}
     .calendar-day{min-height:160px;padding-top:16px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;gap:2px}
     .calendar-day.today{border:2px solid #ccc}
@@ -88,8 +88,8 @@
   </div>
 
   <div id="bookmarks-section" class="section-card tab-content text-left">
-    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer mt-6">
-      <div>이미지 URL을 드래그하거나, 캡쳐/복사 이미지를 붙여넣으세요 (Ctrl/Cmd+V)</div>
+    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer mt-6" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
+      <div>이미지 URL을 드래그하거나, 캡쳐/복사 이미지를 붙여넣으세요 (Ctrl/Cmd+V). 클릭 시 클립보드 자동 읽기.</div>
     </section>
     <section id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6"></section>
   </div>
@@ -138,9 +138,10 @@
   </div>
 
   <script>
-    // ===== 전역 상태 =====
+    // ===== 상수 =====
     const IMGBB_API_KEY = "f64175972f4e4178332db9ae8559969b";
 
+    // ===== 전역 상태 =====
     window.customTasks = window.customTasks || [];
     window.taskStatus = window.taskStatus || {};
     window.__notesTabs = window.__notesTabs || {};
@@ -149,6 +150,7 @@
     let currentDate = new Date();
     window.isAuthReady = false;
 
+    // ===== UI =====
     const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
     const tabContents = document.querySelectorAll('.tab-content');
     const mainNotepadTabs = document.querySelectorAll('#notes-section .notepad-tabs .notepad-tab');
@@ -160,6 +162,7 @@
     const closeImageModalBtn = document.getElementById('closeImageModalBtn');
     const goToPageBtn = document.getElementById('goToPageBtn');
 
+    // ===== helpers =====
     const showFeedbackMessage = (message) => {
       const el = document.createElement('div');
       el.textContent = message;
@@ -224,6 +227,7 @@
       saveTaskBtn.addEventListener('click',saveTask);
       deleteTaskBtn.addEventListener('click',()=>window.deleteTask&&window.deleteTask());
       taskModal.addEventListener('click',(e)=>{ if(e.target===taskModal) closeModal(); });
+
       closeImageModalBtn.addEventListener('click', closeImageModal);
       imageModal.addEventListener('click',(e)=>{ if(e.target===imageModal||e.target===modalImage) closeImageModal(); });
     };
@@ -286,7 +290,7 @@
         card.addEventListener('click',()=>openImageModal(imageUrl,pageUrl));
       });
       imageGrid.querySelectorAll('button[data-id]').forEach(btn=>{
-        btn.onclick=async(e)=>{ e.stopPropagation(); const id=e.currentTarget.dataset.id; try{ if(window.deleteImage) await window.deleteImage(id,null);}catch(err){ console.error(err); showAlert('이미지 삭제 중 오류가 발생했습니다.'); } };
+        btn.onclick=async(e)=>{ e.stopPropagation(); const id=e.currentTarget.dataset.id; try{ if(window.deleteImage) await window.deleteImage(id);}catch(err){ console.error(err); showAlert('이미지 삭제 중 오류가 발생했습니다.'); } };
       });
     };
 
@@ -311,7 +315,7 @@
 
     (function init(){ attachEventListeners(); renderCalendar(); })();
 
-    // ===== 붙여넣기/드래그 핸들러 =====
+    // ===== 드래그/붙여넣기/클릭-자동붙여넣기 =====
     function isValidUrl(u){ try{ new URL(u); return true; }catch(_){ return false; } }
 
     dragArea.addEventListener('dragover',(e)=>{ e.preventDefault(); dragArea.classList.add('active'); });
@@ -327,11 +331,39 @@
       else{ showAlert('이미지를 드래그하거나 유효한 이미지 URL을 드롭하세요.'); }
     });
 
+    // 클릭시 클립보드 자동 읽기(이미지 우선, 실패 시 URL/텍스트)
+    dragArea.addEventListener('click', async ()=>{
+      try{
+        if(navigator.clipboard && navigator.clipboard.read){ // 이미지 지원
+          const items = await navigator.clipboard.read();
+          for(const it of items){
+            for(const type of it.types){
+              if(type.startsWith('image/')){
+                const blob = await it.getType(type);
+                await addImage(new File([blob],'clipboard-image',{type:blob.type}), null);
+                showFeedbackMessage('클립보드 이미지 업로드됨');
+                return;
+              }
+            }
+          }
+        }
+        // 이미지가 없으면 텍스트 URL 시도
+        if(navigator.clipboard && navigator.clipboard.readText){
+          const t = await navigator.clipboard.readText();
+          if(t && isValidUrl(t)){ await addImage(t, t); showFeedbackMessage('클립보드 URL 업로드됨'); return; }
+        }
+        showAlert('클립보드에서 이미지/URL을 읽지 못했습니다. 브라우저 권한을 허용하거나 Ctrl/Cmd+V로 붙여넣기하세요.');
+      }catch(e){
+        console.error(e);
+        showAlert('클립보드 접근이 차단되었습니다. 주소창 왼쪽 사이트 권한에서 클립보드 권한을 허용하세요.');
+      }
+    });
+
+    // 키보드 붙여넣기
     dragArea.addEventListener('paste', async (e)=>{
       e.preventDefault();
       const items=(e.clipboardData||e.originalEvent?.clipboardData)?.items;
       let imageFound=false;
-
       if(items){
         for(let i=0;i<items.length;i++){
           const item=items[i];
@@ -447,7 +479,7 @@
       if(typeof renderCalendar==='function') renderCalendar();
     };
 
-    // ===== imgbb 업로드/삭제 구현 =====
+    // ===== imgbb 업로드/삭제 =====
     async function addImage(fileOrUrl, pageUrl){
       if(!window.isAuthReady || !auth.currentUser){ document.getElementById('modal-message').textContent='로그인 후 이용해 주세요.'; document.getElementById('alert-modal').classList.remove('hidden'); return; }
       try{
@@ -460,11 +492,13 @@
         if(!json.success) throw new Error(json?.error?.message || 'imgbb 업로드 실패');
         const link = json.data?.url || json.data?.display_url;
         const deleteUrl = json.data?.delete_url;
+        const deleteId = deleteUrl ? (deleteUrl.match(/\/image\/([^/?#]+)/)?.[1] || null) : null;
 
         await addDoc(imagesCol, {
           url: link,
           pageUrl: pageUrl || null,
           imgbb_delete_url: deleteUrl,
+          imgbb_delete_id: deleteId,
           timestamp: new Date()
         });
         showFeedbackMessage('이미지 북마크에 추가되었습니다!');
@@ -472,16 +506,33 @@
     }
     window.addImage = addImage;
 
-    window.deleteImage = async (id, _filePath)=>{
+    window.deleteImage = async (id)=>{
       if(!ensureLogin()) return;
       try{
         const { imagesCol } = await window.cloudRefs();
         const row = (window.imageBookmarks||[]).find(d=>d.id===id);
-        const del = row?.imgbb_delete_url;
-        if(del){ await fetch(del, { method:'GET' }); }
-        await deleteDoc(doc(imagesCol, id));
+        const delUrl = row?.imgbb_delete_url || null;
+        let delId = row?.imgbb_delete_id || null;
+        if(!delId && delUrl) delId = delUrl.match(/\/image\/([^/?#]+)/)?.[1] || null;
+
+        let removed=false;
+        if(delUrl){
+          try{ const r=await fetch(delUrl,{method:'GET'}); removed=r.ok; }catch(_){}
+        }
+        if(!removed && delId){
+          try{
+            const r2 = await fetch(`https://api.imgbb.com/1/image/${delId}?key=${IMGBB_API_KEY}`, { method:'DELETE' });
+            removed = r2.ok;
+          }catch(_){}
+        }
+
+        await deleteDoc(doc(imagesCol, id)); // DB 정리
         showFeedbackMessage('이미지가 삭제되었습니다.');
-      }catch(e){ console.error(e); document.getElementById('modal-message').textContent='이미지 삭제 중 오류가 발생했습니다.'; document.getElementById('alert-modal').classList.remove('hidden'); }
+      }catch(e){
+        console.error(e);
+        document.getElementById('modal-message').textContent='이미지 삭제 중 오류가 발생했습니다: '+(e?.message||'unknown');
+        document.getElementById('alert-modal').classList.remove('hidden');
+      }
     };
 
     // ===== 실시간 동기화 =====
@@ -493,7 +544,7 @@
       const unsubTasks = onSnapshot(tasksCol,(snap)=>{ window.customTasks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderCalendar==='function') renderCalendar(); });
       window.__unsubs.push(unsubTasks);
 
-      const unsubState = onSnapshot(stateDoc,(ds)=>{ const data=ds.exists()?(ds.data()||{}):{}; window.taskStatus=data.taskStatus||{}; window.__notesTabs=data.notesTabs||{}; const activeTabButton=document.querySelector('#notes-section .notepad-tab.active'); if(notesArea&&activeTabButton){ notesArea.value=window.__notesTabs[activeTabButton.dataset.tab]||''; } if(typeof renderCalendar==='function') renderCalendar(); });
+      const unsubState = onSnapshot(stateDoc,(ds)=>{ const data=ds.exists()?(ds.data()||{}):{}; window.taskStatus=data.taskStatus||{}; window.__notesTabs=data.notesTabs||{}; const activeTabButton=document.querySelector('#notes-section .notepad-tab.active'); const notesAreaEl=document.getElementById('notesArea'); if(notesAreaEl&&activeTabButton){ notesAreaEl.value=window.__notesTabs[activeTabButton.dataset.tab]||''; } if(typeof renderCalendar==='function') renderCalendar(); });
       window.__unsubs.push(unsubState);
 
       const unsubImages = onSnapshot(imagesCol,(snap)=>{ window.imageBookmarks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); });
@@ -511,7 +562,7 @@
         userInfoEl.textContent=''; signOutBtn.classList.add('hidden'); signInBtn.classList.remove('hidden');
         window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
         window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={};
-        if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); if(notesArea) notesArea.value='';
+        if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); const na=document.getElementById('notesArea'); if(na) na.value='';
       }
       loadingOverlay.classList.add('hidden'); window.isAuthReady=true;
     });
