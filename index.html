@@ -51,7 +51,7 @@
   </style>
 </head>
 <body class="text-white">
-  <div id="authBar" class="w-full max-w-2xl mx-auto flex items-center justify-end gap-2 mb-4">
+  <div id="authBar" class="w-full max-w-2xl mx-auto flex items-center justify-end gap:2 mb-4">
     <span id="userInfo" class="text-sm opacity-80"></span>
     <button id="signInBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Google 로그인</button>
     <button id="signOutBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded hidden">로그아웃</button>
@@ -125,6 +125,7 @@
   </div>
 
   <script>
+    // 상태
     window.customTasks = window.customTasks || [];
     window.taskStatus = window.taskStatus || {};
     window.__notesTabs = window.__notesTabs || {};
@@ -133,6 +134,7 @@
     let currentDate = new Date();
     window.isAuthReady = false;
 
+    // 요소
     const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
     const tabContents = document.querySelectorAll('.tab-content');
     const mainNotepadTabs = document.querySelectorAll('#notes-section .notepad-tabs .notepad-tab');
@@ -144,6 +146,7 @@
     const closeImageModalBtn = document.getElementById('closeImageModalBtn');
     const goToPageBtn = document.getElementById('goToPageBtn');
 
+    // 알림
     window.showFeedbackMessage = (message) => {
       const el = document.createElement('div');
       el.textContent = message;
@@ -158,6 +161,7 @@
     window.hideAlert = () => { document.getElementById('alert-modal').classList.add('hidden'); };
     document.getElementById('modal-close-btn').addEventListener('click', window.hideAlert);
 
+    // 모달
     const openImageModal = (imageUrl, pageUrl) => {
       modalImage.src = imageUrl;
       if (pageUrl) { goToPageBtn.style.display = 'block'; goToPageBtn.onclick = () => window.open(pageUrl, '_blank'); }
@@ -166,6 +170,7 @@
     };
     const closeImageModal = () => { imageModal.style.display = 'none'; };
 
+    // 탭
     function showTab(tabId){
       tabContents.forEach(c=>c.classList.remove('active'));
       tabButtons.forEach(b=>b.classList.remove('active'));
@@ -184,6 +189,7 @@
       });
     });
 
+    // 시간 유틸
     const TZ='Asia/Seoul';
     function ymdKST(date){return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date)}
     function toKST(date){return new Date(date.toLocaleString('en-US',{timeZone:TZ}))}
@@ -223,6 +229,7 @@
       dragArea.addEventListener('click',()=>dragArea.focus());
     };
 
+    // 캘린더 렌더
     const renderCalendar=()=>{
       const year=currentDate.getFullYear();const month=currentDate.getMonth();
       const currentMonthYear=document.getElementById('currentMonthYear');
@@ -269,6 +276,7 @@
       }
     };
 
+    // 북마크 렌더
     const renderImageBookmarks=()=>{
       imageGrid.innerHTML='';
       (window.imageBookmarks||[]).forEach(d=>{
@@ -286,6 +294,7 @@
       });
     };
 
+    // 작업 모달
     const openModal=(task=null)=>{
       window.currentTask=task;
       if(task&&task.id){
@@ -312,18 +321,18 @@
       await window.cloudSaveAll(); closeModal(); renderCalendar();
     };
 
-    function isValidUrl(url){try{new URL(url);return true}catch(e){return false}}
-
-    // 붙여넣기 개선 핸들러
+    // 붙여넣기 핸들러(확장)
     async function handlePaste(e){
       const cd = e.clipboardData || e.originalEvent?.clipboardData;
       if (!cd) return;
 
+      // files
       if (cd.files?.length){
         for (const f of cd.files){
           if (f.type?.startsWith('image/')) { await addImage(f, null); e.preventDefault(); return; }
         }
       }
+      // items -> file
       const items = cd.items || [];
       const IMAGE_MIMES = ['image/png','image/jpeg','image/webp','image/gif','image/svg+xml','image/tiff'];
       for (const it of items){
@@ -332,15 +341,26 @@
           if (file) { await addImage(file, null); e.preventDefault(); return; }
         }
       }
+      // text/html의 <img src>
+      const html = cd.getData?.('text/html') || '';
+      if (html){
+        const doc = new DOMParser().parseFromString(html,'text/html');
+        const src = doc.querySelector('img')?.src || '';
+        if (src && (src.startsWith('data:image/') || /\.(jpe?g|png|gif|webp|svg|tif?f)(\?|#|$)/i.test(src))){
+          await addImage(src, src); e.preventDefault(); return;
+        }
+      }
+      // URL 또는 data URL
       const txt = cd.getData?.('text/uri-list') || cd.getData?.('text/plain') || '';
       const looksImg = txt.startsWith('data:image/') || /\.(jpe?g|png|gif|webp|svg|tif?f)(\?|#|$)/i.test(txt);
       if (txt && looksImg){ await addImage(txt, txt); e.preventDefault(); return; }
-      try {
-        if (navigator.clipboard?.read) {
+      // Clipboard API (보안 컨텍스트)
+      try{
+        if (navigator.clipboard?.read){
           const clItems = await navigator.clipboard.read();
-          for (const ci of clItems) {
+          for (const ci of clItems){
             const type = ci.types.find(t => /^image\//.test(t));
-            if (type) {
+            if (type){
               const blob = await ci.getType(type);
               const file = new File([blob], 'pasted-image.' + (blob.type.split('/')[1] || 'png'), { type: blob.type });
               await addImage(file, null);
@@ -348,10 +368,11 @@
             }
           }
         }
-      } catch (_) {}
+      }catch(_){}
       window.showAlert('붙여넣기한 항목에 유효한 이미지가 없습니다.');
     }
 
+    // 드래그/드롭 + 붙여넣기 등록
     dragArea.addEventListener('dragover',(e)=>{e.preventDefault();dragArea.classList.add('active')});
     dragArea.addEventListener('dragleave',()=>{dragArea.classList.remove('active')});
     dragArea.addEventListener('drop',(e)=>{
@@ -522,7 +543,7 @@
         if (user){
           userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
           signInBtn.classList.add('hidden');
-          signOutBtn.classList.remove('hidden');
+          signOutBtn.classList.remove('hidden');   // 고침
           await setupRealtimeSync();
         } else {
           userInfoEl.textContent = '';
