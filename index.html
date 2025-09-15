@@ -10,11 +10,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
-        /* 세로 정렬을 상단으로 변경 */
-        body { font-family: 'Noto Sans KR', sans-serif; background: #000; color: #fff; display: flex; justify-content: flex-start; align-items: center; min-height: 100vh; padding: 20px; flex-direction: column; gap: 0; }
+        /* 세로 정렬을 상단으로 변경, 전체 여백을 줄여 더 촘촘하게 만듦 */
+        body { font-family: 'Noto Sans KR', sans-serif; background: #000; color: #fff; display: flex; justify-content: flex-start; align-items: center; min-height: 100vh; padding: 16px; flex-direction: column; gap: 0; }
         .tab-content { display: none; }
         .tab-content.active { display: flex; flex-direction: column; flex-grow: 1; }
-        .section-card { background: #2a2a2a; border-radius: 0 0 12px 12px; padding: 24px; box-shadow: inset 0 0 10px rgba(0,0,0,.3); text-align: center; width: 100%; max-width: 800px; }
+        /* 패딩을 줄여 더 촘촘하게 만듦 */
+        .section-card { background: #2a2a2a; border-radius: 12px; padding: 20px; box-shadow: inset 0 0 10px rgba(0,0,0,.3); text-align: center; width: 100%; max-width: 800px; }
         .notepad-tabs { display: flex; justify-content: center; align-items: center; gap: 1rem; width: 100%; max-width: 800px; }
         /* 선택되지 않은 탭 스타일 변경 */
         .notepad-tab { background: #1a1a1a; padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; transition: .2s; font-weight: 700; color: #737373; font-size: 0.85rem; }
@@ -35,14 +36,17 @@
             border-radius: 10px;
         }
 
-        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 24px; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-        .day-label, .calendar-day { text-align: center; padding: 8px; border-radius: 8px; background: #2a2a2a; position: relative; overflow: hidden; word-wrap: break-word; }
+        /* 둥근 모서리 달력 스타일 */
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        /* 캘린더 칸의 세로 여백을 최소화 */
+        .day-label, .calendar-day { text-align: center; padding: 8px 2px; border-radius: 8px; background: #2a2a2a; position: relative; overflow: hidden; word-wrap: break-word; }
         .day-label { background: #444; font-weight: 700; color: #fff; font-size: 0.8rem; }
-        .calendar-day { min-height: 120px; padding-top: 16px; }
+        .calendar-day { min-height: 120px; padding-top: 16px; padding-left: 2px; padding-right: 2px; display: flex; flex-direction: column; gap: 2px; }
         .calendar-day.today { border: 2px solid #ccc; }
-        .day-number { position: absolute; top: 8px; left: 8px; font-size: 0.85rem; font-weight: 700; color: #aaa; }
-        .task-item { font-size: 0.65rem; padding: 4px; border-radius: 4px; margin-top: 4px; word-wrap: break-word; cursor: pointer; }
+        .day-number { position: absolute; top: 8px; left: 8px; font-size: 0.85rem; font-weight: 700; color: #aaa; z-index: 10; }
+        /* 마일스톤도 둥근 모서리, 더 촘촘한 간격 */
+        .task-item { font-size: 0.65rem; padding: 3px 6px; border-radius: 12px; margin-top: 2px; word-wrap: break-word; cursor: pointer; text-align: left; }
         .task-item.custom-task { background: #4c78a8; }
         .task-item.episode-task { background: #444; color: #ddd; cursor: pointer; }
         .task-item.recurring-shorts { background: #7d4040; cursor: pointer; }
@@ -53,10 +57,11 @@
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: #1a1a1a; border-radius: 12px; padding: 24px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,.5); position: relative; }
         
-        /* 이미지 북마크 스타일 추가 */
+        /* 이미지 북마크 스타일 추가, 드래그 영역 패딩 줄여 더 촘촘하게 */
         .drag-area {
             border: 2px dashed #4b4b4b;
             transition: all 0.3s ease;
+            padding: 24px;
         }
         .drag-area.active {
             border-color: #6b6b6b;
@@ -73,11 +78,11 @@
         /* 모바일 화면 (768px 이하)에 대한 CSS */
         @media (max-width: 768px) {
             body { 
-                padding: 16px; 
+                padding: 12px; 
                 gap: 0; 
             }
             .section-card {
-                padding: 16px;
+                padding: 12px;
                 border-radius: 0;
             }
             .notepad-tabs {
@@ -87,21 +92,26 @@
                 padding: 6px 12px;
                 font-size: 0.8rem;
             }
+            /* 모바일 달력 칸 높이를 더 유동적으로 조정 */
             .calendar-day { 
                 min-height: unset; 
-                padding-top: 2rem; 
-                padding-bottom: 0.5rem; 
+                padding: 1.5rem 0.2rem 0.2rem; /* 패딩을 줄여 더 촘촘하게 */
+                gap: 1px; /* 아이템 간 간격 최소화 */
             }
             .day-number { 
                 font-size: 0.75rem; 
                 top: 0.5rem; 
                 left: 0.5rem; 
             }
+            /* 모바일에서 마일스톤 글자 크기와 여백 최소화 */
             .task-item { 
-                font-size: 0.55rem; 
+                font-size: 0.5rem; 
+                padding: 1px 2px;
+                margin-top: 0;
             }
+            /* 모바일에서 요일과 날짜 칸 사이의 간격을 없앰 */
             .calendar-grid, .calendar-header { 
-                gap: 4px; 
+                gap: 0; 
             }
             .add-task-btn { 
                 width: 100%; 
@@ -122,6 +132,15 @@
             display: flex;
             justify-content: center;
             align-items: center;
+        }
+        /* 1일과 2일 간격이 월화요일 간격과 같도록 수정 */
+        .calendar-grid {
+            grid-gap: 4px; /* 기존 4px 유지 */
+        }
+        @media (max-width: 768px) {
+            .calendar-grid {
+                grid-gap: 0;
+            }
         }
     </style>
 </head>
@@ -169,7 +188,7 @@
     </div>
 
     <div id="bookmarks-section" class="section-card tab-content text-left">
-        <section id="drag-area" class="drag-area rounded-lg p-8 flex items-center justify-center text-center text-[#999999] font-medium cursor-pointer mt-6">
+        <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999999] font-medium cursor-pointer mt-6">
             <div></div>
         </section>
         <section id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6"></section>
@@ -455,7 +474,6 @@
                     el.textContent = task.title;
                     if (task.complete) el.classList.add('complete');
                     el.addEventListener('click', async (e) => {
-                        e.stopPropagation();
                         if (e.detail === 1) {
                             if (!window.ensureLogin || !window.ensureLogin()) return;
                             task.complete = !task.complete;
