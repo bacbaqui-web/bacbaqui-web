@@ -21,7 +21,6 @@
     .item:hover{background:#2a3340}
     .item:last-child{border-bottom:none}
     .item .delete-btn{background:none;border:none;color:#fc8181;cursor:pointer;font-size:1.2em;line-height:1;margin-left:10px;opacity:.7;transition:opacity .2s}
-    .item .delete-btn:hover{opacity:1}
     .item .info-icon{background:none;border:none;color:#63b3ed;cursor:pointer;font-size:1.2em;margin-right:5px}
     .video-player{aspect-ratio:16/9;width:100%;max-width:800px;margin:8px auto;border-radius:8px;overflow:hidden;position:relative}
     .main-title{text-align:center}
@@ -151,9 +150,9 @@
   const YOUTUBE_API_KEY = "AIzaSyB2GymrywkBYx4Mbt_xHNiYEV44MbfKY2w";
   const firebaseConfig = {
     apiKey: "AIzaSyDz6xGJNKXinG5rREjdrPz7toIYGZXzilU",
-    authDomain: "sarangbangmusicplaylist.firebaseapp.com",
-    projectId: "sarangbangmusicplaylist",
-    storageBucket: "sarangbangmusicplaylist.apppt.com",
+    authDomain: "sarangbang.firebaseapp.com",
+    projectId: "sarangbang",
+    storageBucket: "sarangbang.appspot.com",
     messagingSenderId: "193412502606",
     appId: "1:193412502606:web:0f7f9ddbef1ee6711d1ff",
     measurementId: "G-L14GH3BHYD"
@@ -198,8 +197,8 @@
   const clientId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random());
   let userId = null;
   const globalState = {
-    playlist: [],            // Firestore에 저장되는 원본 목록
-    shuffledPlaylist: [],    // 로컬 전용 셔플 목록(업로드 안 함)
+    playlist: [],
+    shuffledPlaylist: [],
     isShuffled: false,
     videoId: '',
     timestamp: 0,
@@ -259,12 +258,22 @@
   function onPlayerReady(){}
   function onPlayerStateChange(e){
     switch(e.data){
-      case YT.PlayerState.ENDED: playNext(); break;
-      case YT.PlayerState.PLAYING:
-        const vid = player.getVideoData().video_id;
-        if (vid && vid.length===11) updatePlayingSong(vid);
+      case YT.PlayerState.ENDED:
+        playNext();
         break;
-      case YT.PlayerState.PAUSED: globalState.timestamp = player.getCurrentTime(); break;
+      case YT.PlayerState.PLAYING: {
+        const vid = player.getVideoData().video_id;
+        if (vid && vid.length===11) {
+          updatePlayingSong(vid);
+          globalState.timestamp = player.getCurrentTime() || 0;
+          updatePlaybackState();
+        }
+        break;
+      }
+      case YT.PlayerState.PAUSED:
+        globalState.timestamp = player.getCurrentTime() || 0;
+        updatePlaybackState();
+        break;
     }
   }
 
@@ -279,7 +288,7 @@
         if (!snap.exists) return;
         const s = snap.data();
         if (s && s.lastBusterCallTimestamp){
-          globalState.lastBusterCallTimestamp = s.lastBusterCallTimestamp.toMillis();
+          globalState.lastBusterCallTimestamp = s.lastBusterCallTimestamp.toMillis?.() ?? 0;
           checkBusterCallCooldown();
         }
       });
@@ -332,7 +341,7 @@
         }
       });
 
-    // 노트 변경 시 현재 곡 노트 갱신(공유 경로)
+    // 노트 목록 변경 시 현재 곡 노트 새로고침
     db.collection('artifacts').doc(appId).collection('public')
       .collection('notes')
       .onSnapshot(()=>{ renderCurrentSongNotes(); });
@@ -447,7 +456,9 @@
             busterCallToggleBtn.classList.remove('active');
           }
         }else{
-          playVideo(index); // 가시 리스트 인덱스 사용
+          playVideo(index);
+          globalState.timestamp = 0;
+          updatePlaybackState();
           showMessage("해당 곡을 재생합니다.");
         }
       });
@@ -455,7 +466,11 @@
       listEl.appendChild(div);
     });
 
-    if (vis.length>0 && (!player || !player.getVideoData())) playVideo(0);
+    if (vis.length>0 && (!player || !player.getVideoData())) {
+      playVideo(0);
+      globalState.timestamp = 0;
+      updatePlaybackState();
+    }
     renderCurrentSongInfo();
   }
 
@@ -513,6 +528,20 @@
     }
   }
 
+  function updatePlaybackState(){
+    if (!authed) return;
+    const db=firebase.firestore();
+    db.collection('artifacts').doc(appId).collection('public')
+      .collection('playback_state').doc('main_state')
+      .set({
+        videoId: globalState.videoId || '',
+        timestamp: Number(globalState.timestamp)||0,
+        lastUpdatedBy: clientId,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge:true })
+      .catch(e=>console.error(e));
+  }
+
   // --- 재생 ---
   function playVideo(index){
     const vis=getVisibleList();
@@ -530,10 +559,14 @@
   function playNext(){
     const vis=getVisibleList(); if (!vis.length) return;
     playVideo((globalState.currentPlayingIndex+1)%vis.length);
+    globalState.timestamp = 0;
+    updatePlaybackState();
   }
   function playPrev(){
     const vis=getVisibleList(); if (!vis.length) return;
     playVideo((globalState.currentPlayingIndex-1+vis.length)%vis.length);
+    globalState.timestamp = 0;
+    updatePlaybackState();
   }
 
   function togglePlayerVisibility(){
@@ -585,7 +618,7 @@
     if (i!==-1){
       np[i].title=(songTitleInput.value||'').trim();
       np[i].artist=(artistInput.value||'').trim();
-      updatePlaylist(np); // Firestore에 playlist 저장
+      updatePlaylist(np);
     }
 
     // 공유 노트 Firestore 저장
@@ -716,7 +749,7 @@
     shuffleBtn.addEventListener('click', ()=>{
       if (globalState.isShuffled){
         globalState.isShuffled=false;
-        globalState.shuffledPlaylist=[]; // 업로드 없음
+        globalState.shuffledPlaylist=[];
         shuffleBtn.textContent='셔플';
         showMessage("재생목록 정렬");
       }else{
@@ -730,12 +763,14 @@
         const oldSongs=globalState.playlist.filter(it=>!isNewSong(it));
         const shuffledOld=[...oldSongs].sort(()=>Math.random()-0.5);
         globalState.isShuffled=true;
-        globalState.shuffledPlaylist=[...newSongs, ...shuffledOld]; // 로컬 전용
+        globalState.shuffledPlaylist=[...newSongs, ...shuffledOld];
         shuffleBtn.textContent='정렬';
         showMessage("재생목록 셔플 (new 우선)");
       }
       renderList();
       playVideo(0);
+      globalState.timestamp = 0;
+      updatePlaybackState();
     });
 
     busterCallToggleBtn.addEventListener('click', ()=>{
