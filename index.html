@@ -274,7 +274,7 @@
 
     // 버스터콜 상태
     db.collection('artifacts').doc(appId).collection('public')
-      .doc('data').collection('buster_call_state').doc('main_state')
+      .collection('buster_call_state').doc('main_state')
       .onSnapshot(snap=>{
         if (!snap.exists) return;
         const s = snap.data();
@@ -286,7 +286,7 @@
 
     // 재생 상태
     db.collection('artifacts').doc(appId).collection('public')
-      .doc('data').collection('playback_state').doc('main_state')
+      .collection('playback_state').doc('main_state')
       .onSnapshot(snap=>{
         if (!snap.exists) return;
         const s = snap.data()||{};
@@ -301,7 +301,7 @@
 
     // 재생 목록
     db.collection('artifacts').doc(appId).collection('public')
-      .doc('data').collection('playlist_state').doc('main_playlist')
+      .collection('playlist_state').doc('main_playlist')
       .onSnapshot(snap=>{
         if (!snap.exists){ savePlaylistState(); return; }
         const data = snap.data()||{};
@@ -311,7 +311,7 @@
         }) : [];
         globalState.playlist = sorted;
 
-        // 셔플 활성 시에도 파이어스토어에 올리지 않음. 로컬에서만 new 고정 + 나머지 섞기
+        // 셔플은 로컬 전용
         if (globalState.isShuffled){
           const now=Date.now(), day=24*60*60*1000;
           const isNewSong = it=>{
@@ -332,8 +332,9 @@
         }
       });
 
-    // 노트 변경 시 현재 곡 노트 갱신
-    db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('notes')
+    // 노트 변경 시 현재 곡 노트 갱신(공유 경로)
+    db.collection('artifacts').doc(appId).collection('public')
+      .collection('notes')
       .onSnapshot(()=>{ renderCurrentSongNotes(); });
   }
 
@@ -346,7 +347,7 @@
       try{
         const db=firebase.firestore();
         const ref=db.collection('artifacts').doc(appId).collection('public')
-          .doc('data').collection('playlist_state').doc('main_playlist');
+          .collection('playlist_state').doc('main_playlist');
         const valid = globalState.playlist.map(x=>({...x, createdAt:x.createdAt||new Date()}));
         await ref.set({
           playlist: valid,
@@ -475,11 +476,11 @@
   async function renderCurrentSongNotes(){
     currentSongNotesEl.innerHTML='<span class="muted">정보를 불러오는 중...</span>';
     const videoId=globalState.videoId;
-    if (!videoId || !userId){
+    if (!videoId){
       currentSongNotesEl.innerHTML='<span class="muted">작성된 정보가 없습니다.</span>'; return;
     }
     const db=firebase.firestore();
-    const docRef=db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('notes').doc(videoId);
+    const docRef=db.collection('artifacts').doc(appId).collection('public').collection('notes').doc(videoId);
     try{
       const snap=await docRef.get();
       if (!snap.exists){
@@ -556,7 +557,7 @@
     artistInput.value=item?item.artist:'';
 
     const db=firebase.firestore();
-    const docRef=db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('notes').doc(videoId);
+    const docRef=db.collection('artifacts').doc(appId).collection('public').collection('notes').doc(videoId);
     docRef.get().then(snap=>{
       if (snap.exists){
         const d=snap.data()||{};
@@ -587,9 +588,9 @@
       updatePlaylist(np); // Firestore에 playlist 저장
     }
 
-    // 개인 노트 Firestore 저장
+    // 공유 노트 Firestore 저장
     const db=firebase.firestore();
-    const notesRef=db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('notes').doc(currentInfoVideoId);
+    const notesRef=db.collection('artifacts').doc(appId).collection('public').collection('notes').doc(currentInfoVideoId);
     try{
       await notesRef.set({
         uploader:(uploaderInput.value||'').trim(),
@@ -610,7 +611,7 @@
     if (!authed) return;
     const db=firebase.firestore();
     db.collection('artifacts').doc(appId).collection('public')
-      .doc('data').collection('buster_call_state').doc('main_state')
+      .collection('buster_call_state').doc('main_state')
       .set({ lastBusterCallTimestamp: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: clientId }, { merge:true })
       .catch(e=>console.error(e));
   }
@@ -619,7 +620,7 @@
     try{
       const db=firebase.firestore();
       db.collection('artifacts').doc(appId).collection('public')
-        .doc('data').collection('playback_state').doc('main_state')
+        .collection('playback_state').doc('main_state')
         .set({ videoId, timestamp:0, lastUpdatedBy:clientId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
 
       showMessage("모든 사용자에게 버스터콜을 보냈습니다!","ok");
