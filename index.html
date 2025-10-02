@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>만화 일정 관리</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght400;700&display=swap" rel="stylesheet"/>
   <style>
     body{font-family:'Noto Sans KR',sans-serif;background:#000;color:#fff;display:flex;justify-content:flex-start;align-items:center;min-height:100vh;padding:16px;flex-direction:column;gap:0}
     .tab-content{display:none}.tab-content.active{display:flex;flex-direction:column;flex-grow:1}
@@ -34,7 +34,132 @@
     .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
     .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
     .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
-    .image-card{position:relative;transition:transform .2s ease-in-out}.image-card:hover{transform:translateY(-5px)}
+    
+    /* 북마크 Masonry 레이아웃 */
+    #image-grid {
+        column-count: 2; /* 기본 2열 */
+        column-gap: 1rem;
+        margin-top: 1.5rem; /* mt-6 */
+        display: block;
+    }
+    @media (min-width: 640px) { /* sm: 3열 */
+        #image-grid { column-count: 3; }
+    }
+    @media (min-width: 1024px) { /* lg: 4열 */
+        #image-grid { column-count: 4; }
+    }
+
+    /* 북마크 카드 스타일 */
+    .bookmark-card{
+        position: relative;
+        transition: transform .2s ease-in-out; 
+        background: #333; 
+        border-radius: 8px; 
+        overflow: hidden; 
+        margin-bottom: 1rem; /* 세로 간격 */
+        break-inside: avoid; /* 카드 분할 방지 */
+        width: 100%; /* Column 아이템으로 사용 */
+        display: block;
+    }
+    .bookmark-card:hover{transform:translateY(-5px)}
+    
+    /* 콘텐츠 영역: 이미지/아이콘 높이에 따라 크기 결정 */
+    .bookmark-card .content {
+        display: block; 
+        width: 100%;
+        height: auto;
+        overflow: hidden;
+        background-color: #1a1a1a;
+        /* 링크나 동영상 썸네일이 없을 때 최소 높이 보장 */
+        min-height: 80px; 
+        position: relative; /* 오버레이를 위한 기준점 */
+    }
+    
+    .bookmark-card img {
+        position: static; 
+        width: 100%;
+        height: auto; /* 실제 비율 사용 */
+        display: block;
+        /* 기본: 이미지가 잘리지 않고 전체가 보이도록 contain 설정 */
+        object-fit: contain; 
+    }
+
+    .bookmark-card .img-fit-cover {
+        /* 비디오 썸네일용: 영역을 꽉 채우도록 cover 설정 */
+        object-fit: cover; 
+        height: 100%; /* content의 높이를 꽉 채우도록 설정 */
+    }
+    
+    /* 아이콘/텍스트 오버레이 */
+    .bookmark-card .icon-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex; justify-content: center; align-items: center;
+        color: white; font-size: 3rem;
+    }
+    /* 링크 북마크의 제목 표시 */
+    .bookmark-card .link-title-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        color: white; padding: 10px;
+        text-align: center;
+    }
+    .bookmark-card .link-title-text {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+        word-break: break-all;
+    }
+    .bookmark-card .link-url-text {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        word-break: break-all;
+    }
+    
+    /* 신규 Video title overlay (썸네일 없을 때) */
+    .bookmark-card .video-title-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(80, 0, 0, 0.7); /* Reddish background for video emphasis */
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        color: white; padding: 10px;
+        text-align: center;
+    }
+    .bookmark-card .video-title-text {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+        word-break: break-all;
+    }
+    .bookmark-card .video-url-text {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        word-break: break-all;
+    }
+    
+    /* 인스타그램 스타일 (이제 직접 임베드 코드를 사용하므로 이 스타일은 사용하지 않음) */
+    .bookmark-card .instagram-overlay { display: none; } 
+    
+    /* 인스타그램 임베드 짤림 방지: 임베드 콘텐츠가 부모 카드 너비를 넘지 않도록 설정 */
+    .bookmark-card .content > div[style*="max-width:540px"] {
+        max-width: 100% !important; 
+        width: 100% !important;
+        box-sizing: border-box; /* 패딩/보더 포함 너비 계산 */
+    }
+
+    /* 사이트별 구분 헤더 스타일 */
+    .domain-header {
+        column-span: all; /* Masonry 레이아웃에서 전체 너비를 차지 */
+        width: 100%;
+        margin: 20px 0 10px;
+        padding: 8px 0;
+        color: #fff;
+        font-size: 1.25rem;
+        font-weight: 700;
+        border-bottom: 2px solid #555;
+        text-align: left;
+    }
+
     @media (max-width:768px){
       body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
       .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
@@ -42,13 +167,14 @@
       .task-item{font-size:.85rem;padding:2px 4px;margin-top:2px}
       .calendar-grid,.calendar-header{gap:0}.add-task-btn{width:100%;font-size:.9rem}
       .modal-content{padding:16px;width:95%}
+      .domain-header { font-size: 1rem; }
     }
     .calendar-grid{grid-gap:4px}
     @media (max-width:768px){.calendar-grid{grid-gap:0}}
 
     /* 이미지 모달 스타일 */
     #imageModal.modal {
-        background: rgba(0, 0, 0, 0.7); /* 반투명한 검은 배경 */
+        background: rgba(0, 0, 0, 0.7);
         display: none;
         position: fixed;
         top: 0;
@@ -61,20 +187,31 @@
         background-color: transparent;
         padding: 0;
         box-shadow: none;
-        width: 90%; /* 창 너비의 90%를 차지하도록 설정 */
-        max-width: 1200px; /* 너무 커지지 않도록 최대 너비 설정 */
-        height: auto;
-        max-height: 90%; /* 너무 커지지 않도록 최대 높이 설정 */
+        /* Set max dimensions based on viewport to prioritize height */
+        max-width: 90vw; /* 90% viewport width */
+        max-height: 90vh; /* 90% viewport height (세로에 맞춤) */
+        width: auto; 
+        height: auto; 
         display: flex;
         justify-content: center;
         align-items: center;
+        cursor: pointer; /* 모달 내용을 클릭해서 닫기 위해 커서 추가 */
     }
     #modalImage {
-        width: 100%; /* 부모 컨테이너 너비에 맞춰 크기 조절 */
-        height: auto; /* 이미지 비율 유지 */
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain; /* 이미지 비율을 유지하면서 컨테이너에 맞춤 */
+        /* Fill the constrained container while maintaining aspect ratio */
+        width: auto; 
+        height: auto; 
+        max-width: 100%; /* 모달 콘텐츠 크기 내에서 최대화 */
+        max-height: 100%; /* 모달 콘텐츠 크기 내에서 최대화 */
+        object-fit: contain; /* Crucial: Ensures the whole image is visible within 90vw/90vh without being cut off */
+    }
+    
+    /* 북마크 제목 수정 모달 스타일 */
+    #editTitleModal.modal { z-index: 1001; }
+    #editTitleModal .modal-content {
+        background: #2a2a2a; 
+        max-width: 400px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.5);
     }
   </style>
 </head>
@@ -118,12 +255,28 @@
   </div>
 
   <div id="bookmarks-section" class="section-card tab-content text-left">
-    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer mt-6" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
-      <div>이미지 URL은 드래그. 캡쳐/이미지는 붙여넣기(Ctrl/Cmd+V).</div>
+    
+    <!-- 정렬 기준 선택 추가 -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2 items-center text-sm">
+            <span class="text-gray-400">정렬 기준:</span>
+            <select id="bookmarkSortSelect" class="bg-gray-700 p-1 rounded text-white focus:outline-none">
+                <option value="timestamp">최신순</option>
+                <!-- 기본 선택값을 사이트별 정렬로 변경 -->
+                <option value="sourceDomain" selected>사이트별 정렬</option>
+            </select>
+        </div>
+    </div>
+    <!-- /정렬 기준 선택 추가 -->
+
+    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
+      <div>이미지/동영상/일반 페이지 URL 또는 인스타그램 퍼가기 코드를 붙여넣기 또는 드래그하세요. 캡쳐/이미지는 붙여넣기(Ctrl/Cmd+V)를 사용하세요.</div>
     </section>
-    <section id="image-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6"></section>
+    <!-- Tailwind Grid 클래스 제거, CSS Masonry 스타일 적용됨 -->
+    <section id="image-grid"></section>
   </div>
 
+  <!-- 작업 모달 (기존) -->
   <div id="taskModal" class="modal">
     <div class="modal-content">
       <h2 id="modalTitle" class="text-2xl font-bold mb-4">새 작업</h2>
@@ -141,6 +294,7 @@
     </div>
   </div>
 
+  <!-- 이미지 확대 모달 (기존) -->
   <div id="imageModal" class="modal">
     <div class="modal-content relative">
       <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">
@@ -150,6 +304,20 @@
       <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">원본 페이지로 이동</button>
     </div>
   </div>
+
+  <!-- 북마크 제목 수정 모달 (새로 추가) -->
+  <div id="editTitleModal" class="modal">
+    <div class="modal-content">
+      <h2 class="text-xl font-bold mb-4">북마크 제목 수정</h2>
+      <label class="block mb-2 text-sm opacity-80" id="currentUrlDisplay"></label>
+      <input type="text" id="editTitleInput" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
+      <div class="flex justify-end gap-2">
+        <button id="saveTitleBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
+        <button id="cancelTitleBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
+      </div>
+    </div>
+  </div>
+
 
   <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
@@ -169,16 +337,22 @@
 
   <!-- ===== UI 스크립트 ===== -->
   <script>
+    // ImgBB API Key (이미지 업로드용)
     const IMGBB_API_KEY = "f64175972f4e4178332db9ae8559969b";
 
+    // 전역 상태
     window.customTasks = window.customTasks || [];
     window.taskStatus = window.taskStatus || {};
     window.__notesTabs = window.__notesTabs || {};
-    window.imageBookmarks = window.imageBookmarks || [];
+    window.imageBookmarks = window.imageBookmarks || []; // 북마크는 이미지와 동영상, 일반 링크 모두 포함
     window.currentTask = null;
+    window.currentEditingBookmark = null; // 현재 편집 중인 북마크 항목
     let currentDate = new Date();
     window.isAuthReady = false;
+    // **수정: 기본 정렬 키를 'sourceDomain'으로 설정**
+    window.bookmarkSortKey = 'sourceDomain'; // 기본 정렬 키: sourceDomain (사이트별)
 
+    // DOM 요소
     const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
     const tabContents = document.querySelectorAll('.tab-content');
     const mainNotepadTabs = document.querySelectorAll('#notes-section .notepad-tabs .notepad-tab');
@@ -189,7 +363,17 @@
     const modalImage = document.getElementById('modalImage');
     const closeImageModalBtn = document.getElementById('closeImageModalBtn');
     const goToPageBtn = document.getElementById('goToPageBtn');
+    // 제목 수정 모달 요소
+    const editTitleModal = document.getElementById('editTitleModal');
+    const editTitleInput = document.getElementById('editTitleInput');
+    const saveTitleBtn = document.getElementById('saveTitleBtn');
+    const cancelTitleBtn = document.getElementById('cancelTitleBtn');
+    const currentUrlDisplay = document.getElementById('currentUrlDisplay');
+    // 정렬 선택 요소
+    const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
 
+
+    // 유틸리티 함수
     const showFeedbackMessage = (message) => {
       const el = document.createElement('div');
       el.textContent = message;
@@ -208,6 +392,38 @@
     };
     const closeImageModal = () => { imageModal.style.display = 'none'; };
 
+    // 북마크 제목 수정 모달
+    const openEditModal = (bookmark) => {
+        window.currentEditingBookmark = bookmark;
+        const currentTitle = bookmark.title || '';
+        const displayUrl = bookmark.pageUrl.length > 50 ? bookmark.pageUrl.substring(0, 47) + '...' : bookmark.pageUrl;
+        
+        currentUrlDisplay.textContent = `URL: ${displayUrl}`;
+        editTitleInput.value = currentTitle;
+        editTitleModal.style.display = 'flex';
+    };
+
+    const closeEditModal = () => {
+        window.currentEditingBookmark = null;
+        editTitleModal.style.display = 'none';
+    };
+
+    const saveEditedTitle = async () => {
+        if (!window.currentEditingBookmark || !window.ensureLogin()) return;
+
+        const newTitle = editTitleInput.value.trim();
+        const bookmark = window.currentEditingBookmark;
+
+        if (bookmark.type === 'link' || bookmark.type === 'video' || bookmark.type === 'instagram') {
+            await window.updateBookmarkTitle(bookmark.id, newTitle);
+        }
+        
+        closeEditModal();
+        showFeedbackMessage('제목이 저장되었습니다.');
+        // onSnapshot이 Firestore 업데이트를 감지하고 renderImageBookmarks를 호출할 것입니다.
+    };
+
+
     function showTab(tabId){
       tabContents.forEach(c=>c.classList.remove('active'));
       tabButtons.forEach(b=>b.classList.remove('active'));
@@ -224,6 +440,7 @@
       });
     });
 
+    // 시간/날짜 관련 유틸리티
     const TZ='Asia/Seoul';
     function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
@@ -231,6 +448,7 @@
 
     const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
 
+    // 모달 관련 DOM
     const taskModal=document.getElementById('taskModal');
     const cancelBtn=document.getElementById('cancelBtn');
     const saveTaskBtn=document.getElementById('saveTaskBtn');
@@ -239,6 +457,7 @@
     const taskDescriptionInput=document.getElementById('taskDescription');
     const taskDateInput=document.getElementById('taskDate');
 
+    // 이벤트 리스너 부착
     const attachEventListeners=()=>{
       const prevMonthBtn=document.getElementById('prevMonthBtn');
       const nextMonthBtn=document.getElementById('nextMonthBtn');
@@ -252,13 +471,40 @@
       }
       cancelBtn.addEventListener('click',closeModal);
       saveTaskBtn.addEventListener('click',saveTask);
+      // window.deleteTask는 Firebase 스크립트에서 정의됨
       deleteTaskBtn.addEventListener('click',()=>window.deleteTask&&window.deleteTask());
       taskModal.addEventListener('click',(e)=>{ if(e.target===taskModal) closeModal(); });
 
       closeImageModalBtn.addEventListener('click', closeImageModal);
-      imageModal.addEventListener('click',(e)=>{ if(e.target===imageModal) closeImageModal(); });
+      // 이미지 모달 배경 클릭 시 닫기
+      imageModal.addEventListener('click',(e)=>{ if(e.target===imageModal) closeImageModal(); }); 
+      // 추가: 모달 내용 (이미지 포함) 클릭 시 닫기
+      document.querySelector('#imageModal .modal-content').addEventListener('click', (e) => {
+          // X 버튼, 원본 페이지 이동 버튼을 제외하고 닫기
+          if (!e.target.closest('#closeImageModalBtn') && !e.target.closest('#goToPageBtn')) {
+              closeImageModal();
+          }
+      });
+      
+      // 제목 수정 모달 이벤트 리스너
+      cancelTitleBtn.addEventListener('click', closeEditModal);
+      saveTitleBtn.addEventListener('click', saveEditedTitle);
+      editTitleModal.addEventListener('click', (e) => { if (e.target === editTitleModal) closeEditModal(); });
+      editTitleInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              saveEditedTitle();
+          }
+      });
+      
+      // 정렬 선택 변경 이벤트 리스너
+      bookmarkSortSelect.addEventListener('change', (e) => {
+          window.bookmarkSortKey = e.target.value;
+          renderImageBookmarks();
+      });
     };
 
+    // 달력 렌더링
     const renderCalendar=()=>{
       const year=currentDate.getFullYear(), month=currentDate.getMonth();
       const currentMonthYear=document.getElementById('currentMonthYear');
@@ -302,25 +548,221 @@
       }
     };
 
+    // 유튜브 썸네일 URL 추출
+    function getYoutubeThumbnail(url) {
+        let videoId = null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        if (match && match[2].length === 11) {
+            videoId = match[2];
+        }
+        if (videoId) {
+            return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        }
+        return null;
+    }
+    
+    // 인스타그램 임베드 스크립트를 로드하고 콘텐츠를 처리하는 함수
+    function initializeInstagramEmbeds() {
+        if (window.instgrm && window.instgrm.Embeds) {
+            // 스크립트가 이미 로드된 경우, 새 게시물을 처리
+            window.instgrm.Embeds.process();
+            return;
+        }
+
+        // 스크립트 로드
+        const scriptId = 'instagram-embed-script';
+        if (!document.getElementById(scriptId)) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.async = true;
+            script.src = '//www.instagram.com/embed.js';
+            document.head.appendChild(script);
+            
+            // 스크립트 로드 후에도 process를 한 번 더 호출할 수 있도록 window에 핸들러 등록
+            script.onload = () => {
+                if (window.instgrm && window.instgrm.Embeds) {
+                    window.instgrm.Embeds.process();
+                }
+            };
+        }
+    }
+
+    // 북마크 렌더링 (이미지 및 동영상 포함)
     const renderImageBookmarks=()=>{
       imageGrid.innerHTML='';
-      (window.imageBookmarks||[]).forEach(d=>{
-        const imageUrl=d.url; const pageUrl=d.pageUrl; if(!imageUrl) return;
+      
+      let sortedBookmarks = [...(window.imageBookmarks || [])];
+
+      // 1. 정렬 로직 적용
+      let currentSortKey = window.bookmarkSortKey || 'sourceDomain'; // 기본값 반영
+      bookmarkSortSelect.value = currentSortKey; // 선택 박스 값 업데이트
+
+      if (currentSortKey === 'sourceDomain') {
+          // 사이트별 정렬: 도메인 이름순으로 정렬
+          sortedBookmarks.sort((a, b) => {
+              const domainA = a.sourceDomain || 'Unknown Source';
+              const domainB = b.sourceDomain || 'Unknown Source';
+              return domainA.localeCompare(domainB);
+          });
+      } else { // 'timestamp' (Newest first)
+          // 최신순 정렬: 타임스탬프 역순 (가장 큰 값이 맨 위)
+          sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
+      }
+
+      let lastDomain = null; // 그룹 구분을 위한 변수
+
+      sortedBookmarks.forEach(d=>{
+        const isVideo = d.type === 'video';
+        const isLink = d.type === 'link'; // 일반 페이지 링크
+        const isInstagram = d.type === 'instagram'; // 인스타그램 게시물
+        const isEditable = isVideo || isLink || isInstagram; // 제목 수정 가능한 항목
+        const imageUrl = d.url;
+        const pageUrl = d.pageUrl; // 일반 URL, 동영상 URL 또는 인스타그램 게시물 URL
+        const sourceDomain = d.sourceDomain || 'Unknown Source';
+
+        // **2. 사이트별 정렬 시 헤더 추가**
+        if (currentSortKey === 'sourceDomain' && sourceDomain !== lastDomain) {
+            const header = document.createElement('h3');
+            header.className = 'domain-header';
+            header.textContent = sourceDomain;
+            imageGrid.appendChild(header);
+            lastDomain = sourceDomain;
+        }
+        
+        let thumbnail = isVideo ? getYoutubeThumbnail(pageUrl) : imageUrl;
+        let iconHtml = '';
+        let urlToOpen = pageUrl;
+
+        if (isLink) {
+            // 일반 페이지 링크 북마크
+            const displayTitle = d.title || '일반 페이지 링크';
+            const displayUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+            
+            iconHtml = `<div class="link-title-overlay">
+                            <!-- 링크 아이콘 -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.708l4-4a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" />
+                            </svg>
+                            <!-- 제목 텍스트 -->
+                            <span class="link-title-text">${displayTitle}</span>
+                            <!-- URL 텍스트 -->
+                            <span class="link-url-text">${displayUrl}</span>
+                        </div>`;
+        } else if (isInstagram) {
+             // 인스타그램 게시물 북마크 (퍼가기 코드 사용)
+             // 원본 URL 추출 (클릭 시 이동용)
+             const parser = new DOMParser();
+             const doc = parser.parseFromString(d.embedCode || '', 'text/html');
+             const blockquote = doc.querySelector('blockquote.instagram-media');
+             if (blockquote && blockquote.cite) urlToOpen = blockquote.cite;
+             else urlToOpen = pageUrl;
+             
+             const displayTitle = d.title || 'Instagram Post (클릭 시 원본 이동)';
+             
+             // Embed Code를 직접 삽입하여 인스타그램 미리보기가 렌더링되도록 함.
+             // z-index를 사용하여 제목 오버레이가 임베드 위에 오도록 설정.
+             // 인스타그램 임베드는 높이가 가변적이며, Masonry 레이아웃이 이를 처리하도록 기대함.
+             iconHtml = `
+                <div class="w-full h-full relative z-0">
+                    <!-- 인스타그램 임베드 코드 (직접 렌더링) -->
+                    ${d.embedCode || ''}
+                    <!-- 임베드가 로드되기를 기다리는 동안 제목 표시 -->
+                    <div class="absolute top-0 left-0 right-0 p-2 bg-black bg-opacity-70 text-white text-sm font-bold z-10">${displayTitle}</div>
+                </div>
+             `;
+
+        } else if (isVideo && !thumbnail) {
+            // **수정된 부분: 썸네일 없는 비디오를 위한 새로운 제목 오버레이 스타일 적용**
+            const displayTitle = d.title || '동영상 북마크 (제목 편집 가능)';
+            const displayUrl = pageUrl.replace(/^https?:\/\//, '').substring(0, 30) + '...';
+            
+            iconHtml = `<div class="video-title-overlay">
+                            <!-- 비디오 아이콘 -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-400 mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg>
+                            <!-- 제목 텍스트 -->
+                            <span class="video-title-text">${displayTitle}</span>
+                            <!-- URL 텍스트 -->
+                            <span class="video-url-text">${displayUrl}</span>
+                        </div>`;
+        } else if (!isVideo) {
+            // 이미지 북마크인 경우 (썸네일은 이미지 URL 자체)
+            iconHtml = `<img src="${imageUrl}" alt="북마크된 이미지" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=이미지+오류'"/>`;
+        } else {
+            // 유튜브 동영상이고 썸네일이 있는 경우
+            const displayTitle = d.title || 'YouTube 영상';
+            iconHtml = `<img src="${thumbnail}" alt="동영상 썸네일" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=동영상+썸네일'"/>
+                        <div class="icon-overlay flex-col">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg>
+                            <span class="text-xs mt-1 font-bold">${displayTitle}</span>
+                        </div>`;
+        }
+
         const card=document.createElement('div');
-        card.className='image-card relative group cursor-pointer';
+        card.className='bookmark-card relative group cursor-pointer';
         card.innerHTML=`
-          <div class="block w-full h-40"><img src="${imageUrl}" alt="북마크된 이미지" loading="lazy" decoding="async" class="w-full h-full object-cover rounded-lg shadow-md"/></div>
-          <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-id="${d.id}">
+          <div class="content">
+            ${iconHtml}
+          </div>
+          <!-- 소스 도메인 표시 -->
+          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 truncate z-10 opacity-70">
+              ${sourceDomain}
+          </div>
+          <!-- 삭제 버튼 -->
+          <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="delete">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>`;
+          </button>
+          <!-- 제목 수정 버튼 (링크, 비디오, 인스타그램 전용) -->
+          ${isEditable ? `
+          <button class="absolute top-2 right-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="edit">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          ` : ''}
+          `;
         imageGrid.appendChild(card);
-        card.addEventListener('click',()=>openImageModal(imageUrl,pageUrl));
+        
+        // 클릭 이벤트 (Card Main Action)
+        card.addEventListener('click',(e)=>{
+            // 삭제나 편집 버튼을 누른 경우는 무시
+            if (e.target.closest('button[data-action]')) return; 
+
+            if (isVideo || isLink || isInstagram) {
+                // 인스타그램의 경우 URLToOpen을 사용 (퍼가기 코드에서 추출된 원본 URL)
+                window.open(urlToOpen, '_blank');
+            } else {
+                openImageModal(imageUrl, pageUrl);
+            }
+        });
       });
-      imageGrid.querySelectorAll('button[data-id]').forEach(btn=>{
-        btn.onclick=async(e)=>{ e.stopPropagation(); const id=e.currentTarget.dataset.id; try{ if(window.deleteImage) await window.deleteImage(id);}catch(err){ console.error(err); showAlert('이미지 삭제 중 오류가 발생했습니다.'); } };
+      
+      // 버튼 이벤트 리스너 부착
+      imageGrid.querySelectorAll('button[data-action]').forEach(btn=>{
+        btn.onclick=async(e)=>{ 
+          e.stopPropagation(); 
+          const id=e.currentTarget.dataset.id;
+          const action=e.currentTarget.dataset.action;
+          const bookmark = window.imageBookmarks.find(d => d.id === id);
+
+          if (action === 'delete') {
+             try{ 
+                 if(window.deleteImage) await window.deleteImage(id);
+             }catch(err){ 
+                 console.error(err); 
+                 showAlert('북마크 삭제 중 오류가 발생했습니다.'); 
+             }
+          } else if (action === 'edit' && bookmark) {
+             openEditModal(bookmark);
+          }
+        };
       });
+      
+      // 인스타그램 임베드 스크립트 초기화 및 렌더링
+      initializeInstagramEmbeds();
     };
 
+    // 작업 모달
     const openModal=(task=null)=>{
       window.currentTask=task;
       if(task&&task.id){ document.getElementById('modalTitle').textContent='작업 수정'; taskTitleInput.value=task.title; taskDescriptionInput.value=task.description||''; taskDateInput.value=task.date||''; deleteTaskBtn.classList.remove('hidden'); }
@@ -340,71 +782,190 @@
       await window.cloudSaveAll(); closeModal(); renderCalendar();
     };
 
-    (function init(){ attachEventListeners(); renderCalendar(); })();
+    (function init(){ 
+        attachEventListeners(); 
+        // 초기화 시 기본 정렬 키를 'sourceDomain'으로 설정했으므로 선택 상자 값을 업데이트합니다.
+        bookmarkSortSelect.value = window.bookmarkSortKey;
+        renderCalendar(); 
+    })();
 
     // ===== D&D/붙여넣기/클릭-자동붙여넣기 =====
     function isImageUrl(u){
       try{ new URL(u); }catch{ return false; }
       return /\.(jpe?g|png|gif|webp|svg|avif)(\?|$)/i.test(u);
     }
-    // 드래그앤드롭: URL만 저장. 파일 드롭 시 안내.
+    
+    function isVideoUrl(u){
+        if (!u) return false;
+        try { new URL(u); } catch { return false; }
+        // YouTube, Vimeo, 또는 일반적인 동영상 확장자 검사
+        return /youtu\.be|youtube\.com|vimeo\.com|\.(mp4|webm|ogg|mov)(\?|$)|missav\.com/i.test(u);
+    }
+    
+    // 인스타그램 퍼가기 코드 확인 (blockquote 태그를 포함하는지 확인)
+    function isInstagramEmbed(text) {
+        return /<blockquote class="instagram-media".*<\/blockquote>/.test(text);
+    }
+    
+    // **신규: 도메인 추출 유틸리티**
+    function extractDomain(url) {
+        if (!url) return 'Unknown';
+        try {
+            const urlObj = new URL(url.includes('://') ? url : 'https://' + url);
+            let domain = urlObj.hostname;
+            if (domain.startsWith('www.')) domain = domain.substring(4);
+            return domain;
+        } catch {
+            return 'Unknown';
+        }
+    }
+
+
+    // 새로운 유틸리티: 이미지/동영상/인스타그램 URL이 아닌 일반 URL인지 확인
+    function isGenericUrl(u) {
+        if (!u) return false;
+        try {
+            const urlObj = new URL(u);
+            // http 또는 https 프로토콜을 사용하며, 이미지/비디오/인스타그램 URL이 아닌 경우
+            // **수정된 부분: URL에 . (점)이 포함되어야 유효한 도메인으로 간주합니다.**
+            return (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') && urlObj.hostname.includes('.') && !isImageUrl(u) && !isVideoUrl(u) && !/instagram\.com/.test(u);
+        } catch {
+            return false;
+        }
+    }
+
+    // 드래그앤드롭 핸들러
     dragArea.addEventListener('dragover',(e)=>{ e.preventDefault(); dragArea.classList.add('active'); });
     dragArea.addEventListener('dragleave',()=>{ dragArea.classList.remove('active'); });
     dragArea.addEventListener('drop',async(e)=>{
       e.preventDefault(); dragArea.classList.remove('active');
       const dt=e.dataTransfer;
       const html=dt.getData('text/html');
+      const plainText = dt.getData('text/plain');
+
       let url=null, pageUrl=null;
+      
+      // 1. 드롭된 내용에서 인스타그램 퍼가기 코드 확인
+      if(plainText && isInstagramEmbed(plainText)) {
+          if(window.addInstagramBookmark) { await window.addInstagramBookmark(plainText); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
+      }
+      
+      // 2. 드롭된 내용에서 이미지 URL 추출 시도
       if(html){
         const doc=new DOMParser().parseFromString(html,'text/html');
         const img=doc.querySelector('img');
         if(img?.src){ url=img.src; pageUrl=dt.getData('text/uri-list')||dt.getData('URL')||null; }
       }
-      if(!url){ const u=dt.getData('text/uri-list')||dt.getData('URL')||dt.getData('text/plain'); if(u) { url=u; pageUrl=u; } }
-      if(url && isImageUrl(url)){ if(window.addRemoteImage){ await window.addRemoteImage(url,pageUrl); showFeedbackMessage('이미지 URL 북마크됨'); } return; }
+      // 3. 드롭된 내용에서 일반 URL 추출 시도
+      if(!url){ const u=dt.getData('text/uri-list')||dt.getData('URL')||plainText; if(u) { url=u; pageUrl=u; } }
 
+      // 4. 북마크 처리 (URL인 경우)
+      if(url){
+          if(isImageUrl(url)){ 
+              // 이미지 URL 북마크
+              if(window.addRemoteImage){ await window.addRemoteImage(url,pageUrl); showFeedbackMessage('이미지 URL 북마크됨'); } 
+              return; 
+          } else if(isVideoUrl(url)) {
+              // 동영상 URL 북마크
+              if(window.addVideoBookmark) { await window.addVideoBookmark(url); showFeedbackMessage('동영상 URL 북마크됨'); }
+              return;
+          } else if(isGenericUrl(url)) {
+              // 일반 페이지 URL 북마크
+              if(window.addGenericBookmark) { await window.addGenericBookmark(url); showFeedbackMessage('페이지 URL 북마크됨'); }
+              return;
+          }
+      }
+
+      // 5. 파일 드롭 처리 (캡쳐 이미지는 붙여넣기 안내)
       const files=[...(dt.files||[])].filter(f=>f.type.startsWith('image/'));
       if(files.length){ showAlert('파일 드롭은 업로드하지 않습니다. 캡쳐 이미지는 붙여넣기(Ctrl/Cmd+V)를 사용하세요.'); return; }
 
-      showAlert('이미지 URL을 찾지 못했습니다.');
+      showAlert('유효한 콘텐츠를 찾지 못했습니다.');
     });
 
-    // 클릭: 클립보드 접근. 이미지면 imgbb 업로드, 텍스트 URL이면 URL 저장.
+    // 클릭: 클립보드 접근 및 자동 붙여넣기 시도
     dragArea.addEventListener('click', async ()=>{
       try{
+        let processed = false;
+        
+        // 1. 클립보드 이미지 처리
         if(navigator.clipboard?.read){
           const items=await navigator.clipboard.read();
           for(const it of items){
             for(const type of it.types){
               if(type.startsWith('image/')){
                 const blob=await it.getType(type);
-                if(window.addImage){ await window.addImage(new File([blob],'clipboard-image',{type:blob.type}), null); showFeedbackMessage('클립보드 이미지 업로드됨'); return; }
+                if(window.addImage){ await window.addImage(new File([blob],'clipboard-image',{type:blob.type}), null); showFeedbackMessage('클립보드 이미지 업로드됨'); processed=true; return; }
               }
             }
           }
         }
+        
+        // 2. 클립보드 텍스트 (URL/퍼가기 코드) 처리
         const t = await navigator.clipboard.readText();
-        if(t && isImageUrl(t)){ if(window.addRemoteImage){ await window.addRemoteImage(t,t); showFeedbackMessage('클립보드 URL 북마크됨'); return; } }
-        showAlert('클립보드에서 이미지/URL을 읽지 못했습니다.');
+        if(t){
+            if (isInstagramEmbed(t)) {
+                if(window.addInstagramBookmark) { await window.addInstagramBookmark(t); showFeedbackMessage('클립보드 인스타그램 게시물 북마크됨'); processed=true; return; }
+            } else if(isImageUrl(t)){ 
+                if(window.addRemoteImage){ await window.addRemoteImage(t,t); showFeedbackMessage('클립보드 이미지 URL 북마크됨'); processed=true; return; } 
+            } else if(isVideoUrl(t)){
+                if(window.addVideoBookmark) { await window.addVideoBookmark(t); showFeedbackMessage('클립보드 동영상 URL 북마크됨'); processed=true; return; }
+            } else if(isGenericUrl(t)) {
+                if(window.addGenericBookmark) { await window.addGenericBookmark(t); showFeedbackMessage('클립보드 페이지 URL 북마크됨'); processed=true; return; }
+            }
+        }
+        
+        if(!processed) showAlert('클립보드에서 유효한 콘텐츠를 읽지 못했습니다.');
       }catch(e){ console.error(e); showAlert('클립보드 권한을 허용하세요.'); }
     });
 
-    // 붙여넣기: 이미지 파일이면 imgbb, URL이면 URL 저장.
+    // 붙여넣기 핸들러
     dragArea.addEventListener('paste', async (e)=>{
       e.preventDefault();
       const items=[...(e.clipboardData||e.originalEvent?.clipboardData)?.items||[]];
+      let foundText = null;
+
       for(const item of items){
+        // 1. 이미지 파일 처리
         if(item.kind==='file' && item.type.startsWith('image/')){
-          const file=item.getAsFile(); if(file && window.addImage){ await window.addImage(file,null); showFeedbackMessage('이미지 업로드됨'); return; }
+          const file=item.getAsFile(); 
+          if(file && window.addImage){ await window.addImage(file,null); showFeedbackMessage('이미지 업로드됨'); return; }
         }
+        // 2. 텍스트 처리
         if(item.kind==='string'){
           const txt=await new Promise(r=>item.getAsString(r));
-          if(txt && isImageUrl(txt)){ if(window.addRemoteImage){ await window.addRemoteImage(txt,txt); showFeedbackMessage('URL 북마크됨'); return; } }
+          if(txt){
+             if (isInstagramEmbed(txt)) {
+                 if(window.addInstagramBookmark) { await window.addInstagramBookmark(txt); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
+             } else if(isImageUrl(txt)){ 
+                if(window.addRemoteImage){ await window.addRemoteImage(txt,txt); showFeedbackMessage('URL 북마크됨'); return; } 
+             } else if(isVideoUrl(txt)){
+                 if(window.addVideoBookmark) { await window.addVideoBookmark(txt); showFeedbackMessage('동영상 URL 북마크됨'); return; }
+             } else if(isGenericUrl(txt)){
+                 if(window.addGenericBookmark) { await window.addGenericBookmark(txt); showFeedbackMessage('페이지 URL 북마크됨'); return; }
+             }
+             foundText = txt;
+          }
         }
       }
-      const plain=e.clipboardData?.getData('text/plain');
-      if(plain && isImageUrl(plain)){ if(window.addRemoteImage){ await window.addRemoteImage(plain,plain); showFeedbackMessage('URL 북마크됨'); return; } }
-      showAlert('붙여넣기한 항목에 유효한 이미지가 없습니다.');
+      
+      // Fallback: plain text
+      if (!foundText) {
+          const plain=e.clipboardData?.getData('text/plain');
+          if(plain){
+             if (isInstagramEmbed(plain)) {
+                 if(window.addInstagramBookmark) { await window.addInstagramBookmark(plain); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
+             } else if(isImageUrl(plain)){ 
+                if(window.addRemoteImage){ await window.addRemoteImage(plain,plain); showFeedbackMessage('URL 북마크됨'); return; } 
+             } else if(isVideoUrl(plain)){
+                if(window.addVideoBookmark) { await window.addVideoBookmark(plain); showFeedbackMessage('동영상 URL 북마크됨'); return; }
+             } else if(isGenericUrl(plain)){
+                if(window.addGenericBookmark) { await window.addGenericBookmark(plain); showFeedbackMessage('페이지 URL 북마크됨'); return; }
+             }
+          }
+      }
+      
+      showAlert('붙여넣기한 항목에 유효한 이미지, 동영상 URL, 일반 페이지 URL 또는 인스타그램 퍼가기 코드가 없습니다.');
     });
   </script>
 
@@ -412,8 +973,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    // Firebase Config (원래 파일에서 가져옴)
     const firebaseConfig = {
       apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
       authDomain: "comicschedule-dfec7.firebaseapp.com",
@@ -433,6 +995,20 @@
     const userInfoEl=document.getElementById('userInfo');
     const loadingOverlay=document.getElementById('loading-overlay');
     const provider = new GoogleAuthProvider();
+    
+    // **도메인 추출 함수를 모듈 스코프에서 사용 가능하도록 재정의**
+    function extractDomain(url) {
+        if (!url) return 'Unknown';
+        try {
+            const urlObj = new URL(url.includes('://') ? url : 'https://' + url);
+            let domain = urlObj.hostname;
+            if (domain.startsWith('www.')) domain = domain.substring(4);
+            return domain;
+        } catch {
+            return 'Unknown';
+        }
+    }
+
 
     async function doSignIn(){
       try{ await signInWithPopup(auth,provider); }
@@ -452,7 +1028,7 @@
       return {
         tasksCol: collection(db, `${userPath}/customTasks`),
         stateDoc: doc(db, `${userPath}/meta/appState`),
-        imagesCol: collection(db, `${userPath}/images`),
+        imagesCol: collection(db, `${userPath}/images`), // 이미지/동영상/링크 북마크 통합 컬렉션
       };
     };
 
@@ -470,6 +1046,7 @@
       const { tasksCol, stateDoc } = await cloudRefs();
       window.taskStatus=window.taskStatus||{}; window.customTasks=window.customTasks||[];
       await setDoc(stateDoc,{taskStatus:window.taskStatus},{merge:true});
+      // FireStore에서 setDoc은 문서 ID가 없으면 생성, 있으면 덮어쓰기/병합하므로 map/reduce 대신 setDoc 사용
       const ops=window.customTasks.map(t=>setDoc(doc(tasksCol,String(t.id)),t,{merge:true}));
       await Promise.all(ops);
     };
@@ -500,19 +1077,53 @@
       if(typeof renderCalendar==='function') renderCalendar();
     };
 
-    // ===== 북마크 저장 로직 =====
-    // URL만 저장
+    // ===== 북마크 저장 로직 (sourceDomain 추가) =====
+    
+    // 동영상 북마크 저장 (URL만 저장, type: 'video')
+    window.addVideoBookmark = async (url)=>{
+      if(!ensureLogin()) return;
+      const { imagesCol } = await cloudRefs();
+      // pageUrl 필드에 동영상 URL을 저장. title 필드 추가.
+      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'video', title: null, sourceDomain: extractDomain(url), timestamp:new Date() }); 
+    };
+    
+    // 일반 링크 북마크 저장 (URL만 저장, type: 'link')
+    window.addGenericBookmark = async (url)=>{
+      if(!ensureLogin()) return;
+      const { imagesCol } = await cloudRefs();
+      // pageUrl 필드에 일반 URL을 저장. title 필드 추가.
+      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'link', title: null, sourceDomain: extractDomain(url), timestamp:new Date() }); 
+    };
+    
+    // 인스타그램 북마크 저장 (퍼가기 코드 저장, type: 'instagram')
+    window.addInstagramBookmark = async (embedCode)=>{
+      if(!ensureLogin()) return;
+      const { imagesCol } = await cloudRefs();
+      
+      // 퍼가기 코드에서 원본 URL 추출 시도
+      let pageUrl = '인스타그램 게시물';
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(embedCode, 'text/html');
+      const blockquote = doc.querySelector('blockquote.instagram-media');
+      if(blockquote && blockquote.cite) pageUrl = blockquote.cite;
+      
+      await addDoc(imagesCol,{ pageUrl: pageUrl, embedCode: embedCode, url: null, type:'instagram', title: null, sourceDomain: extractDomain(pageUrl), timestamp:new Date() }); 
+    };
+
+    // 이미지 URL만 저장 (type: 'remote')
     window.addRemoteImage = async (url, pageUrl)=>{
       if(!ensureLogin()) return;
       const { imagesCol } = await cloudRefs();
-      await addDoc(imagesCol,{ url, pageUrl: pageUrl||null, type:'remote', timestamp:new Date() });
+      await addDoc(imagesCol,{ url, pageUrl: pageUrl||null, type:'remote', sourceDomain: extractDomain(pageUrl || url), timestamp:new Date() });
     };
-    // imgbb 업로드(붙여넣기/클립보드 이미지 전용)
+    
+    // imgbb 업로드(붙여넣기/클립보드 이미지 전용, type: 'imgbb')
     window.addImage = async (fileOrUrl, pageUrl)=>{
       if(!ensureLogin()) return;
       try{
         const { imagesCol } = await cloudRefs();
         const form=new FormData();
+        // fileOrUrl이 string인 경우는 현재 Paste/Click 핸들러에서 사용되지 않지만, 기존 코드를 유지합니다.
         if(typeof fileOrUrl==='string'){ form.append('image', fileOrUrl); }
         else{ form.append('image', fileOrUrl); }
         const res=await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,{method:'POST',body:form});
@@ -521,33 +1132,64 @@
         const link=json.data?.url || json.data?.display_url;
         const deleteUrl=json.data?.delete_url || null;
         const deleteId = deleteUrl ? (deleteUrl.match(/\/image\/([^/?#]+)/)?.[1] || null) : null;
+        
+        // imgbb로 업로드된 이미지의 원본 출처를 알 수 없으므로 'Uploaded (ImgBB)'로 표시
+        const source = pageUrl ? extractDomain(pageUrl) : 'Uploaded (ImgBB)';
 
-        await addDoc(imagesCol,{ url:link, pageUrl:pageUrl||null, type:'imgbb', imgbb_delete_url:deleteUrl, imgbb_delete_id:deleteId, timestamp:new Date() });
+        await addDoc(imagesCol,{ url:link, pageUrl:pageUrl||null, type:'imgbb', imgbb_delete_url:deleteUrl, imgbb_delete_id:deleteId, title: null, sourceDomain: source, timestamp:new Date() });
       }catch(err){
         document.getElementById('modal-message').textContent='이미지 추가 실패: '+(err.message||'오류');
         document.getElementById('alert-modal').classList.remove('hidden');
       }
     };
 
-    // 삭제: remote는 문서만 삭제, imgbb는 delete_url 호출 후 문서 삭제
+    // 북마크 제목 수정 기능 (신규)
+    window.updateBookmarkTitle = async (id, newTitle) => {
+        if (!ensureLogin()) return;
+        const { imagesCol } = await cloudRefs();
+        const docRef = doc(imagesCol, id);
+        
+        try {
+            await updateDoc(docRef, { title: newTitle || null });
+        } catch (e) {
+            console.error("제목 업데이트 오류:", e);
+            showAlert("제목을 저장하는 중 오류가 발생했습니다.");
+        }
+    };
+
+
+    // 북마크 삭제
     window.deleteImage = async (id)=>{
       if(!ensureLogin()) return;
       try{
         const { imagesCol } = await cloudRefs();
-        const row=(window.imageBookmarks||[]).find(d=>d.id===id);
-        if(row?.type==='remote'){
+        // window.imageBookmarks는 onSnapshot을 통해 실시간으로 업데이트됨
+        const row=(window.imageBookmarks||[]).find(d=>d.id===id); 
+        
+        if(!row) throw new Error('북마크 항목을 찾을 수 없습니다.');
+        
+        if(row.type==='remote' || row.type === 'video' || row.type === 'link' || row.type === 'instagram'){
+          // remote 이미지, 동영상, 일반 링크, 인스타그램 북마크는 Firestore 문서만 삭제
           await deleteDoc(doc(imagesCol,id));
+          showFeedbackMessage('북마크가 삭제되었습니다.');
           return;
         }
-        if(row?.type==='imgbb'){
+        
+        if(row.type==='imgbb'){
+          // imgbb 업로드 이미지는 imgbb에서도 삭제 시도 후, Firestore 문서 삭제
           const delUrl=row.imgbb_delete_url||null;
-          let delId=row.imgbb_delete_id||null;
-          if(!delId && delUrl) delId = delUrl.match(/\/image\/([^/?#]+)/)?.[1] || null;
-          if(delUrl){ try{ await fetch(delUrl,{method:'GET'}); }catch(_){/* ignore */} }
+          if(delUrl){ 
+            try{ 
+                // imgbb 삭제 API 호출 (GET 요청)
+                await fetch(delUrl,{method:'GET'}); 
+                // 성공 여부와 상관없이 Firestore 문서 삭제
+            }catch(_){/* imgbb 삭제 오류는 무시 */} 
+          }
           await deleteDoc(doc(imagesCol,id));
+          showFeedbackMessage('북마크가 삭제되었습니다.');
         }
       }catch(e){
-        document.getElementById('modal-message').textContent='이미지 삭제 중 오류: '+(e?.message||'unknown');
+        document.getElementById('modal-message').textContent='북마크 삭제 중 오류: '+(e?.message||'unknown');
         document.getElementById('alert-modal').classList.remove('hidden');
       }
     };
@@ -564,7 +1206,11 @@
       const unsubState = onSnapshot(stateDoc,(ds)=>{ const data=ds.exists()?(ds.data()||{}):{}; window.taskStatus=data.taskStatus||{}; window.__notesTabs=data.notesTabs||{}; const activeTabButton=document.querySelector('#notes-section .notepad-tab.active'); const notesAreaEl=document.getElementById('notesArea'); if(notesAreaEl&&activeTabButton){ notesAreaEl.value=window.__notesTabs[activeTabButton.dataset.tab]||''; } if(typeof renderCalendar==='function') renderCalendar(); });
       window.__unsubs.push(unsubState);
 
-      const unsubImages = onSnapshot(imagesCol,(snap)=>{ window.imageBookmarks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); });
+      const unsubImages = onSnapshot(imagesCol,(snap)=>{ 
+          // imageBookmarks에 이미지/동영상/링크/인스타그램 북마크 모두 포함
+          window.imageBookmarks=snap.docs.map(d=>({id:d.id,...d.data()})); 
+          if(typeof renderImageBookmarks==='function') renderImageBookmarks(); 
+      });
       window.__unsubs.push(unsubImages);
     }
 
