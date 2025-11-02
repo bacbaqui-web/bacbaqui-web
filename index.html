@@ -982,16 +982,17 @@
       apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
       authDomain: "comicschedule-dfec7.firebaseapp.com",
       projectId: "comicschedule-dfec7",
-      storageBucket: "comicschedule-dfec7.firebasestorage.app",
-      messagingSenderId: "1004611276816",
-      appId: "1:1004611276816:web:aca83237bafa971ed1fa95",
+      storageBucket: "comicschedule-dfec7.firebasestorage.app", // <-- 올바른 주소
+      messagingSenderId: "1004611276816", // <-- 사용자님이 주신 새 ID
+      appId: "1:1004611276816:web:aca83237bafa971ed1fa95", // <-- 사용자님이 주신 새 ID
       measurementId: "G-ZNZZQRJZF9"
     };
 
+    // ***이 부분이 수정되었습니다 (analytics 관련 코드 제거, 원본 코드로 복구)***
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app); // [수정 3] Storage 서비스 초기화
+    const storage = getStorage(app); 
 
     const signInBtn=document.getElementById('signInBtn');
     const signOutBtn=document.getElementById('signOutBtn');
@@ -1244,7 +1245,7 @@
       window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
 
       const unsubTasks = onSnapshot(tasksCol,(snap)=>{ window.customTasks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderCalendar==='function') renderCalendar(); });
-      window.__unsubs.push(unsubTasks);
+      window.__unsubs.push(unTasks);
 
       const unsubState = onSnapshot(stateDoc,(ds)=>{ const data=ds.exists()?(ds.data()||{}):{}; window.taskStatus=data.taskStatus||{}; window.__notesTabs=data.notesTabs||{}; const activeTabButton=document.querySelector('#notes-section .notepad-tab.active'); const notesAreaEl=document.getElementById('notesArea'); if(notesAreaEl&&activeTabButton){ notesAreaEl.value=window.__notesTabs[activeTabButton.dataset.tab]||''; } if(typeof renderCalendar==='function') renderCalendar(); });
       window.__unsubs.push(unsubState);
