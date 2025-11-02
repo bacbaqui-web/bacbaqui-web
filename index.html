@@ -819,7 +819,7 @@
             const urlObj = new URL(u);
             // http 또는 https 프로토콜을 사용하며, 이미지/비디오/인스타그램 URL이 아닌 경우
             // **수정된 부분: URL에 . (점)이 포함되어야 유효한 도메인으로 간주합니다.**
-            return (urlObj.protocol === 'http:' || urlObj.protocol === 'https.) && urlObj.hostname.includes('.') && !isImageUrl(u) && !isVideoUrl(u) && !/instagram\.com/.test(u);
+            return (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') && urlObj.hostname.includes('.') && !isImageUrl(u) && !isVideoUrl(u) && !/instagram\.com/.test(u);
         } catch {
             return false;
         }
@@ -1245,7 +1245,7 @@
       window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
 
       const unsubTasks = onSnapshot(tasksCol,(snap)=>{ window.customTasks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderCalendar==='function') renderCalendar(); });
-      window.__unsubs.push(unTasks);
+      window.__unsubs.push(unsubTasks);
 
       const unsubState = onSnapshot(stateDoc,(ds)=>{ const data=ds.exists()?(ds.data()||{}):{}; window.taskStatus=data.taskStatus||{}; window.__notesTabs=data.notesTabs||{}; const activeTabButton=document.querySelector('#notes-section .notepad-tab.active'); const notesAreaEl=document.getElementById('notesArea'); if(notesAreaEl&&activeTabButton){ notesAreaEl.value=window.__notesTabs[activeTabButton.dataset.tab]||''; } if(typeof renderCalendar==='function') renderCalendar(); });
       window.__unsubs.push(unsubState);
@@ -1276,3 +1276,4 @@
   </script>
 </body>
 </html>
+
