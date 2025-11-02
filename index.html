@@ -256,27 +256,21 @@
 
   <div id="bookmarks-section" class="section-card tab-content text-left">
     
-    <!-- 정렬 기준 선택 추가 -->
     <div class="flex justify-between items-center mb-4">
         <div class="flex gap-2 items-center text-sm">
             <span class="text-gray-400">정렬 기준:</span>
             <select id="bookmarkSortSelect" class="bg-gray-700 p-1 rounded text-white focus:outline-none">
                 <option value="timestamp">최신순</option>
-                <!-- 기본 선택값을 사이트별 정렬로 변경 -->
                 <option value="sourceDomain" selected>사이트별 정렬</option>
             </select>
         </div>
     </div>
-    <!-- /정렬 기준 선택 추가 -->
-
     <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
       <div>이미지/동영상/일반 페이지 URL 또는 인스타그램 퍼가기 코드를 붙여넣기 또는 드래그하세요. 캡쳐/이미지는 붙여넣기(Ctrl/Cmd+V)를 사용하세요.</div>
     </section>
-    <!-- Tailwind Grid 클래스 제거, CSS Masonry 스타일 적용됨 -->
     <section id="image-grid"></section>
   </div>
 
-  <!-- 작업 모달 (기존) -->
   <div id="taskModal" class="modal">
     <div class="modal-content">
       <h2 id="modalTitle" class="text-2xl font-bold mb-4">새 작업</h2>
@@ -294,7 +288,6 @@
     </div>
   </div>
 
-  <!-- 이미지 확대 모달 (기존) -->
   <div id="imageModal" class="modal">
     <div class="modal-content relative">
       <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">
@@ -305,7 +298,6 @@
     </div>
   </div>
 
-  <!-- 북마크 제목 수정 모달 (새로 추가) -->
   <div id="editTitleModal" class="modal">
     <div class="modal-content">
       <h2 class="text-xl font-bold mb-4">북마크 제목 수정</h2>
@@ -335,11 +327,12 @@
     </div>
   </div>
 
-  <!-- ===== UI 스크립트 ===== -->
   <script>
     // ImgBB API Key (이미지 업로드용)
-    const IMGBB_API_KEY = "f64175972f4e4178332db9ae8559969b";
-
+    // const IMGBB_API_KEY = "f64175972f4e4178332db9ae8559969b"; // [수정 1] 더 이상 필요 없으므로 주석 처리
+    
+    // (이 아래 UI 스크립트 내용은 변경 사항 없음)
+    
     // 전역 상태
     window.customTasks = window.customTasks || [];
     window.taskStatus = window.taskStatus || {};
@@ -616,6 +609,9 @@
         const isVideo = d.type === 'video';
         const isLink = d.type === 'link'; // 일반 페이지 링크
         const isInstagram = d.type === 'instagram'; // 인스타그램 게시물
+        // [수정] type: 'imgbb' 또는 'firebase_storage' 또는 'remote'일 때가 이미지임
+        const isImage = d.type === 'imgbb' || d.type === 'firebase_storage' || d.type === 'remote';
+        
         const isEditable = isVideo || isLink || isInstagram; // 제목 수정 가능한 항목
         const imageUrl = d.url;
         const pageUrl = d.pageUrl; // 일반 URL, 동영상 URL 또는 인스타그램 게시물 URL
@@ -640,13 +636,10 @@
             const displayUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
             
             iconHtml = `<div class="link-title-overlay">
-                            <!-- 링크 아이콘 -->
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.708l4-4a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" />
                             </svg>
-                            <!-- 제목 텍스트 -->
                             <span class="link-title-text">${displayTitle}</span>
-                            <!-- URL 텍스트 -->
                             <span class="link-url-text">${displayUrl}</span>
                         </div>`;
         } else if (isInstagram) {
@@ -665,9 +658,7 @@
              // 인스타그램 임베드는 높이가 가변적이며, Masonry 레이아웃이 이를 처리하도록 기대함.
              iconHtml = `
                 <div class="w-full h-full relative z-0">
-                    <!-- 인스타그램 임베드 코드 (직접 렌더링) -->
                     ${d.embedCode || ''}
-                    <!-- 임베드가 로드되기를 기다리는 동안 제목 표시 -->
                     <div class="absolute top-0 left-0 right-0 p-2 bg-black bg-opacity-70 text-white text-sm font-bold z-10">${displayTitle}</div>
                 </div>
              `;
@@ -678,23 +669,25 @@
             const displayUrl = pageUrl.replace(/^https?:\/\//, '').substring(0, 30) + '...';
             
             iconHtml = `<div class="video-title-overlay">
-                            <!-- 비디오 아이콘 -->
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-400 mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg>
-                            <!-- 제목 텍스트 -->
                             <span class="video-title-text">${displayTitle}</span>
-                            <!-- URL 텍스트 -->
                             <span class="video-url-text">${displayUrl}</span>
                         </div>`;
-        } else if (!isVideo) {
-            // 이미지 북마크인 경우 (썸네일은 이미지 URL 자체)
+        } else if (isImage) {
+            // [수정] 이미지 북마크인 경우 (썸네일은 이미지 URL 자체)
             iconHtml = `<img src="${imageUrl}" alt="북마크된 이미지" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=이미지+오류'"/>`;
-        } else {
-            // 유튜브 동영상이고 썸네일이 있는 경우
+        } else if (isVideo) {
+            // [수정] 유튜브 동영상이고 썸네일이 있는 경우
             const displayTitle = d.title || 'YouTube 영상';
             iconHtml = `<img src="${thumbnail}" alt="동영상 썸네일" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=동영상+썸네일'"/>
                         <div class="icon-overlay flex-col">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg>
                             <span class="text-xs mt-1 font-bold">${displayTitle}</span>
+                        </div>`;
+        } else {
+             // 예외 처리 (알 수 없는 타입)
+             iconHtml = `<div class="link-title-overlay">
+                            <span class="link-title-text">알 수 없는 북마크</span>
                         </div>`;
         }
 
@@ -704,15 +697,12 @@
           <div class="content">
             ${iconHtml}
           </div>
-          <!-- 소스 도메인 표시 -->
           <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 truncate z-10 opacity-70">
               ${sourceDomain}
           </div>
-          <!-- 삭제 버튼 -->
           <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="delete">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
-          <!-- 제목 수정 버튼 (링크, 비디오, 인스타그램 전용) -->
           ${isEditable ? `
           <button class="absolute top-2 right-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="edit">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -731,7 +721,8 @@
             if (isVideo || isLink || isInstagram) {
                 // 인스타그램의 경우 URLToOpen을 사용 (퍼가기 코드에서 추출된 원본 URL)
                 window.open(urlToOpen, '_blank');
-            } else {
+            } else if (isImage) {
+                // [수정] 이미지일 경우 모달 열기
                 openImageModal(imageUrl, pageUrl);
             }
         });
@@ -878,7 +869,10 @@
 
       // 5. 파일 드롭 처리 (캡쳐 이미지는 붙여넣기 안내)
       const files=[...(dt.files||[])].filter(f=>f.type.startsWith('image/'));
-      if(files.length){ showAlert('파일 드롭은 업로드하지 않습니다. 캡쳐 이미지는 붙여넣기(Ctrl/Cmd+V)를 사용하세요.'); return; }
+      if(files.length){ 
+          // [수정] 파일 드롭 시 window.addImage 호출
+          if(window.addImage){ await window.addImage(files[0], null); showFeedbackMessage('이미지 업로드됨'); return; }
+      }
 
       showAlert('유효한 콘텐츠를 찾지 못했습니다.');
     });
@@ -969,11 +963,19 @@
     });
   </script>
 
-  <!-- ===== Firebase & 동기화 ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    
+    // [수정 2] Firebase Storage 모듈 임포트
+    import { 
+      getStorage, 
+      ref, 
+      uploadBytes, 
+      getDownloadURL, 
+      deleteObject 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
     // Firebase Config (원래 파일에서 가져옴)
     const firebaseConfig = {
@@ -989,6 +991,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app); // [수정 3] Storage 서비스 초기화
 
     const signInBtn=document.getElementById('signInBtn');
     const signOutBtn=document.getElementById('signOutBtn');
@@ -1117,27 +1120,50 @@
       await addDoc(imagesCol,{ url, pageUrl: pageUrl||null, type:'remote', sourceDomain: extractDomain(pageUrl || url), timestamp:new Date() });
     };
     
-    // imgbb 업로드(붙여넣기/클립보드 이미지 전용, type: 'imgbb')
-    window.addImage = async (fileOrUrl, pageUrl)=>{
+    // [수정 4] window.addImage 함수 전체 교체 (ImgBB -> Firebase Storage)
+    // (붙여넣기/클립보드/파일드래그 이미지 전용)
+    window.addImage = async (file, pageUrl)=>{ // 'fileOrUrl'을 'file'로 명시
       if(!ensureLogin()) return;
+
+      // file이 string으로 들어오는 경우 (현재 UI에서는 사용되지 않음)
+      if (typeof file === 'string') {
+          // 원본 URL 추가 로직으로 연결
+          return window.addRemoteImage(file, pageUrl || file);
+      }
+      
+      // file이 File 객체인 경우 (주요 사용 사례)
       try{
         const { imagesCol } = await cloudRefs();
-        const form=new FormData();
-        // fileOrUrl이 string인 경우는 현재 Paste/Click 핸들러에서 사용되지 않지만, 기존 코드를 유지합니다.
-        if(typeof fileOrUrl==='string'){ form.append('image', fileOrUrl); }
-        else{ form.append('image', fileOrUrl); }
-        const res=await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,{method:'POST',body:form});
-        const json=await res.json();
-        if(!json.success) throw new Error(json?.error?.message || 'imgbb 업로드 실패');
-        const link=json.data?.url || json.data?.display_url;
-        const deleteUrl=json.data?.delete_url || null;
-        const deleteId = deleteUrl ? (deleteUrl.match(/\/image\/([^/?#]+)/)?.[1] || null) : null;
-        
-        // imgbb로 업로드된 이미지의 원본 출처를 알 수 없으므로 'Uploaded (ImgBB)'로 표시
-        const source = pageUrl ? extractDomain(pageUrl) : 'Uploaded (ImgBB)';
+        const user = auth.currentUser;
+        if (!user) throw new Error("로그인이 필요합니다.");
 
-        await addDoc(imagesCol,{ url:link, pageUrl:pageUrl||null, type:'imgbb', imgbb_delete_url:deleteUrl, imgbb_delete_id:deleteId, title: null, sourceDomain: source, timestamp:new Date() });
+        // 1. 고유한 파일 경로 생성
+        const storagePath = `users/${user.uid}/uploads/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, storagePath);
+
+        // 2. 파일 업로드 (피드백 메시지 추가)
+        showFeedbackMessage('이미지 업로드 중...');
+        const uploadResult = await uploadBytes(storageRef, file);
+        
+        // 3. 다운로드 URL 가져오기
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+        
+        const source = pageUrl ? extractDomain(pageUrl) : 'Uploaded (Firebase)';
+
+        // 4. Firestore에 정보 저장
+        await addDoc(imagesCol,{ 
+          url: downloadURL,       // Firebase Storage URL
+          pageUrl: pageUrl || null,
+          type: 'firebase_storage', // ImgBB 대신 새 타입 지정
+          storagePath: storagePath, // [중요] 삭제를 위한 파일 경로 저장
+          title: null, 
+          sourceDomain: source, 
+          timestamp: new Date() 
+        });
+        showFeedbackMessage('이미지가 업로드되었습니다.'); // 성공 피드백
+
       }catch(err){
+        console.error("Firebase Storage 업로드 실패:", err);
         document.getElementById('modal-message').textContent='이미지 추가 실패: '+(err.message||'오류');
         document.getElementById('alert-modal').classList.remove('hidden');
       }
@@ -1158,36 +1184,53 @@
     };
 
 
-    // 북마크 삭제
+    // [수정 5] window.deleteImage 함수 전체 교체 (Firebase Storage 삭제 로직 추가)
     window.deleteImage = async (id)=>{
       if(!ensureLogin()) return;
       try{
         const { imagesCol } = await cloudRefs();
-        // window.imageBookmarks는 onSnapshot을 통해 실시간으로 업데이트됨
         const row=(window.imageBookmarks||[]).find(d=>d.id===id); 
         
         if(!row) throw new Error('북마크 항목을 찾을 수 없습니다.');
         
-        if(row.type==='remote' || row.type === 'video' || row.type === 'link' || row.type === 'instagram'){
-          // remote 이미지, 동영상, 일반 링크, 인스타그램 북마크는 Firestore 문서만 삭제
-          await deleteDoc(doc(imagesCol,id));
+        // 1. Firebase Storage에 업로드된 파일인 경우
+        if (row.type === 'firebase_storage') {
+          // 1-1. Storage에서 파일 삭제
+          if (row.storagePath) {
+            try {
+              const fileRef = ref(storage, row.storagePath);
+              await deleteObject(fileRef);
+            } catch (e) {
+              console.warn("Storage 파일 삭제 실패 (무시함):", e);
+              // 스토리지에 파일이 없더라도 DB 문서는 삭제되도록 계속 진행
+            }
+          }
+          // 1-2. Firestore 문서 삭제
+          await deleteDoc(doc(imagesCol, id));
           showFeedbackMessage('북마크가 삭제되었습니다.');
-          return;
-        }
-        
-        if(row.type==='imgbb'){
-          // imgbb 업로드 이미지는 imgbb에서도 삭제 시도 후, Firestore 문서 삭제
+
+        // 2. ImgBB에 업로드된 파일인 경우 (기존 코드 유지)
+        } else if(row.type==='imgbb'){
           const delUrl=row.imgbb_delete_url||null;
           if(delUrl){ 
             try{ 
-                // imgbb 삭제 API 호출 (GET 요청)
                 await fetch(delUrl,{method:'GET'}); 
-                // 성공 여부와 상관없이 Firestore 문서 삭제
             }catch(_){/* imgbb 삭제 오류는 무시 */} 
           }
           await deleteDoc(doc(imagesCol,id));
           showFeedbackMessage('북마크가 삭제되었습니다.');
+        
+        // 3. 단순 링크/URL 북마크인 경우 (DB 문서만 삭제)
+        } else if(row.type==='remote' || row.type === 'video' || row.type === 'link' || row.type === 'instagram'){
+          await deleteDoc(doc(imagesCol,id));
+          showFeedbackMessage('북마크가 삭제되었습니다.');
+        
+        // 4. 기타 (DB 문서만 삭제)
+        } else {
+            await deleteDoc(doc(imagesCol, id));
+            showFeedbackMessage('북마크가 삭제되었습니다.');
         }
+
       }catch(e){
         document.getElementById('modal-message').textContent='북마크 삭제 중 오류: '+(e?.message||'unknown');
         document.getElementById('alert-modal').classList.remove('hidden');
