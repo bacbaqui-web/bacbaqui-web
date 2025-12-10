@@ -26,8 +26,6 @@
     .task-item{font-size:.85rem;padding:5px 6px;border-radius:8px;margin-top:4px;word-wrap:break-word;cursor:pointer;text-align:left}
     .task-item.custom-task{background:#4c78a8}
     .task-item.episode-task{background:#444;color:#ddd}
-    .task-item.recurring-shorts{background:#7d4040}
-    .task-item.recurring-instatoon{background:#999966}
     .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
     .add-task-btn{background:#666;transition:.2s}.add-task-btn:hover{background:#777;transform:scale(1.02)}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
@@ -35,6 +33,42 @@
     .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
     .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
     
+    /* 일일 체크 버튼 그룹 (쇼츠/웹툰) 스타일 */
+    .daily-check-group {
+        display: flex;
+        width: 100%;
+        gap: 2px;
+        margin-top: 2px;
+    }
+    .daily-check-btn {
+        flex: 1;
+        text-align: center;
+        font-size: 0.75rem;
+        padding: 4px 0;
+        border-radius: 4px;
+        background: #444; /* 기본 회색 */
+        color: #ccc;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+        font-weight: 500;
+    }
+    .daily-check-btn:hover {
+        opacity: 0.9;
+    }
+    /* 쇼츠 활성 상태: 빨강 */
+    .daily-check-btn.shorts.active {
+        background: #dc2626; 
+        color: white;
+        font-weight: 700;
+    }
+    /* 웹툰 활성 상태: 노랑 */
+    .daily-check-btn.webtoon.active {
+        background: #eab308;
+        color: #000;
+        font-weight: 700;
+    }
+
+
     /* 북마크 Masonry 레이아웃 */
     #image-grid {
         column-count: 2; /* 기본 2열 */
@@ -439,7 +473,7 @@
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
     function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=0&&d<=4)c++; cur.setDate(cur.getDate()+1);} return c;}
 
-    const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
+    // const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
 
     // 모달 관련 DOM
     const taskModal=document.getElementById('taskModal');
@@ -511,6 +545,7 @@
         const today=toKST(new Date()); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
         const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
 
+        // 1. 에피소드 정보 (평일만 표시)
         if(dayOfWeek>=0&&dayOfWeek<=4){
           const milestoneDate=new Date('2025-09-01'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
           const milestoneEpisode=2014; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
@@ -520,15 +555,46 @@
           dayDiv.appendChild(epItem);
         }
 
-        fixedSchedules.forEach(sch=>{
-          if(sch.daysOfWeek.includes(dayOfWeek)){
-            const t=document.createElement('div'); t.classList.add('task-item',sch.colorClass); t.textContent=sch.title;
-            const key=`${fullDate}_${sch.title}`; if((window.taskStatus||{})[key]) t.classList.add('complete');
-            t.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.ensureLogin||!window.ensureLogin()) return; window.taskStatus=window.taskStatus||{}; window.taskStatus[key]=!window.taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar();});
-            dayDiv.appendChild(t);
-          }
+        // 2. [NEW] 매일 쇼츠/웹툰 체크 버튼 그룹
+        const checkGroup = document.createElement('div');
+        checkGroup.className = 'daily-check-group';
+
+        // 쇼츠 버튼
+        const shortsBtn = document.createElement('div');
+        shortsBtn.className = 'daily-check-btn shorts';
+        shortsBtn.textContent = '쇼츠';
+        const shortsKey = `${fullDate}_daily_shorts`;
+        if ((window.taskStatus || {})[shortsKey]) shortsBtn.classList.add('active');
+        shortsBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!window.ensureLogin || !window.ensureLogin()) return;
+            window.taskStatus = window.taskStatus || {};
+            window.taskStatus[shortsKey] = !window.taskStatus[shortsKey];
+            await window.cloudSaveStateOnly();
+            renderCalendar();
         });
 
+        // 웹툰 버튼
+        const webtoonBtn = document.createElement('div');
+        webtoonBtn.className = 'daily-check-btn webtoon';
+        webtoonBtn.textContent = '웹툰';
+        const webtoonKey = `${fullDate}_daily_webtoon`;
+        if ((window.taskStatus || {})[webtoonKey]) webtoonBtn.classList.add('active');
+        webtoonBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!window.ensureLogin || !window.ensureLogin()) return;
+            window.taskStatus = window.taskStatus || {};
+            window.taskStatus[webtoonKey] = !window.taskStatus[webtoonKey];
+            await window.cloudSaveStateOnly();
+            renderCalendar();
+        });
+
+        checkGroup.appendChild(shortsBtn);
+        checkGroup.appendChild(webtoonBtn);
+        dayDiv.appendChild(checkGroup);
+
+
+        // 3. 사용자 커스텀 태스크
         (window.customTasks||[]).filter(t=>t.date===fullDate).forEach(task=>{
           const el=document.createElement('div'); el.classList.add('task-item','custom-task'); el.textContent=task.title;
           if(task.complete) el.classList.add('complete');
@@ -1276,4 +1342,3 @@
   </script>
 </body>
 </html>
-
