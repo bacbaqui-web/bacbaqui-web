@@ -1,27 +1,35 @@
-import { auth, db } from "../firebaseClient.js";
+import { auth, userRefs } from "../firebaseClient.js";
+import { ensureLogin, showAlert, showFeedbackMessage, setLoading } from "../utils.js";
 import {
-  doc,
   onSnapshot,
   setDoc,
   updateDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-let unsub = null;
 let styleEl = null;
+let rootEl = null;
+let unsubs = [];
 
-function ensureStyle() {
+let model = {
+  notesById: {},          // { [id]: string }
+  notesActiveTabId: null  // string
+};
+
+let saveTimer = null;
+
+function injectStyle() {
   if (styleEl) return;
   styleEl = document.createElement("style");
   styleEl.id = "notes-module-style";
   styleEl.textContent = `
-    /* 노트 모듈은 index의 공통 스타일을 최대한 존중하면서, "꽉 차는" 레이아웃만 보강 */
-    .notes-module-root{
+    /* ✅ 노트 모듈: 화면을 크게 쓰도록 레이아웃 보강 */
+    .notes-module-wrap{
       display:flex;
       flex-direction:column;
       gap:12px;
-      /* 상단 헤더/탭 영역 제외하고 화면을 넓게 사용 */
-      height: calc(100vh - 150px);
+      /* 상단 로그인바/탭/여백 고려: 필요하면 숫자만 조절 */
+      height: calc(100vh - 170px);
       min-height: 520px;
     }
     .notes-module-top{
@@ -34,6 +42,7 @@ function ensureStyle() {
       display:flex;
       gap:8px;
       flex-wrap:wrap;
+      align-items:center;
     }
     .notes-tab{
       background:#2a2a2a;
@@ -58,12 +67,9 @@ function ensureStyle() {
       border-radius:12px;
       padding:12px;
       outline:none;
-      resize:none;
+      resize:none; /* ✅ 예전 느낌: 창 꽉차는 것 우선 */
       min-height: 320px;
-    }
-    .notes-hint{
-      font-size:.8rem;
-      opacity:.75;
+      color:#fff;
     }
     .notes-btn{
       background:#2563eb;
@@ -73,159 +79,178 @@ function ensureStyle() {
       padding:8px 12px;
       font-size:.9rem;
       cursor:pointer;
+      white-space:nowrap;
     }
     .notes-btn:hover{ filter:brightness(1.05); }
+    .notes-hint{
+      font-size:.8rem;
+      opacity:.75;
+    }
   `;
   document.head.appendChild(styleEl);
 }
 
-function safeText(v) {
-  return typeof v === "string" ? v : "";
+function cleanup() {
+  unsubs.forEach(fn => { try { fn(); } catch {} });
+  unsubs = [];
+  if (styleEl) { try { styleEl.remove(); } catch {} }
+  styleEl = null;
+  rootEl = null;
+  model = { notesById: {}, notesActiveTabId: null };
+  saveTimer = null;
 }
 
-/**
- * 기존 DB 구조 (스크린샷 기준):
- * users/{uid}/meta/appState
- *  - notesActiveTabId: string
- *  - notesById: { [noteId]: string }
- */
-function appStateRef(uid) {
-  return doc(db, `users/${uid}/meta/appState`);
+function makeDefaultIfEmpty(stateDoc) {
+  const keys = Object.keys(model.notesById || {});
+  if (keys.length > 0) return;
+
+  // 기존 시스템과 충돌 안 나게 legacy_ prefix 유지
+  const id = `legacy_0_${Date.now()}`;
+  model.notesById = { [id]: "" };
+  model.notesActiveTabId = id;
+
+  // DB에도 바로 반영
+  setDoc(stateDoc, {
+    notesById: model.notesById,
+    notesActiveTabId: model.notesActiveTabId,
+    updatedAt: serverTimestamp()
+  }, { merge: true }).catch(() => {});
+}
+
+function renderTabs(tabsEl, areaEl, stateDoc) {
+  const ids = Object.keys(model.notesById || {});
+  if (!model.notesActiveTabId || !(model.notesActiveTabId in model.notesById)) {
+    model.notesActiveTabId = ids[0] || null;
+  }
+
+  tabsEl.innerHTML = "";
+  ids.forEach((id, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "notes-tab" + (id === model.notesActiveTabId ? " active" : "");
+    btn.textContent = `메모${idx + 1}`;
+    btn.addEventListener("click", async () => {
+      // 현재 탭 내용 먼저 반영
+      if (model.notesActiveTabId) {
+        model.notesById[model.notesActiveTabId] = areaEl.value;
+      }
+
+      model.notesActiveTabId = id;
+
+      // textarea 내용 교체
+      areaEl.value = (model.notesById[id] ?? "");
+
+      // active 탭 저장
+      try {
+        await updateDoc(stateDoc, { notesActiveTabId: id, updatedAt: serverTimestamp() });
+      } catch (e) {
+        console.error(e);
+      }
+
+      renderTabs(tabsEl, areaEl, stateDoc);
+    });
+
+    tabsEl.appendChild(btn);
+  });
+
+  // active 탭 내용 표시
+  if (model.notesActiveTabId) {
+    areaEl.value = (model.notesById[model.notesActiveTabId] ?? "");
+  } else {
+    areaEl.value = "";
+  }
+}
+
+function scheduleAutoSave(stateDoc, areaEl) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    if (!model.notesActiveTabId) return;
+
+    // 모델에 반영
+    model.notesById[model.notesActiveTabId] = areaEl.value;
+
+    try {
+      await setDoc(stateDoc, {
+        notesById: model.notesById,
+        notesActiveTabId: model.notesActiveTabId,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      showFeedbackMessage("저장됨");
+    } catch (e) {
+      console.error(e);
+      showAlert("메모 저장 중 오류가 발생했습니다.");
+    }
+  }, 600);
 }
 
 export async function mount(container) {
-  ensureStyle();
+  injectStyle();
 
-  const user = auth.currentUser;
-  if (!user) {
-    container.innerHTML = `<div class="text-sm opacity-80">로그인 후 메모를 사용할 수 있습니다.</div>`;
-    return;
-  }
+  rootEl = document.createElement("div");
+  rootEl.className = "notes-module-wrap";
 
-  container.innerHTML = `
-    <div class="notes-module-root">
-      <div class="notes-module-top">
-        <div class="notes-tabs" id="notesTabs"></div>
-        <button class="notes-btn" id="saveNotesBtn">저장</button>
-      </div>
-
-      <textarea id="notesArea" class="notes-area" placeholder="메모를 입력하세요..."></textarea>
-      <div class="notes-hint">자동 저장은 입력 후 잠시 멈추면 반영됩니다. (또는 저장 버튼)</div>
+  rootEl.innerHTML = `
+    <div class="notes-module-top">
+      <div class="notes-tabs" id="notesTabs"></div>
+      <button class="notes-btn" id="saveNotesBtn">저장</button>
     </div>
+    <textarea id="notesArea" class="notes-area" placeholder="메모를 입력하세요..."></textarea>
+    <div class="notes-hint">입력 후 잠시 멈추면 자동 저장됩니다.</div>
   `;
 
-  const tabsEl = container.querySelector("#notesTabs");
-  const areaEl = container.querySelector("#notesArea");
-  const saveBtn = container.querySelector("#saveNotesBtn");
+  container.innerHTML = "";
+  container.appendChild(rootEl);
 
-  const ref = appStateRef(user.uid);
+  if (!ensureLogin()) return;
 
-  let notesById = {};
-  let activeId = null;
+  const uid = auth.currentUser.uid;
+  const { stateDoc } = userRefs(uid);
 
-  // 디바운스 자동 저장
-  let t = null;
-  const debouncedSave = () => {
-    clearTimeout(t);
-    t = setTimeout(async () => {
-      if (!activeId) return;
-      try {
-        const patch = {
-          notesById: { ...notesById, [activeId]: areaEl.value },
-          notesActiveTabId: activeId,
-          updatedAt: serverTimestamp()
-        };
-        // notesById는 객체 전체를 갱신하는 편이 안전합니다(merge 사용)
-        await setDoc(ref, patch, { merge: true });
-        notesById[activeId] = areaEl.value;
-      } catch (e) {
-        console.error("notes autosave failed:", e);
-      }
-    }, 600);
-  };
+  const tabsEl = rootEl.querySelector("#notesTabs");
+  const areaEl = rootEl.querySelector("#notesArea");
+  const saveBtn = rootEl.querySelector("#saveNotesBtn");
 
-  areaEl.addEventListener("input", debouncedSave);
+  // 입력 자동저장
+  areaEl.addEventListener("input", () => scheduleAutoSave(stateDoc, areaEl));
 
+  // 수동 저장
   saveBtn.addEventListener("click", async () => {
-    if (!activeId) return;
+    if (!model.notesActiveTabId) return;
+    model.notesById[model.notesActiveTabId] = areaEl.value;
     try {
-      const patch = {
-        notesById: { ...notesById, [activeId]: areaEl.value },
-        notesActiveTabId: activeId,
+      setLoading(true);
+      await setDoc(stateDoc, {
+        notesById: model.notesById,
+        notesActiveTabId: model.notesActiveTabId,
         updatedAt: serverTimestamp()
-      };
-      await setDoc(ref, patch, { merge: true });
-      notesById[activeId] = areaEl.value;
+      }, { merge: true });
+      showFeedbackMessage("저장됨");
     } catch (e) {
-      console.error("notes save failed:", e);
-      alert("저장 중 오류가 발생했습니다.");
+      console.error(e);
+      showAlert("저장 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
     }
   });
 
-  const renderTabs = () => {
-    // 탭이 하나도 없으면 기본 탭을 생성
-    const ids = Object.keys(notesById || {});
-    if (ids.length === 0) {
-      // 기존 시스템과 충돌 없게 legacy_ 스타일 유지
-      const newId = `legacy_0_${Date.now()}`;
-      notesById[newId] = "";
-      activeId = newId;
-      // DB에도 즉시 반영
-      setDoc(ref, { notesById, notesActiveTabId: activeId, createdAt: serverTimestamp() }, { merge: true }).catch(()=>{});
-    }
-
-    // activeId가 없거나 사라졌으면 첫 탭으로
-    if (!activeId || !notesById[activeId]) {
-      activeId = Object.keys(notesById)[0];
-    }
-
-    tabsEl.innerHTML = "";
-    const keys = Object.keys(notesById);
-
-    // 기존 UI 감성: 메모1/2/3처럼 보이게 (실제 id는 유지)
-    keys.forEach((id, idx) => {
-      const btn = document.createElement("button");
-      btn.className = "notes-tab" + (id === activeId ? " active" : "");
-      btn.textContent = `메모${idx + 1}`;
-      btn.dataset.id = id;
-      btn.addEventListener("click", async () => {
-        // 현재 내용 반영 후 전환
-        if (activeId) notesById[activeId] = areaEl.value;
-        activeId = id;
-        areaEl.value = safeText(notesById[activeId]);
-
-        // activeId 저장
-        try {
-          await updateDoc(ref, { notesActiveTabId: activeId, updatedAt: serverTimestamp() });
-        } catch (e) {
-          console.error("active tab update failed:", e);
-        }
-
-        renderTabs();
-      });
-      tabsEl.appendChild(btn);
-    });
-
-    areaEl.value = safeText(notesById[activeId]);
-  };
-
-  // 실시간 동기화: 기존 appState 문서를 그대로 구독
-  unsub = onSnapshot(ref, (snap) => {
+  // ✅ 실시간 구독: 기존 DB 구조(notesById/notesActiveTabId) 그대로 읽음
+  const unsub = onSnapshot(stateDoc, (snap) => {
     const data = snap.exists() ? (snap.data() || {}) : {};
-    notesById = data.notesById || {};
-    activeId = data.notesActiveTabId || activeId;
-    renderTabs();
+
+    // 기존 스키마: notesById / notesActiveTabId
+    model.notesById = data.notesById || {};
+    model.notesActiveTabId = data.notesActiveTabId || null;
+
+    // 혹시 과거에 notesTabs가 있었다면(이전 버전 호환), 있는 경우만 병합
+    // (기존 데이터가 notesById로 존재하니 일반적으로는 필요 없음)
+    // data.notesTabs 가 존재해도 지금은 UI에 쓰지 않음.
+
+    makeDefaultIfEmpty(stateDoc);
+    renderTabs(tabsEl, areaEl, stateDoc);
   });
+
+  unsubs.push(unsub);
 }
 
 export function unmount() {
-  if (unsub) {
-    try { unsub(); } catch (_) {}
-    unsub = null;
-  }
-  // 스타일은 공통으로 남겨도 되지만, “모듈 완전 분리” 원칙이면 제거
-  if (styleEl) {
-    try { styleEl.remove(); } catch (_) {}
-    styleEl = null;
-  }
+  cleanup();
 }
