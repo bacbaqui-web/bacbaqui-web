@@ -104,6 +104,16 @@
     };
 
     const uploadPreviewImageFromFile = async (file) => {
+        // 파일선택 업로드는 비활성화하고, 붙여넣기(clipboard)로 들어온 이미지 파일만 처리합니다.
+        if (file && !(file.type||'').startsWith('image/')) {
+            showAlert('이미지 파일만 붙여넣을 수 있습니다.');
+            return;
+        }
+        // 일부 브라우저는 clipboard 이미지에 name이 비어있을 수 있어 강제로 이름을 부여합니다.
+        if (file && (!file.name || file.name === 'blob')) {
+            const ext = (file.type && file.type.includes('/')) ? file.type.split('/')[1] : 'png';
+            file = new File([file], `preview.${ext}`, { type: file.type || 'image/png' });
+        }
         if (!file || !window.currentPreviewBookmark) return;
         if (!window.ensureLogin || !window.ensureLogin()) return;
         try {
@@ -200,13 +210,6 @@
       // 링크 미리보기 모달
       closePreviewModalBtn?.addEventListener('click', closePreviewModal);
       attachPreviewModal?.addEventListener('click', (e) => { if (e.target === attachPreviewModal) closePreviewModal(); });
-      previewDropzone?.addEventListener('click', () => previewFileInput?.click());
-      previewFileInput?.addEventListener('change', (e) => {
-          const file = e.target.files?.[0];
-          if (file) uploadPreviewImageFromFile(file);
-          e.target.value = '';
-      });
-
       // 붙여넣기(Ctrl/Cmd+V)로 이미지 업로드 (모달이 열려 있을 때만)
       document.addEventListener('paste', (e) => {
           if (!attachPreviewModal || attachPreviewModal.style.display !== 'flex') return;

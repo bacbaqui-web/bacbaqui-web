@@ -225,6 +225,10 @@ import { initBookmarks } from "./bookmarks.js";
     // 링크 북마크 미리보기 이미지 업로드 (Firebase Storage) + Firestore 업데이트
     // - link 타입 북마크에 previewImageUrl, previewStoragePath 저장
     window.uploadBookmarkPreviewImage = async (bookmarkId, file) => {
+        // 안전장치: 이미지 파일만 허용
+        if (file && file.type && !file.type.startsWith('image/')) {
+            throw new Error('이미지 파일만 업로드할 수 있습니다.');
+        }
         if (!ensureLogin()) return;
         if (!bookmarkId || !file) return;
         try {
@@ -237,7 +241,7 @@ import { initBookmarks } from "./bookmarks.js";
             const storageRef = ref(storage, storagePath);
 
             showFeedbackMessage('미리보기 이미지 업로드 중...');
-            const uploadResult = await uploadBytes(storageRef, file);
+            const uploadResult = await uploadBytes(storageRef, file, { contentType: file.type || 'image/png', cacheControl: 'public,max-age=31536000' });
             const downloadURL = await getDownloadURL(uploadResult.ref);
 
             const docRef = doc(imagesCol, bookmarkId);
