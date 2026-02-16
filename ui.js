@@ -12,8 +12,8 @@
     window.currentEditingBookmark = null; // 현재 편집 중인 북마크 항목
     let currentDate = new Date();
     window.isAuthReady = false;
-    // **수정: 기본 정렬 키를 'sourceDomain'으로 설정**
-    window.bookmarkSortKey = 'sourceDomain'; // 기본 정렬 키: sourceDomain (사이트별)
+    // 북마크는 항상 최신순으로만 정렬 (UI 정렬 선택 제거)
+    window.bookmarkSortKey = 'timestamp';
 
     // DOM 요소
     const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
@@ -32,8 +32,15 @@
     const saveTitleBtn = document.getElementById('saveTitleBtn');
     const cancelTitleBtn = document.getElementById('cancelTitleBtn');
     const currentUrlDisplay = document.getElementById('currentUrlDisplay');
-    // 정렬 선택 요소
+    // (정렬 선택 UI는 제거됨)
     const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
+
+    // 링크 북마크 미리보기 이미지 첨부 모달
+    const attachPreviewModal = document.getElementById('attachPreviewModal');
+    const previewDropzone = document.getElementById('previewDropzone');
+    const previewFileInput = document.getElementById('previewFileInput');
+    const closePreviewModalBtn = document.getElementById('closePreviewModalBtn');
+    window.currentPreviewBookmark = null;
 
 
     // 유틸리티 함수
@@ -84,6 +91,28 @@
         closeEditModal();
         showFeedbackMessage('제목이 저장되었습니다.');
         // onSnapshot이 Firestore 업데이트를 감지하고 renderImageBookmarks를 호출할 것입니다.
+    };
+
+    // 링크 북마크: 미리보기 이미지 첨부 모달
+    const openPreviewModal = (bookmark) => {
+        window.currentPreviewBookmark = bookmark;
+        if (attachPreviewModal) attachPreviewModal.style.display = 'flex';
+    };
+    const closePreviewModal = () => {
+        window.currentPreviewBookmark = null;
+        if (attachPreviewModal) attachPreviewModal.style.display = 'none';
+    };
+
+    const uploadPreviewImageFromFile = async (file) => {
+        if (!file || !window.currentPreviewBookmark) return;
+        if (!window.ensureLogin || !window.ensureLogin()) return;
+        try {
+            await window.uploadBookmarkPreviewImage?.(window.currentPreviewBookmark.id, file);
+            closePreviewModal();
+        } catch (e) {
+            console.error(e);
+            showAlert('미리보기 이미지 업로드 중 오류가 발생했습니다.');
+        }
     };
 
 
@@ -160,10 +189,39 @@
           }
       });
       
-      // 정렬 선택 변경 이벤트 리스너
-      bookmarkSortSelect.addEventListener('change', (e) => {
-          window.bookmarkSortKey = e.target.value;
-          renderImageBookmarks();
+      // 정렬 선택 UI 제거됨 (bookmarkSortSelect는 null일 수 있음)
+      if (bookmarkSortSelect) {
+          bookmarkSortSelect.addEventListener('change', (e) => {
+              window.bookmarkSortKey = e.target.value;
+              renderImageBookmarks();
+          });
+      }
+
+      // 링크 미리보기 모달
+      closePreviewModalBtn?.addEventListener('click', closePreviewModal);
+      attachPreviewModal?.addEventListener('click', (e) => { if (e.target === attachPreviewModal) closePreviewModal(); });
+      previewDropzone?.addEventListener('click', () => previewFileInput?.click());
+      previewFileInput?.addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (file) uploadPreviewImageFromFile(file);
+          e.target.value = '';
+      });
+
+      // 붙여넣기(Ctrl/Cmd+V)로 이미지 업로드 (모달이 열려 있을 때만)
+      document.addEventListener('paste', (e) => {
+          if (!attachPreviewModal || attachPreviewModal.style.display !== 'flex') return;
+          const items = e.clipboardData?.items;
+          if (!items) return;
+          for (const item of items) {
+              if (item.type && item.type.startsWith('image/')) {
+                  const file = item.getAsFile();
+                  if (file) {
+                      e.preventDefault();
+                      uploadPreviewImageFromFile(file);
+                      break;
+                  }
+              }
+          }
       });
     };
 
@@ -289,23 +347,8 @@
       
       let sortedBookmarks = [...(window.imageBookmarks || [])];
 
-      // 1. 정렬 로직 적용
-      let currentSortKey = window.bookmarkSortKey || 'sourceDomain'; // 기본값 반영
-      bookmarkSortSelect.value = currentSortKey; // 선택 박스 값 업데이트
-
-      if (currentSortKey === 'sourceDomain') {
-          // 사이트별 정렬: 도메인 이름순으로 정렬
-          sortedBookmarks.sort((a, b) => {
-              const domainA = a.sourceDomain || 'Unknown Source';
-              const domainB = b.sourceDomain || 'Unknown Source';
-              return domainA.localeCompare(domainB);
-          });
-      } else { // 'timestamp' (Newest first)
-          // 최신순 정렬: 타임스탬프 역순 (가장 큰 값이 맨 위)
-          sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
-      }
-
-      let lastDomain = null; // 그룹 구분을 위한 변수
+      // 최신순 정렬 고정
+      sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
 
       sortedBookmarks.forEach(d=>{
         const isVideo = d.type === 'video';
@@ -319,31 +362,23 @@
         const pageUrl = d.pageUrl; // 일반 URL, 동영상 URL 또는 인스타그램 게시물 URL
         const sourceDomain = d.sourceDomain || 'Unknown Source';
 
-        // **2. 사이트별 정렬 시 헤더 추가**
-        if (currentSortKey === 'sourceDomain' && sourceDomain !== lastDomain) {
-            const header = document.createElement('h3');
-            header.className = 'domain-header';
-            header.textContent = sourceDomain;
-            imageGrid.appendChild(header);
-            lastDomain = sourceDomain;
-        }
+        // 사이트별 헤더/정렬 UI 제거됨
         
         let thumbnail = isVideo ? getYoutubeThumbnail(pageUrl) : imageUrl;
         let iconHtml = '';
         let urlToOpen = pageUrl;
 
         if (isLink) {
-            // 일반 페이지 링크 북마크
-            const displayTitle = d.title || '일반 페이지 링크';
-            const displayUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-            
-            iconHtml = `<div class="link-title-overlay">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.708l4-4a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" />
-                            </svg>
-                            <span class="link-title-text">${displayTitle}</span>
-                            <span class="link-url-text">${displayUrl}</span>
-                        </div>`;
+            // 일반 페이지 링크 북마크: 제목/URL 텍스트는 숨기고, 첨부한 미리보기 이미지가 있으면 그것을 표시
+            if (d.previewImageUrl) {
+                iconHtml = `<img src="${d.previewImageUrl}" alt="링크 미리보기" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=미리보기+오류'"/>`;
+            } else {
+                iconHtml = `<div class="link-title-overlay">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.708l4-4a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" />
+                                </svg>
+                           </div>`;
+            }
         } else if (isInstagram) {
              // 인스타그램 게시물 북마크 (퍼가기 코드 사용)
              // 원본 URL 추출 (클릭 시 이동용)
@@ -405,13 +440,19 @@
           <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="delete">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
-          ${isEditable ? `
+          ${isLink ? `
+          <button class="absolute top-2 right-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="preview">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          ` : (isEditable ? `
           <button class="absolute top-2 right-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="edit">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </button>
-          ` : ''}
+          ` : '')}
           `;
         imageGrid.appendChild(card);
         
@@ -447,6 +488,8 @@
              }
           } else if (action === 'edit' && bookmark) {
              openEditModal(bookmark);
+          } else if (action === 'preview' && bookmark) {
+             openPreviewModal(bookmark);
           }
         };
       });
@@ -477,8 +520,7 @@
 
     (function init(){ 
         attachEventListeners(); 
-        // 초기화 시 기본 정렬 키를 'sourceDomain'으로 설정했으므로 선택 상자 값을 업데이트합니다.
-        bookmarkSortSelect.value = window.bookmarkSortKey;
+        // 정렬 UI가 제거되었으므로 별도 처리 없음
         renderCalendar(); 
     })();
 
