@@ -1,375 +1,231 @@
-import { auth, userRefs } from "../firebaseClient.js";
-import { ensureLogin, showAlert, showFeedbackMessage } from "../utils.js";
+import { auth, db } from "../firebaseClient.js";
 import {
+  doc,
   onSnapshot,
-  getDoc,
-  setDoc
+  setDoc,
+  updateDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+let unsub = null;
 let styleEl = null;
-let rootEl = null;
-let unsubs = [];
 
-let model = {
-  notesTabList: [],
-  notesById: {},
-  notesActiveTabId: null
-};
-
-let saveTimer = null;
-
-function injectStyle() {
+function ensureStyle() {
+  if (styleEl) return;
   styleEl = document.createElement("style");
   styleEl.id = "notes-module-style";
   styleEl.textContent = `
-    .notes-area{flex-grow:1;resize:vertical}
-    textarea#notesArea::-webkit-scrollbar{width:8px;background-color:#2a2a2a;border-radius:10px}
-    textarea#notesArea::-webkit-scrollbar-thumb{background-color:#555;border-radius:10px}
-
-    .notepad-tab .tab-gear{margin-left:6px;opacity:.75;font-weight:700}
-    .notepad-tab .tab-gear:hover{opacity:1}
-    .notepad-tab.add-tab{min-width:40px;display:flex;justify-content:center;align-items:center}
+    /* 노트 모듈은 index의 공통 스타일을 최대한 존중하면서, "꽉 차는" 레이아웃만 보강 */
+    .notes-module-root{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      /* 상단 헤더/탭 영역 제외하고 화면을 넓게 사용 */
+      height: calc(100vh - 150px);
+      min-height: 520px;
+    }
+    .notes-module-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .notes-tabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .notes-tab{
+      background:#2a2a2a;
+      border:1px solid #333;
+      border-radius:10px;
+      padding:6px 10px;
+      cursor:pointer;
+      color:#cfcfcf;
+      font-size:.9rem;
+      user-select:none;
+    }
+    .notes-tab.active{
+      background:#3b82f6;
+      border-color:#2563eb;
+      color:#fff;
+    }
+    .notes-area{
+      flex:1;
+      width:100%;
+      background:#1f2937;
+      border:1px solid #374151;
+      border-radius:12px;
+      padding:12px;
+      outline:none;
+      resize:none;
+      min-height: 320px;
+    }
+    .notes-hint{
+      font-size:.8rem;
+      opacity:.75;
+    }
+    .notes-btn{
+      background:#2563eb;
+      border:1px solid #1d4ed8;
+      color:#fff;
+      border-radius:10px;
+      padding:8px 12px;
+      font-size:.9rem;
+      cursor:pointer;
+    }
+    .notes-btn:hover{ filter:brightness(1.05); }
   `;
   document.head.appendChild(styleEl);
 }
 
-function buildUI(container) {
+function safeText(v) {
+  return typeof v === "string" ? v : "";
+}
+
+/**
+ * 기존 DB 구조 (스크린샷 기준):
+ * users/{uid}/meta/appState
+ *  - notesActiveTabId: string
+ *  - notesById: { [noteId]: string }
+ */
+function appStateRef(uid) {
+  return doc(db, `users/${uid}/meta/appState`);
+}
+
+export async function mount(container) {
+  ensureStyle();
+
+  const user = auth.currentUser;
+  if (!user) {
+    container.innerHTML = `<div class="text-sm opacity-80">로그인 후 메모를 사용할 수 있습니다.</div>`;
+    return;
+  }
+
   container.innerHTML = `
-    <div class="section-card" id="notes-section">
-      <div id="notesTabs" class="notepad-tabs"></div>
-      <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg" placeholder="메모..."></textarea>
-    </div>
-
-    <div id="tabSettingsModal" class="modal">
-      <div class="modal-content">
-        <h2 class="text-xl font-bold mb-4">탭 설정</h2>
-
-        <label class="block mb-2 text-sm opacity-80">탭 이름</label>
-        <input type="text" id="tabNameInput" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
-
-        <div class="flex justify-between items-center mb-4">
-          <div class="flex gap-2">
-            <button id="tabMoveLeftBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-lg">←</button>
-            <button id="tabMoveRightBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-lg">→</button>
-          </div>
-          <button id="tabDeleteBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">삭제</button>
-        </div>
-
-        <div class="flex justify-end gap-2">
-          <button id="tabSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
-          <button id="tabCancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-        </div>
+    <div class="notes-module-root">
+      <div class="notes-module-top">
+        <div class="notes-tabs" id="notesTabs"></div>
+        <button class="notes-btn" id="saveNotesBtn">저장</button>
       </div>
+
+      <textarea id="notesArea" class="notes-area" placeholder="메모를 입력하세요..."></textarea>
+      <div class="notes-hint">자동 저장은 입력 후 잠시 멈추면 반영됩니다. (또는 저장 버튼)</div>
     </div>
   `;
-}
 
-function makeId() {
-  return `t_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
+  const tabsEl = container.querySelector("#notesTabs");
+  const areaEl = container.querySelector("#notesArea");
+  const saveBtn = container.querySelector("#saveNotesBtn");
 
-function setModel(patch) {
-  model = { ...model, ...patch };
-}
+  const ref = appStateRef(user.uid);
 
-async function cloudSaveModel() {
-  if (!ensureLogin()) return;
-  const { stateDoc } = userRefs(auth.currentUser.uid);
-  await setDoc(stateDoc, {
-    notesTabList: model.notesTabList,
-    notesById: model.notesById,
-    notesActiveTabId: model.notesActiveTabId
-  }, { merge: true });
-}
+  let notesById = {};
+  let activeId = null;
 
-function cloudSaveDebounced() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    cloudSaveModel().catch(() => {});
-  }, 800);
-}
+  // 디바운스 자동 저장
+  let t = null;
+  const debouncedSave = () => {
+    clearTimeout(t);
+    t = setTimeout(async () => {
+      if (!activeId) return;
+      try {
+        const patch = {
+          notesById: { ...notesById, [activeId]: areaEl.value },
+          notesActiveTabId: activeId,
+          updatedAt: serverTimestamp()
+        };
+        // notesById는 객체 전체를 갱신하는 편이 안전합니다(merge 사용)
+        await setDoc(ref, patch, { merge: true });
+        notesById[activeId] = areaEl.value;
+      } catch (e) {
+        console.error("notes autosave failed:", e);
+      }
+    }, 600);
+  };
 
-function ensureDefaultsIfEmpty() {
-  if (model.notesTabList.length > 0) {
-    if (!model.notesTabList.some(t => t.id === model.notesActiveTabId)) {
-      setModel({ notesActiveTabId: model.notesTabList[0]?.id || null });
-    }
-    return;
-  }
+  areaEl.addEventListener("input", debouncedSave);
 
-  const defaults = ["바퀴멘터리", "짐승육아", "그거아세요", "메모"];
-  const list = defaults.map((name) => ({ id: makeId(), name }));
-  const byId = {};
-  list.forEach((t) => (byId[t.id] = ""));
-  setModel({
-    notesTabList: list,
-    notesById: byId,
-    notesActiveTabId: list[0]?.id || null
-  });
-
-  // 로그인 상태면 1회 저장
-  if (auth.currentUser) cloudSaveModel().catch(() => {});
-}
-
-function saveTextareaToModel() {
-  const notesArea = document.getElementById("notesArea");
-  if (!notesArea) return;
-  if (!model.notesActiveTabId) return;
-  const next = { ...(model.notesById || {}) };
-  next[model.notesActiveTabId] = notesArea.value ?? "";
-  setModel({ notesById: next });
-}
-
-function loadTextareaFromModel() {
-  const notesArea = document.getElementById("notesArea");
-  if (!notesArea) return;
-  if (!model.notesActiveTabId) {
-    notesArea.value = "";
-    return;
-  }
-  notesArea.value = (model.notesById && model.notesById[model.notesActiveTabId]) ? model.notesById[model.notesActiveTabId] : "";
-}
-
-let editingTabId = null;
-function openSettings(tabId) {
-  if (!ensureLogin()) return;
-  const modal = document.getElementById("tabSettingsModal");
-  const nameInput = document.getElementById("tabNameInput");
-  const btnLeft = document.getElementById("tabMoveLeftBtn");
-  const btnRight = document.getElementById("tabMoveRightBtn");
-
-  const tab = model.notesTabList.find((t) => t.id === tabId);
-  if (!tab || !modal || !nameInput) return;
-
-  editingTabId = tabId;
-  nameInput.value = tab.name || "";
-
-  const idx = model.notesTabList.findIndex((t) => t.id === tabId);
-  if (btnLeft) btnLeft.disabled = idx <= 0;
-  if (btnRight) btnRight.disabled = idx < 0 || idx >= model.notesTabList.length - 1;
-
-  modal.style.display = "flex";
-  nameInput.focus();
-  nameInput.select();
-}
-
-function closeSettings() {
-  const modal = document.getElementById("tabSettingsModal");
-  editingTabId = null;
-  if (modal) modal.style.display = "none";
-}
-
-function moveTab(delta) {
-  if (!editingTabId) return;
-  const list = [...model.notesTabList];
-  const idx = list.findIndex((t) => t.id === editingTabId);
-  const nextIdx = idx + delta;
-  if (idx < 0 || nextIdx < 0 || nextIdx >= list.length) return;
-  [list[idx], list[nextIdx]] = [list[nextIdx], list[idx]];
-  setModel({ notesTabList: list });
-  render();
-  openSettings(editingTabId);
-  cloudSaveDebounced();
-}
-
-function deleteTab() {
-  if (!editingTabId) return;
-
-  if (model.notesTabList.length <= 1) {
-    showAlert("최소 1개의 탭은 남겨두어야 합니다.");
-    return;
-  }
-
-  const tab = model.notesTabList.find((t) => t.id === editingTabId);
-  const ok = confirm(`'${tab?.name || "탭"}' 을(를) 삭제하시겠습니까?\n(해당 탭의 메모도 함께 삭제됩니다)`);
-  if (!ok) return;
-
-  saveTextareaToModel();
-
-  const list = model.notesTabList.filter((t) => t.id !== editingTabId);
-  const byId = { ...(model.notesById || {}) };
-  delete byId[editingTabId];
-
-  let nextActive = model.notesActiveTabId;
-  if (model.notesActiveTabId === editingTabId) nextActive = list[0]?.id || null;
-
-  setModel({ notesTabList: list, notesById: byId, notesActiveTabId: nextActive });
-
-  closeSettings();
-  render();
-  loadTextareaFromModel();
-  cloudSaveDebounced();
-}
-
-function saveSettings() {
-  if (!editingTabId) return;
-  const nameInput = document.getElementById("tabNameInput");
-  const newName = (nameInput?.value || "").trim();
-  if (!newName) {
-    showAlert("탭 이름을 입력해 주세요.");
-    return;
-  }
-  const dup = model.notesTabList.some((t) => t.id !== editingTabId && (t.name || "").trim() === newName);
-  if (dup) {
-    showAlert("이미 같은 이름의 탭이 있습니다.");
-    return;
-  }
-
-  const list = [...model.notesTabList];
-  const idx = list.findIndex((t) => t.id === editingTabId);
-  if (idx < 0) return;
-  list[idx] = { ...list[idx], name: newName };
-  setModel({ notesTabList: list });
-
-  render();
-  closeSettings();
-  cloudSaveDebounced();
-}
-
-function render() {
-  ensureDefaultsIfEmpty();
-
-  const tabsWrap = document.getElementById("notesTabs");
-  if (!tabsWrap) return;
-
-  tabsWrap.innerHTML = "";
-
-  model.notesTabList.forEach((tab) => {
-    const btn = document.createElement("button");
-    btn.className = "notepad-tab";
-    btn.type = "button";
-    btn.textContent = tab.name;
-
-    if (tab.id === model.notesActiveTabId) btn.classList.add("active");
-
-    const gear = document.createElement("span");
-    gear.className = "tab-gear";
-    gear.textContent = "⚙︎";
-    gear.title = "탭 설정";
-    gear.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openSettings(tab.id);
-    });
-
-    btn.appendChild(gear);
-
-    btn.addEventListener("click", () => {
-      saveTextareaToModel();
-      setModel({ notesActiveTabId: tab.id });
-      loadTextareaFromModel();
-      render();
-      cloudSaveDebounced();
-    });
-
-    tabsWrap.appendChild(btn);
-  });
-
-  // + 탭
-  const addBtn = document.createElement("button");
-  addBtn.className = "notepad-tab add-tab";
-  addBtn.type = "button";
-  addBtn.textContent = "+";
-  addBtn.title = "새 탭 추가";
-
-  addBtn.addEventListener("click", () => {
-    if (!ensureLogin()) return;
-
-    saveTextareaToModel();
-
-    const id = makeId();
-    const newTab = { id, name: "새 탭" };
-    const list = [...model.notesTabList, newTab];
-    const byId = { ...(model.notesById || {}), [id]: "" };
-
-    setModel({ notesTabList: list, notesById: byId, notesActiveTabId: id });
-
-    render();
-    loadTextareaFromModel();
-    openSettings(id);
-    cloudSaveDebounced();
-  });
-
-  tabsWrap.appendChild(addBtn);
-}
-
-function wireEvents() {
-  const notesArea = document.getElementById("notesArea");
-  notesArea?.addEventListener("input", () => {
-    saveTextareaToModel();
-    cloudSaveDebounced();
-  });
-
-  notesArea?.addEventListener("blur", () => {
-    saveTextareaToModel();
-    cloudSaveModel().catch(() => {});
-  });
-
-  document.getElementById("tabMoveLeftBtn")?.addEventListener("click", () => moveTab(-1));
-  document.getElementById("tabMoveRightBtn")?.addEventListener("click", () => moveTab(1));
-  document.getElementById("tabDeleteBtn")?.addEventListener("click", deleteTab);
-  document.getElementById("tabSaveBtn")?.addEventListener("click", saveSettings);
-  document.getElementById("tabCancelBtn")?.addEventListener("click", closeSettings);
-
-  const modal = document.getElementById("tabSettingsModal");
-  modal?.addEventListener("click", (e) => { if (e.target === modal) closeSettings(); });
-
-  const nameInput = document.getElementById("tabNameInput");
-  nameInput?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      saveSettings();
-    }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeSettings();
+  saveBtn.addEventListener("click", async () => {
+    if (!activeId) return;
+    try {
+      const patch = {
+        notesById: { ...notesById, [activeId]: areaEl.value },
+        notesActiveTabId: activeId,
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(ref, patch, { merge: true });
+      notesById[activeId] = areaEl.value;
+    } catch (e) {
+      console.error("notes save failed:", e);
+      alert("저장 중 오류가 발생했습니다.");
     }
   });
-}
 
-function startSync() {
-  unsubs.forEach((fn) => { try { fn(); } catch {} });
-  unsubs = [];
+  const renderTabs = () => {
+    // 탭이 하나도 없으면 기본 탭을 생성
+    const ids = Object.keys(notesById || {});
+    if (ids.length === 0) {
+      // 기존 시스템과 충돌 없게 legacy_ 스타일 유지
+      const newId = `legacy_0_${Date.now()}`;
+      notesById[newId] = "";
+      activeId = newId;
+      // DB에도 즉시 반영
+      setDoc(ref, { notesById, notesActiveTabId: activeId, createdAt: serverTimestamp() }, { merge: true }).catch(()=>{});
+    }
 
-  if (!auth.currentUser) {
-    model = { notesTabList: [], notesById: {}, notesActiveTabId: null };
-    render();
-    loadTextareaFromModel();
-    return;
-  }
+    // activeId가 없거나 사라졌으면 첫 탭으로
+    if (!activeId || !notesById[activeId]) {
+      activeId = Object.keys(notesById)[0];
+    }
 
-  const { stateDoc } = userRefs(auth.currentUser.uid);
+    tabsEl.innerHTML = "";
+    const keys = Object.keys(notesById);
 
-  const unsub = onSnapshot(stateDoc, (ds) => {
-    const data = ds.exists() ? (ds.data() || {}) : {};
-    setModel({
-      notesTabList: Array.isArray(data.notesTabList) ? data.notesTabList : [],
-      notesById: data.notesById && typeof data.notesById === "object" ? data.notesById : {},
-      notesActiveTabId: data.notesActiveTabId || null
+    // 기존 UI 감성: 메모1/2/3처럼 보이게 (실제 id는 유지)
+    keys.forEach((id, idx) => {
+      const btn = document.createElement("button");
+      btn.className = "notes-tab" + (id === activeId ? " active" : "");
+      btn.textContent = `메모${idx + 1}`;
+      btn.dataset.id = id;
+      btn.addEventListener("click", async () => {
+        // 현재 내용 반영 후 전환
+        if (activeId) notesById[activeId] = areaEl.value;
+        activeId = id;
+        areaEl.value = safeText(notesById[activeId]);
+
+        // activeId 저장
+        try {
+          await updateDoc(ref, { notesActiveTabId: activeId, updatedAt: serverTimestamp() });
+        } catch (e) {
+          console.error("active tab update failed:", e);
+        }
+
+        renderTabs();
+      });
+      tabsEl.appendChild(btn);
     });
 
-    render();
-    loadTextareaFromModel();
+    areaEl.value = safeText(notesById[activeId]);
+  };
+
+  // 실시간 동기화: 기존 appState 문서를 그대로 구독
+  unsub = onSnapshot(ref, (snap) => {
+    const data = snap.exists() ? (snap.data() || {}) : {};
+    notesById = data.notesById || {};
+    activeId = data.notesActiveTabId || activeId;
+    renderTabs();
   });
-
-  unsubs.push(unsub);
-}
-
-export function mount(container) {
-  rootEl = container;
-  injectStyle();
-  buildUI(container);
-  wireEvents();
-  startSync();
-  render();
-  loadTextareaFromModel();
 }
 
 export function unmount() {
-  clearTimeout(saveTimer);
-  saveTimer = null;
-  unsubs.forEach((fn) => { try { fn(); } catch {} });
-  unsubs = [];
-  if (styleEl) styleEl.remove();
-  styleEl = null;
-  rootEl = null;
+  if (unsub) {
+    try { unsub(); } catch (_) {}
+    unsub = null;
+  }
+  // 스타일은 공통으로 남겨도 되지만, “모듈 완전 분리” 원칙이면 제거
+  if (styleEl) {
+    try { styleEl.remove(); } catch (_) {}
+    styleEl = null;
+  }
 }
