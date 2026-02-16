@@ -237,7 +237,7 @@ import { initBookmarks } from "./bookmarks.js";
             if (!user) throw new Error('로그인이 필요합니다.');
 
             const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop() : 'png';
-            const storagePath = `users/${user.uid}/bookmark_previews/${bookmarkId}/${Date.now()}.${ext}`;
+            const storagePath = `users/${user.uid}/uploads/bookmark_preview_${bookmarkId}_${Date.now()}.${ext}`;
             const storageRef = ref(storage, storagePath);
 
             showFeedbackMessage('미리보기 이미지 업로드 중...');
