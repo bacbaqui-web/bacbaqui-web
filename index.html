@@ -1,99 +1,373 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bacbaqui</title>
-
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>만화 일정 관리</title>
 <script src="https://cdn.tailwindcss.com"></script>
-
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght400;700&amp;display=swap" rel="stylesheet"/>
 <style>
-body { background:#1e1e1e; color:white; }
+    body{font-family:'Noto Sans KR',sans-serif;background:#000;color:#fff;display:flex;justify-content:flex-start;align-items:center;min-height:100vh;padding:16px;flex-direction:column;gap:0}
+    .tab-content{display:none}.tab-content.active{display:flex;flex-direction:column;flex-grow:1}
+    .section-card{background:#2a2a2a;border-radius:12px;padding:20px;box-shadow:inset 0 0 10px rgba(0,0,0,.3);text-align:center;width:100%;max-width:800px}
+    .notepad-tabs{display:flex;justify-content:center;align-items:center;gap:1rem;width:100%;max-width:800px}
+    .notepad-tab{background:#1a1a1a;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700;color:#737373;font-size:.85rem}
+    .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
+    .notes-area{flex-grow:1;resize:vertical}
+    textarea#notesArea::-webkit-scrollbar{width:8px;background-color:#2a2a2a;border-radius:10px}
+    textarea#notesArea::-webkit-scrollbar-thumb{background-color:#555;border-radius:10px}
+    .calendar-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+    .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .day-label,.calendar-day{text-align:center;padding:8px 2px;border-radius:8px;background:#2a2a2a;position:relative;overflow:hidden;word-wrap:break-word}
+    .day-label{background:#444;font-weight:700;color:#fff;font-size:.8rem;padding:8px 0}
+    .calendar-day{min-height:160px;padding-top:16px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;gap:2px}
+    .calendar-day.today{border:2px solid #ccc}
+    .day-number{position:absolute;top:8px;left:8px;font-size:.85rem;font-weight:700;color:#aaa;z-index:10}
+    .task-item{font-size:.85rem;padding:5px 6px;border-radius:8px;margin-top:4px;word-wrap:break-word;cursor:pointer;text-align:left}
+    .task-item.custom-task{background:#4c78a8}
+    .task-item.episode-task{background:#444;color:#ddd}
+    .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
+    .add-task-btn{background:#666;transition:.2s}.add-task-btn:hover{background:#777;transform:scale(1.02)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
+    .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
+    .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
+    .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
+    
+    /* 일일 체크 버튼 그룹 (쇼츠/웹툰) 스타일 */
+    .daily-check-group {
+        display: flex;
+        width: 100%;
+        gap: 2px;
+        margin-top: 2px;
+    }
+    .daily-check-btn {
+        flex: 1;
+        text-align: center;
+        font-size: 0.75rem;
+        padding: 4px 0;
+        border-radius: 4px;
+        background: #444;
+        color: #ccc;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+        font-weight: 500;
+    }
+    .daily-check-btn:hover {
+        opacity: 0.9;
+    }
+    .daily-check-btn.shorts.active {
+        background: #dc2626; 
+        color: white;
+        font-weight: 700;
+    }
+    .daily-check-btn.webtoon.active {
+        background: #eab308;
+        color: #000;
+        font-weight: 700;
+    }
 
-.bookmark-card {
-  background:#2a2a2a;
-  border-radius:12px;
-  overflow:hidden;
-  position:relative;
-}
+    /* 북마크 Masonry 레이아웃 */
+    #image-grid {
+        column-count: 2;
+        column-gap: 1rem;
+        margin-top: 1.5rem;
+        display: block;
+    }
+    @media (min-width: 640px) {
+        #image-grid { column-count: 3; }
+    }
+    @media (min-width: 1024px) {
+        #image-grid { column-count: 4; }
+    }
 
-.bookmark-card img {
-  width:100%;
-  height:180px;
-  object-fit:cover;
-}
+    .bookmark-card{
+        position: relative;
+        transition: transform .2s ease-in-out; 
+        background: #333; 
+        border-radius: 8px; 
+        overflow: hidden; 
+        margin-bottom: 1rem;
+        break-inside: avoid;
+        width: 100%;
+        display: block;
+    }
+    .bookmark-card:hover{transform:translateY(-5px)}
+    
+    .bookmark-card .content {
+        display: block; 
+        width: 100%;
+        height: auto;
+        overflow: hidden;
+        background-color: #1a1a1a;
+        min-height: 80px; 
+        position: relative;
+    }
+    
+    .bookmark-card img {
+        position: static; 
+        width: 100%;
+        height: auto;
+        display: block;
+        object-fit: contain; 
+    }
 
-.bookmark-actions {
-  position:absolute;
-  top:8px;
-  right:8px;
-  display:flex;
-  gap:6px;
-}
+    .bookmark-card .img-fit-cover {
+        object-fit: cover; 
+        height: 100%;
+    }
+    
+    .bookmark-card .icon-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex; justify-content: center; align-items: center;
+        color: white; font-size: 3rem;
+    }
+    .bookmark-card .link-title-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        color: white; padding: 10px;
+        text-align: center;
+    }
+    .bookmark-card .link-title-text {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+        word-break: break-all;
+    }
+    .bookmark-card .link-url-text {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        word-break: break-all;
+    }
+    
+    .bookmark-card .video-title-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(80, 0, 0, 0.7);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        color: white; padding: 10px;
+        text-align: center;
+    }
+    .bookmark-card .video-title-text {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+        word-break: break-all;
+    }
+    .bookmark-card .video-url-text {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        word-break: break-all;
+    }
+    
+    .bookmark-card .instagram-overlay { display: none; } 
+    
+    .bookmark-card .content > div[style*="max-width:540px"] {
+        max-width: 100% !important; 
+        width: 100% !important;
+        box-sizing: border-box;
+    }
 
-.bookmark-actions button {
-  background:#000000aa;
-  padding:6px;
-  border-radius:50%;
-}
+    .domain-header {
+        column-span: all;
+        width: 100%;
+        margin: 20px 0 10px;
+        padding: 8px 0;
+        color: #fff;
+        font-size: 1.25rem;
+        font-weight: 700;
+        border-bottom: 2px solid #555;
+        text-align: left;
+    }
 
-.sticky-drop {
-  position:sticky;
-  top:0;
-  z-index:50;
-  background:#1e1e1e;
-  padding:12px 0;
-}
+    @media (max-width:768px){
+      body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
+      .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
+      .calendar-day{min-height:120px;padding:1.5rem .2rem .2rem;gap:1px}.day-number{font-size:.75rem;top:.5rem;left:.5rem}
+      .task-item{font-size:.85rem;padding:2px 4px;margin-top:2px}
+      .calendar-grid,.calendar-header{gap:0}.add-task-btn{width:100%;font-size:.9rem}
+      .modal-content{padding:16px;width:95%}
+      .domain-header { font-size: 1rem; }
+    }
+    .calendar-grid{grid-gap:4px}
+    @media (max-width:768px){.calendar-grid{grid-gap:0}}
 
-.plus-box {
-  height:80px;
-  border:2px dashed #444;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:32px;
-  cursor:pointer;
-  border-radius:12px;
-}
+    #imageModal.modal {
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 9999;
+    }
+    #imageModal .modal-content {
+        background-color: transparent;
+        padding: 0;
+        box-shadow: none;
+        max-width: 90vw;
+        max-height: 90vh;
+        width: auto; 
+        height: auto; 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+    }
+    #modalImage {
+        width: auto; 
+        height: auto; 
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    
+    #editTitleModal.modal { z-index: 1001; }
+    #editTitleModal .modal-content {
+        background: #2a2a2a; 
+        max-width: 400px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    }
+
+    /* 노트 탭(동적) - 톱니/플러스 버튼 */
+    .notepad-tab .tab-gear{margin-left:6px;opacity:.75;font-weight:700}
+    .notepad-tab .tab-gear:hover{opacity:1}
+    .notepad-tab.add-tab{min-width:40px;display:flex;justify-content:center;align-items:center}
 </style>
 </head>
-<body class="p-6">
 
-<div id="bookmarks-section">
-
-  <!-- 🔵 고정 + 아이콘 영역 -->
-  <div class="sticky-drop">
-    <div id="drag-area" class="plus-box">+</div>
-  </div>
-
-  <!-- 🔵 북마크 그리드 -->
-  <div id="image-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6"></div>
-
+<body class="text-white">
+<div class="w-full max-w-2xl mx-auto flex items-center justify-end gap-2 mb-4" id="authBar">
+<span class="text-sm opacity-80" id="userInfo"></span>
+<button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded" id="signInBtn">Google 로그인</button>
+<button class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded hidden" id="signOutBtn">로그아웃</button>
 </div>
 
+<div class="notepad-tabs mx-auto" id="main-tabs">
+<button class="notepad-tab active" data-tab="calendar">달력</button>
+<button class="notepad-tab" data-tab="notes">메모</button>
+<button class="notepad-tab" data-tab="bookmarks">북마크</button>
+</div>
 
-<!-- 🔵 편집 모달 -->
-<div id="editModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-70 z-50">
-  <div class="bg-[#2a2a2a] p-6 rounded-xl w-full max-w-md">
-    <h2 class="text-lg font-bold mb-4">북마크 편집</h2>
+<div class="section-card tab-content active" id="calendar-section">
+<div class="flex justify-between items-center mb-4">
+<button class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg" id="prevMonthBtn">&lt; 이전 달</button>
+<h2 class="text-lg font-bold" id="currentMonthYear"></h2>
+<button class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg" id="nextMonthBtn">다음 달 &gt;</button>
+</div>
+<div class="calendar-header mb-2">
+<div class="day-label">일</div><div class="day-label">월</div><div class="day-label">화</div>
+<div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div>
+</div>
+<div class="calendar-grid" id="calendarGrid"></div>
+<div class="mt-8 text-center">
+<button class="add-task-btn px-6 py-3 rounded-full font-bold text-white shadow-md" id="addTaskBtn">+ 개인 작업 추가</button>
+</div>
+</div>
 
-    <input id="editTitleInput"
-           class="w-full mb-4 p-2 rounded bg-gray-800 border border-gray-700"
-           placeholder="제목 수정"/>
+<div class="section-card tab-content" id="notes-section">
+  <!-- ✅ 메모 탭은 notes.js가 동적으로 생성 -->
+  <div id="notesTabs" class="notepad-tabs"></div>
+  <textarea class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg" id="notesArea"></textarea>
+</div>
 
-    <div id="previewDropArea"
-         class="plus-box mb-4">
-      +
+<div class="section-card tab-content text-left" id="bookmarks-section">
+<div class="flex justify-between items-center mb-4">
+<div class="flex gap-2 items-center text-sm">
+<span class="text-gray-400">정렬 기준:</span>
+<select class="bg-gray-700 p-1 rounded text-white focus:outline-none" id="bookmarkSortSelect">
+<option value="timestamp">최신순</option>
+<option selected="" value="sourceDomain">사이트별 정렬</option>
+</select>
+</div>
+</div>
+<section class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" id="drag-area" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
+<div>이미지/동영상/일반 페이지 URL 또는 인스타그램 퍼가기 코드를 붙여넣기 또는 드래그하세요. 캡쳐/이미지는 붙여넣기(Ctrl/Cmd+V)를 사용하세요.</div>
+</section>
+<section id="image-grid"></section>
+</div>
+
+<div class="modal" id="taskModal">
+<div class="modal-content">
+<h2 class="text-2xl font-bold mb-4" id="modalTitle">새 작업</h2>
+<label class="block mb-2">제목:</label>
+<input class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4" id="taskTitle" type="text"/>
+<label class="block mb-2">설명:</label>
+<textarea class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24" id="taskDescription"></textarea>
+<label class="block mb-2">날짜:</label>
+<input class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4" id="taskDate" type="date"/>
+<div class="flex justify-end gap-2">
+<button class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg" id="saveTaskBtn">저장</button>
+<button class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg" id="cancelBtn">취소</button>
+<button class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hidden" id="deleteTaskBtn">삭제</button>
+</div>
+</div>
+</div>
+
+<div class="modal" id="imageModal">
+<div class="modal-content relative">
+<button class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50" id="closeImageModalBtn">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<img alt="확대 이미지" id="modalImage" src=""/>
+<button class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50" id="goToPageBtn">원본 페이지로 이동</button>
+</div>
+</div>
+
+<div class="modal" id="editTitleModal">
+<div class="modal-content">
+<h2 class="text-xl font-bold mb-4">북마크 제목 수정</h2>
+<label class="block mb-2 text-sm opacity-80" id="currentUrlDisplay"></label>
+<input class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white" id="editTitleInput" type="text"/>
+<div class="flex justify-end gap-2">
+<button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg" id="saveTitleBtn">저장</button>
+<button class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg" id="cancelTitleBtn">취소</button>
+</div>
+</div>
+</div>
+
+<!-- ✅ 새로 추가: 탭 설정 모달 -->
+<div id="tabSettingsModal" class="modal">
+  <div class="modal-content">
+    <h2 class="text-xl font-bold mb-4">탭 설정</h2>
+
+    <label class="block mb-2 text-sm opacity-80">탭 이름</label>
+    <input type="text" id="tabNameInput" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
+
+    <div class="flex justify-between items-center mb-4">
+      <div class="flex gap-2">
+        <button id="tabMoveLeftBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-lg">←</button>
+        <button id="tabMoveRightBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-lg">→</button>
+      </div>
+      <button id="tabDeleteBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">삭제</button>
     </div>
 
-    <div class="flex justify-end gap-3">
-      <button id="editCancelBtn" class="px-4 py-2 bg-gray-600 rounded">취소</button>
-      <button id="editSaveBtn" class="px-4 py-2 bg-blue-600 rounded">저장</button>
+    <div class="flex justify-end gap-2">
+      <button id="tabSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
+      <button id="tabCancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
     </div>
   </div>
 </div>
 
-<script type="module" src="./main.js"></script>
+<div class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50" id="alert-modal">
+<div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
+<p class="text-white text-lg text-center font-medium" id="modal-message"></p>
+<div class="mt-4 flex justify-center">
+<button class="px-4 py-2 bg-[#424242] text-white rounded-md hover:bg-[#525252]" id="modal-close-btn">확인</button>
+</div>
+</div>
+</div>
 
+<div class="fixed inset-0 bg-black bg-opacity-70 z-[1001] flex items-center justify-center hidden" id="loading-overlay">
+<div class="flex flex-col items-center">
+<div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+<p class="text-white mt-4 text-lg">데이터를 불러오는 중...</p>
+</div>
+</div>
+
+<!-- ✅ UI 코드(기능)는 ui.js, Firebase/동기화는 main.js -->
+<script src="./main.js" type="module"></script>
 </body>
 </html>
