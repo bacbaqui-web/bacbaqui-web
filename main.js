@@ -11,6 +11,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
       deleteObject 
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
+import { initCalendar } from "./calendar.js";
+import { initNotes } from "./notes.js";
+import { initBookmarks } from "./bookmarks.js";
+
     // Firebase Config (***이 부분이 수정되었습니다***)
     const firebaseConfig = {
       apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
@@ -307,3 +311,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
       }
       loadingOverlay.classList.add('hidden'); window.isAuthReady=true;
     });
+
+initCalendar();
+initNotes();
+initBookmarks();
