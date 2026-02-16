@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>만화 일정 관리</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    body{
+      font-family:'Noto Sans KR',sans-serif;
+      background:#000;
+      color:#fff;
+      display:flex;
+      justify-content:flex-start;
+      align-items:center;
+      min-height:100vh;
+      padding:16px;
+      flex-direction:column;
+      gap:0
+    }
+
+    /* 상단 탭 UI */
+    .notepad-tabs{display:flex;justify-content:center;align-items:center;gap:1rem;width:100%;max-width:800px}
+    .notepad-tab{background:#1a1a1a;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700;color:#737373;font-size:.85rem}
+    .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
+
+    /* 공통 카드 */
+    .section-card{background:#2a2a2a;border-radius:12px;padding:20px;box-shadow:inset 0 0 10px rgba(0,0,0,.3);text-align:center;width:100%;max-width:800px}
+
+    /* 공통 모달 */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
+    .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
+
+    /* 공통 드래그 영역(북마크 등에서 사용) */
+    .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
+    .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
+
+    /* 반응형 */
+    @media (max-width:768px){
+      body{padding:12px;gap:0}
+      .section-card{padding:12px;border-radius:0}
+      .notepad-tabs{gap:.5rem}
+      .notepad-tab{padding:6px 12px;font-size:.8rem}
+      .modal-content{padding:16px;width:95%}
+    }
+
+    /* 알림 모달(기존 UI 유지) */
+    #alert-modal { display:none; }
+
+    /* 로딩 오버레이(기존 UI 유지) */
+    #loading-overlay{ display:none; }
+  </style>
+</head>
+<body class="text-white">
+
+  <!-- 로그인 바 (기존 스타일 유지) -->
+  <div id="authBar" class="w-full max-w-2xl mx-auto flex items-center justify-end gap-2 mb-4">
+    <span id="userInfo" class="text-sm opacity-80"></span>
+    <button id="signInBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Google 로그인</button>
+    <button id="signOutBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded hidden">로그아웃</button>
+  </div>
+
+  <!-- 메인 탭 -->
+  <div class="notepad-tabs mx-auto" id="main-tabs">
+    <button class="notepad-tab active" data-tab="calendar">달력</button>
+    <button class="notepad-tab" data-tab="notes">메모</button>
+    <button class="notepad-tab" data-tab="bookmarks">북마크</button>
+  </div>
+
+  <!-- 모듈이 마운트되는 자리 -->
+  <div id="appRoot" class="w-full"></div>
+
+  <!-- 공통 알림 모달(기존) -->
+  <div class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50" id="alert-modal">
+    <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
+      <p class="text-white text-lg text-center font-medium" id="modal-message"></p>
+      <div class="mt-4 flex justify-center">
+        <button class="px-4 py-2 bg-[#424242] text-white rounded-md hover:bg-[#525252]" id="modal-close-btn">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 공통 로딩 오버레이(기존) -->
+  <div class="fixed inset-0 bg-black bg-opacity-70 z-[1001] flex items-center justify-center hidden" id="loading-overlay">
+    <div class="flex flex-col items-center">
+      <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+      <p class="text-white mt-4 text-lg">데이터를 불러오는 중...</p>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
