@@ -2,7 +2,6 @@ export function initCalendar() {
   // Calendar rendering is based on Korea Standard Time (Asia/Seoul),
   // regardless of the user's local browser timezone.
   const TZ = 'Asia/Seoul';
-  const KST_OFFSET_MIN = 9 * 60; // UTC+9
 
   // Get today's date parts in KST.
   function getKSTParts(date = new Date()) {
@@ -16,19 +15,16 @@ export function initCalendar() {
     return { y, m, d };
   }
 
-  // Create a timestamp for KST midnight of (y, monthIndex, day).
-  // We compute in UTC so the result is stable in any browser timezone.
-  function kstMidnightUTC(y, monthIndex, day) {
-    // Date.UTC gives midnight UTC. KST midnight is 9 hours earlier in UTC.
-    return Date.UTC(y, monthIndex, day, 0, 0, 0) - KST_OFFSET_MIN * 60 * 1000;
-  }
-
-  // Weekday in KST: 0=Sun ... 6=Sat
+  // Weekday in KST as number: 0=Sun ... 6=Sat
+  // Uses Intl with a "safe" UTC time (noon) to avoid day-boundary issues.
   function getKSTWeekday(y, monthIndex, day) {
-    return new Date(kstMidnightUTC(y, monthIndex, day)).getUTCDay();
+    const dt = new Date(Date.UTC(y, monthIndex, day, 12, 0, 0)); // 12:00 UTC
+    const wd = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' }).format(dt);
+    const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    return map[wd];
   }
 
-  // Days in month in KST month/year (independent of timezone when using UTC)
+  // Days in month in (y, monthIndex)
   function getDaysInMonth(y, monthIndex) {
     return new Date(Date.UTC(y, monthIndex + 1, 0)).getUTCDate();
   }
@@ -68,7 +64,7 @@ export function initCalendar() {
     calendarGrid.innerHTML = '';
 
     // Monday-first display: Mon=0 ... Sun=6
-    const firstDowSun0 = getKSTWeekday(viewYear, viewMonth, 1); // 0=Sun..6=Sat
+    const firstDowSun0 = getKSTWeekday(viewYear, viewMonth, 1); // 0=Sun..6=Sat (KST)
     const firstDowMon0 = (firstDowSun0 + 6) % 7; // shift so Mon becomes 0
 
     const daysInMonth = getDaysInMonth(viewYear, viewMonth);
