@@ -284,6 +284,30 @@ import { initBookmarks } from "./bookmarks.js";
         }
     };
 
+    // 링크 북마크 미리보기 이미지 업로드 (붙여넣기 전용)
+    // - Firebase Storage에 업로드 후, 해당 북마크 문서에 previewImageUrl 저장
+    // - 기존 preview는 유지(이전 파일 삭제하지 않음)
+    window.uploadBookmarkPreviewImage = async (bookmarkId, file) => {
+        if(!ensureLogin()) return;
+        if(!bookmarkId || !file) throw new Error('bookmarkId/file required');
+
+        const { imagesCol } = await cloudRefs();
+        const user = auth.currentUser;
+        if(!user) throw new Error('로그인이 필요합니다.');
+
+        // 파일명/타입 보정
+        const contentType = file.type || 'image/png';
+        const safeName = (file.name && file.name.trim()) ? file.name : `preview_${bookmarkId}.png`;
+        const storagePath = `users/${user.uid}/uploads/bookmark_preview_${bookmarkId}_${Date.now()}_${safeName}`;
+        const storageRef = ref(storage, storagePath);
+
+        const uploadResult = await uploadBytes(storageRef, file, { contentType });
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        const docRef = doc(imagesCol, bookmarkId);
+        await updateDoc(docRef, { previewImageUrl: downloadURL, previewStoragePath: storagePath });
+    };
+
 
     // [수정 5] window.deleteImage 함수 전체 교체 (Firebase Storage 삭제 로직 추가)
     window.deleteImage = async (id)=>{

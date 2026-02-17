@@ -38,7 +38,7 @@ export function initNotes(){
 
     sorted.forEach((t)=>{
       const btn = document.createElement('button');
-      btn.className = 'notepad-tab' + (t.id===activeId ? ' active' : '');
+      btn.className = 'notes-tab' + (t.id===activeId ? ' active' : '');
       btn.dataset.tabId = t.id;
       btn.draggable = editMode;
       btn.innerHTML = `
@@ -56,9 +56,11 @@ export function initNotes(){
     }
     notesArea.value = notes[useId] || '';
 
-    // Toggle button label
+    // Toggle button icon
     if(toggleEditBtn){
-      toggleEditBtn.textContent = editMode ? '완료' : '편집';
+      toggleEditBtn.innerHTML = editMode
+        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
     }
   };
 
@@ -79,7 +81,7 @@ export function initNotes(){
 
   // Events: select / rename / delete
   tabsContainer.addEventListener('click', async (e)=>{
-    const tabBtn = e.target.closest('.notepad-tab');
+    const tabBtn = e.target.closest('.notes-tab');
     if(!tabBtn) return;
     const tabId = tabBtn.dataset.tabId;
 
@@ -95,7 +97,7 @@ export function initNotes(){
   });
 
   tabsContainer.addEventListener('dblclick', async (e)=>{
-    const tabBtn = e.target.closest('.notepad-tab');
+    const tabBtn = e.target.closest('.notes-tab');
     if(!tabBtn) return;
     const tabId = tabBtn.dataset.tabId;
     const { tabs } = getState();
@@ -110,7 +112,7 @@ export function initNotes(){
 
   tabsContainer.addEventListener('dragstart', (e)=>{
     if(!editMode) return;
-    const tabBtn = e.target.closest('.notepad-tab');
+    const tabBtn = e.target.closest('.notes-tab');
     if(!tabBtn) return;
     dragFromId = tabBtn.dataset.tabId;
     e.dataTransfer && (e.dataTransfer.effectAllowed = 'move');
@@ -125,7 +127,7 @@ export function initNotes(){
   tabsContainer.addEventListener('drop', async (e)=>{
     if(!editMode) return;
     e.preventDefault();
-    const tabBtn = e.target.closest('.notepad-tab');
+    const tabBtn = e.target.closest('.notes-tab');
     if(!tabBtn || !dragFromId) return;
     const dropId = tabBtn.dataset.tabId;
     if(dropId === dragFromId) return;

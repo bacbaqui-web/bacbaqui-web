@@ -12,13 +12,13 @@
     window.currentEditingBookmark = null; // 현재 편집 중인 북마크 항목
     let currentDate = new Date();
     window.isAuthReady = false;
-    // **수정: 기본 정렬 키를 'sourceDomain'으로 설정**
-    window.bookmarkSortKey = 'timestamp'; // 기본 정렬 키: 최신순(고정)
+    // 북마크는 최신순 고정(정렬 UI 제거)
+    window.bookmarkSortKey = 'timestamp';
 
     // DOM 요소
     const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
     const tabContents = document.querySelectorAll('.tab-content');
-    const mainNotepadTabs = document.querySelectorAll('#notes-section .notepad-tabs .notepad-tab');
+    // 메모 탭 UI는 notes.js가 관리 (여기서는 관여하지 않음)
     const notesArea = document.getElementById('notesArea');
     const dragArea = document.getElementById('drag-area');
     const imageGrid = document.getElementById('image-grid');
@@ -32,8 +32,13 @@
     const saveTitleBtn = document.getElementById('saveTitleBtn');
     const cancelTitleBtn = document.getElementById('cancelTitleBtn');
     const currentUrlDisplay = document.getElementById('currentUrlDisplay');
-    // 정렬 UI 제거됨 (최신순 고정)
-    const bookmarkSortSelect = null;
+    // 정렬 선택 요소(현재는 UI 제거됨)
+    const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
+
+    // 링크 미리보기(붙여넣기) 모달
+    const previewUploadModal = document.getElementById('previewUploadModal');
+    const closePreviewUploadBtn = document.getElementById('closePreviewUploadBtn');
+    let currentPreviewEditingBookmark = null;
 
 
     // 유틸리티 함수
@@ -88,22 +93,14 @@
 
 
     function showTab(tabId){
-      tabContents.forEach(c=>{ c.classList.remove('active'); c.style.display='none'; });
+      tabContents.forEach(c=>c.classList.remove('active'));
       tabButtons.forEach(b=>b.classList.remove('active'));
-      const section=document.getElementById(`${tabId}-section`);
-      if(section){ section.classList.add('active'); section.style.display='flex'; }
-      const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`);
-      if(btn) btn.classList.add('active');
+      document.getElementById(`${tabId}-section`).classList.add('active');
+      const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`); if(btn) btn.classList.add('active');
     }
     showTab('calendar');
     tabButtons.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-    mainNotepadTabs.forEach(tab=>{
-      tab.addEventListener('click',()=>{
-        mainNotepadTabs.forEach(t=>t.classList.remove('active')); tab.classList.add('active');
-        window.activeTab = tab.dataset.tab;
-        notesArea.value = (window.__notesTabs||{})[window.activeTab] || '';
-      });
-    });
+    // (주의) 과거 메모 탭 선택 로직은 제거됨. notes.js가 담당.
 
     // 시간/날짜 관련 유틸리티
     const TZ='Asia/Seoul';
@@ -161,8 +158,8 @@
               saveEditedTitle();
           }
       });
-
-      // 정렬 UI는 제거되어 별도 리스너 없음 (최신순 고정)
+      
+      // 정렬 UI는 제거됨 (최신순 고정)
     };
 
     // 달력 렌더링
@@ -287,10 +284,7 @@
       
       let sortedBookmarks = [...(window.imageBookmarks || [])];
 
-      // 1. 정렬 로직 적용
-      let currentSortKey = 'timestamp'; // 최신순 고정
-
-      // 최신순 정렬: 타임스탬프 역순 (가장 큰 값이 맨 위)
+      // 최신순 고정
       sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
 
       sortedBookmarks.forEach(d=>{
@@ -304,23 +298,26 @@
         const imageUrl = d.url;
         const pageUrl = d.pageUrl; // 일반 URL, 동영상 URL 또는 인스타그램 게시물 URL
         const sourceDomain = d.sourceDomain || 'Unknown Source';
+
+        // (사이트별 헤더 제거)
         
         let thumbnail = isVideo ? getYoutubeThumbnail(pageUrl) : imageUrl;
         let iconHtml = '';
         let urlToOpen = pageUrl;
 
         if (isLink) {
-            // 일반 페이지 링크 북마크
-            const displayTitle = d.title || '일반 페이지 링크';
-            const displayUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-            
-            iconHtml = `<div class="link-title-overlay">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.708l4-4a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" />
-                            </svg>
-                            <span class="link-title-text">${displayTitle}</span>
-                            <span class="link-url-text">${displayUrl}</span>
-                        </div>`;
+            // 일반 페이지 링크 북마크: 제목/URL 미표시. previewImageUrl이 있으면 그 이미지만 표시.
+            const prevImg = d.previewImageUrl || null;
+            if (prevImg) {
+                iconHtml = `<img src="${prevImg}" alt="링크 미리보기" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=미리보기+오류'"/>`;
+            } else {
+                iconHtml = `<div class="icon-overlay">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;opacity:.9">
+                                <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4"/>
+                                <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 20"/>
+                              </svg>
+                            </div>`;
+            }
         } else if (isInstagram) {
              // 인스타그램 게시물 북마크 (퍼가기 코드 사용)
              // 원본 URL 추출 (클릭 시 이동용)
@@ -423,7 +420,12 @@
                  showAlert('북마크 삭제 중 오류가 발생했습니다.'); 
              }
           } else if (action === 'edit' && bookmark) {
-             openEditModal(bookmark);
+             // 링크 북마크는 제목 수정 대신 "미리보기 이미지 붙여넣기" 모달을 사용
+             if (bookmark.type === 'link') {
+                 openPreviewUploadModal(bookmark);
+             } else {
+                 openEditModal(bookmark);
+             }
           }
         };
       });
@@ -452,10 +454,44 @@
       await window.cloudSaveAll(); closeModal(); renderCalendar();
     };
 
+    // 링크 미리보기 모달
+    const openPreviewUploadModal = (bookmark) => {
+        currentPreviewEditingBookmark = bookmark;
+        if (previewUploadModal) previewUploadModal.style.display = 'flex';
+    };
+    const closePreviewUploadModal = () => {
+        currentPreviewEditingBookmark = null;
+        if (previewUploadModal) previewUploadModal.style.display = 'none';
+    };
+    closePreviewUploadBtn?.addEventListener('click', closePreviewUploadModal);
+    previewUploadModal?.addEventListener('click', (e)=>{ if(e.target===previewUploadModal) closePreviewUploadModal(); });
+
+    // 붙여넣기 처리(모달이 열려 있을 때만)
+    document.addEventListener('paste', async (e)=>{
+        if(!previewUploadModal || previewUploadModal.style.display !== 'flex') return;
+        if(!currentPreviewEditingBookmark) return;
+        const items = e.clipboardData?.items;
+        if(!items) return;
+        const imgItem = [...items].find(it=>it.type && it.type.startsWith('image/'));
+        if(!imgItem) return;
+        e.preventDefault();
+        const blob = imgItem.getAsFile();
+        if(!blob) return;
+        const fileName = `preview_${currentPreviewEditingBookmark.id}.png`;
+        const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+        try{
+            showFeedbackMessage('미리보기 이미지 업로드 중...');
+            await window.uploadBookmarkPreviewImage(currentPreviewEditingBookmark.id, file);
+            showFeedbackMessage('미리보기 이미지가 저장되었습니다.');
+            closePreviewUploadModal();
+        }catch(err){
+            console.error(err);
+            showAlert('미리보기 이미지 업로드 중 오류가 발생했습니다.');
+        }
+    });
+
     (function init(){ 
         attachEventListeners(); 
-        // 초기화 시 기본 정렬 키를 'sourceDomain'으로 설정했으므로 선택 상자 값을 업데이트합니다.
-        bookmarkSortSelect.value = window.bookmarkSortKey;
         renderCalendar(); 
     })();
 
