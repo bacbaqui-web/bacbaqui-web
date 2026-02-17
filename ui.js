@@ -106,7 +106,7 @@
     const TZ='Asia/Seoul';
     function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
-    function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=0&&d<=4)c++; cur.setDate(cur.getDate()+1);} return c;}
+    function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=1&&d<=5)c++; cur.setDate(cur.getDate()+1);} return c;}
 
     // const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
 
@@ -178,8 +178,8 @@
 
         // 1. 에피소드 정보 (평일만 표시)
         if(dayOfWeek>=0&&dayOfWeek<=4){
-          const milestoneDate=new Date('2025-09-01'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
-          const milestoneEpisode=2014; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
+          const milestoneDate=new Date('2026-02-23'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
+          const milestoneEpisode=2137; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
           const epItem=document.createElement('div'); epItem.classList.add('task-item','episode-task'); epItem.textContent=`${episodeNumber}화`;
           const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; if((window.taskStatus||{})[key]) epItem.classList.add('complete');
           epItem.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.ensureLogin||!window.ensureLogin()) return; window.taskStatus=window.taskStatus||{}; window.taskStatus[key]=!window.taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar();});
