@@ -13,7 +13,7 @@ export function initNotes(){
   const genId = ()=> 'tab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
 
   const getState = ()=>({
-    tabs: window.__notesTabList || [{ id:'memo', name:'메모', order:0 }],
+    tabs: (Array.isArray(window.__notesTabList) && window.__notesTabList.length>0) ? window.__notesTabList : [{ id:'memo', name:'메모', order:0 }],
     notes: window.__notesTabs || {},
     activeId: window.__notesActiveTabId || 'memo'
   });
@@ -32,13 +32,19 @@ export function initNotes(){
 
   const render = ()=>{
     const { tabs, activeId, notes } = getState();
+    // if tabs list is empty or activeId missing, fallback to first tab
+    const hasActive = Array.isArray(tabs) && tabs.some(t=>t.id===_activeId);
+    let _activeId = hasActive ? activeId : ((Array.isArray(tabs) && tabs.length>0) ? tabs[0].id : 'memo');
+    if(_activeId !== activeId){
+      window.__notesActiveTabId = _activeId;
+    }
     // normalize tabs ordering
     const sorted = [...tabs].sort((a,b)=>(a.order??0)-(b.order??0));
     tabsContainer.innerHTML = '';
 
     sorted.forEach((t)=>{
       const btn = document.createElement('button');
-      btn.className = 'notes-tab' + (t.id===activeId ? ' active' : '');
+      btn.className = 'notes-tab' + (t.id===_activeId ? ' active' : '');
       btn.dataset.tabId = t.id;
       btn.draggable = editMode;
       btn.innerHTML = `
@@ -49,7 +55,7 @@ export function initNotes(){
     });
 
     // Ensure textarea shows active note
-    const activeExists = sorted.some(t=>t.id===activeId);
+    const activeExists = sorted.some(t=>t.id===_activeId);
     const useId = activeExists ? activeId : (sorted[0]?.id || 'memo');
     if(useId !== activeId){
       window.__notesActiveTabId = useId;
