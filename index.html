@@ -17,6 +17,8 @@
     /* ===== 메모(내부) 탭 전용 스타일: 메인 탭(.notepad-tab)과 분리 ===== */
     /* 탭이 살짝 떠 보이지 않도록 전체 줄을 5px 아래로 내림 */
     #notesTabsContainer{justify-content:flex-start;align-items:flex-end;gap:.5rem;padding-left:10px;margin-top:5px}
+#notesHeaderRow{margin-top:5px;margin-bottom:6px}
+
     .notes-tab{background:#3a3a3a;padding:8px 14px;border-radius:10px 10px 0 0;cursor:pointer;transition:background .2s,color .2s,transform .15s ease; font-weight:700;color:#bdbdbd;font-size:.85rem;position:relative;z-index:1}
     .notes-tab:hover{filter:brightness(1.05)}
     .notes-tab.active{background:#000;color:#fff;z-index:3;margin-bottom:0;box-shadow:none}
@@ -297,7 +299,7 @@
   </div>
 
   <div id="notes-section" class="section-card tab-content">
-    <div class="flex items-center justify-between mb-2">
+    <div class="flex items-center justify-between mb-2" id="notesHeaderRow">
       <div id="notesTabsContainer" class="notepad-tabs flex flex-wrap gap-2"></div>
       <div class="flex items-center gap-2">
         <button id="addNotesTabBtn" class="icon-btn" title="새 탭">
