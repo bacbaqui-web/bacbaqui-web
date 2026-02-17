@@ -69,8 +69,12 @@
     .calendar-day{min-height:160px;padding-top:16px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;gap:2px}
     .calendar-day.today{border:2px solid #ccc}
     .day-number{position:absolute;top:8px;left:8px;font-size:.85rem;font-weight:700;color:#aaa;z-index:10}
+    .day-divider{height:1px;background:#3a3a3a;margin:18px 6px 2px;border-radius:999px;opacity:.95}
     .task-item{font-size:.85rem;padding:5px 6px;border-radius:8px;margin-top:4px;word-wrap:break-word;cursor:pointer;text-align:left}
     .task-item.custom-task{background:#4c78a8}
+    .task-item.custom-task.custom-important{background:#dc2626;color:#fff}
+    .task-item.custom-task.custom-family{background:#2563eb;color:#fff}
+    .task-item.custom-task.custom-special{background:#16a34a;color:#fff}
     .task-item.episode-task{background:#444;color:#ddd}
     .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
     .add-task-btn{background:#666;transition:.2s}.add-task-btn:hover{background:#777;transform:scale(1.02)}
@@ -113,6 +117,16 @@
         color: #000;
         font-weight: 700;
     }
+
+    /* 달력 아래 일정 & 할 일 리스트 */
+    .agenda-item{display:flex;align-items:center;gap:10px;background:#2a2a2a;border-radius:10px;padding:10px 10px}
+    .agenda-dot{width:10px;height:10px;border-radius:999px;flex:0 0 10px}
+    .agenda-date{font-size:.8rem;color:#bbb;min-width:92px}
+    .agenda-text{flex:1 1 auto;word-break:break-word}
+    .agenda-actions{display:flex;gap:6px;flex:0 0 auto}
+    .agenda-btn{background:#3a3a3a;border-radius:10px;padding:6px 8px;font-size:.8rem;color:#fff;cursor:pointer;user-select:none}
+    .agenda-btn:hover{background:#4a4a4a}
+    .agenda-section-title{margin-top:10px;margin-bottom:6px;color:#ddd;font-weight:700;font-size:.9rem;opacity:.95}
 
 
     /* 북마크 Masonry 레이아웃 */
@@ -322,6 +336,15 @@
     <div class="mt-8 text-center">
       <button id="addTaskBtn" class="add-task-btn px-6 py-3 rounded-full font-bold text-white shadow-md">+ 개인 작업 추가</button>
     </div>
+
+    <!-- 일정 & 할 일 (달력 아래 리스트) -->
+    <div id="agendaPanel" class="mt-6 text-left" style="background:#1f1f1f;border-radius:12px;padding:14px;box-shadow:inset 0 0 10px rgba(0,0,0,.25)">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-bold" style="font-size:1rem;">📌 일정 &amp; 할 일</div>
+        <button id="addTodoBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">+ 할 일 추가</button>
+      </div>
+      <div id="agendaList" class="space-y-2"></div>
+    </div>
   </div>
 
   <div id="notes-section" class="section-card tab-content">
@@ -359,6 +382,19 @@
       <textarea id="taskDescription" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24"></textarea>
       <label class="block mb-2">날짜:</label>
       <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
+
+      <label class="block mb-2">분류:</label>
+      <select id="taskCategory" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
+        <option value="">(기본)</option>
+        <option value="important">중요한일 (빨강)</option>
+        <option value="family">가족행사 (파랑)</option>
+        <option value="special">특별한날 (초록)</option>
+      </select>
+
+      <label class="flex items-center gap-2 mb-4 text-sm opacity-90" style="user-select:none;">
+        <input type="checkbox" id="todoOnly" />
+        달력에는 표시하지 않고 <b>할 일</b>로만 추가
+      </label>
       <div class="flex justify-end gap-2">
         <button id="saveTaskBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
         <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>

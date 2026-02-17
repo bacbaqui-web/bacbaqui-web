@@ -156,6 +156,12 @@
     const taskTitleInput=document.getElementById('taskTitle');
     const taskDescriptionInput=document.getElementById('taskDescription');
     const taskDateInput=document.getElementById('taskDate');
+    const taskCategorySelect=document.getElementById('taskCategory');
+    const todoOnlyCheckbox=document.getElementById('todoOnly');
+
+    // 달력 아래 리스트
+    const agendaListEl=document.getElementById('agendaList');
+    const addTodoBtn=document.getElementById('addTodoBtn');
 
     // 이벤트 리스너 부착
     const attachEventListeners=()=>{
@@ -165,6 +171,16 @@
       prevMonthBtn?.addEventListener('click',()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
       nextMonthBtn?.addEventListener('click',()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
       addTaskBtn?.addEventListener('click',()=>openModal());
+      addTodoBtn?.addEventListener('click',()=>openModal({ date:'', todoOnly:true }));
+
+      // "달력에는 표시하지 않고 할 일로만" 토글
+      todoOnlyCheckbox?.addEventListener('change',()=>{
+        const on = !!todoOnlyCheckbox.checked;
+        if(taskDateInput){
+          taskDateInput.disabled = on;
+          if(on) taskDateInput.value = '';
+        }
+      });
       if(notesArea){
         notesArea.addEventListener('input',()=>window.cloudSaveNotesDebounced&&window.cloudSaveNotesDebounced());
         notesArea.addEventListener('blur',()=>window.cloudSaveNotes&&window.cloudSaveNotes());
@@ -214,26 +230,12 @@
         const today=new Date(); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
         const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
 
-        // 1. 에피소드 정보 (일~목만 표시)
-        if(dayOfWeek>=0&&dayOfWeek<=4){
-          const episodeNumber = episodeNumberForDate(thisDate);
-          const epItem=document.createElement('div'); 
-          epItem.classList.add('task-item','episode-task'); 
-          epItem.textContent=`${episodeNumber}화`;
-          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; 
-          if((window.taskStatus||{})[key]) epItem.classList.add('complete');
-          epItem.addEventListener('click',async(e)=>{ 
-            e.stopPropagation(); 
-            if(!window.ensureLogin||!window.ensureLogin()) return; 
-            window.taskStatus=window.taskStatus||{}; 
-            window.taskStatus[key]=!window.taskStatus[key]; 
-            await window.cloudSaveStateOnly(); 
-            renderCalendar();
-          });
-          dayDiv.appendChild(epItem);
-        }
+        // 날짜 숫자 아래 구분선
+        const divider = document.createElement('div');
+        divider.className = 'day-divider';
+        dayDiv.appendChild(divider);
 
-        // 2. [NEW] 매일 쇼츠/웹툰 체크 버튼 그룹
+        // 1) 매일 쇼츠/웹툰 체크 버튼 그룹 (항상 최상단)
         const checkGroup = document.createElement('div');
         checkGroup.className = 'daily-check-group';
 
@@ -271,10 +273,34 @@
         checkGroup.appendChild(webtoonBtn);
         dayDiv.appendChild(checkGroup);
 
+        // 2) 에피소드 정보 (일~목만 표시) - 쇼츠/웹툰 아래
+        if(dayOfWeek>=0&&dayOfWeek<=4){
+          const episodeNumber = episodeNumberForDate(thisDate);
+          const epItem=document.createElement('div'); 
+          epItem.classList.add('task-item','episode-task'); 
+          epItem.textContent=`${episodeNumber}화`;
+          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; 
+          if((window.taskStatus||{})[key]) epItem.classList.add('complete');
+          epItem.addEventListener('click',async(e)=>{ 
+            e.stopPropagation(); 
+            if(!window.ensureLogin||!window.ensureLogin()) return; 
+            window.taskStatus=window.taskStatus||{}; 
+            window.taskStatus[key]=!window.taskStatus[key]; 
+            await window.cloudSaveStateOnly(); 
+            renderCalendar();
+          });
+          dayDiv.appendChild(epItem);
+        }
 
-        // 3. 사용자 커스텀 태스크
+
+        // 3) 사용자 커스텀 태스크 (개인작업) - 에피소드 아래
         (window.customTasks||[]).filter(t=>t.date===fullDate).forEach(task=>{
-          const el=document.createElement('div'); el.classList.add('task-item','custom-task'); el.textContent=task.title;
+          const el=document.createElement('div'); 
+          el.classList.add('task-item','custom-task');
+          if(task.category==='important') el.classList.add('custom-important');
+          if(task.category==='family') el.classList.add('custom-family');
+          if(task.category==='special') el.classList.add('custom-special');
+          el.textContent=task.title;
           if(task.complete) el.classList.add('complete');
           el.addEventListener('click',async(e)=>{ if(e.detail===1){ if(!window.ensureLogin||!window.ensureLogin()) return; task.complete=!task.complete; await window.cloudSaveAll(); renderCalendar(); } else if(e.detail===2){ openModal(task); }});
           dayDiv.appendChild(el);
@@ -282,6 +308,132 @@
 
         dayDiv.addEventListener('click',(e)=>{ if(e.target.classList.contains('calendar-day')||e.target.classList.contains('day-number')) openModal({date:fullDate});});
         calendarGrid.appendChild(dayDiv);
+      }
+
+      // 달력 아래 리스트도 함께 갱신
+      renderAgendaList();
+    };
+
+    // 달력 아래 "일정 & 할 일" 리스트
+    const renderAgendaList = ()=>{
+      if(!agendaListEl) return;
+      const tasks = (window.customTasks||[]).slice();
+      const order = { important: 1, family: 2, special: 3 };
+      const dotColor = (cat)=>{
+        if(cat==='important') return '#dc2626';
+        if(cat==='family') return '#2563eb';
+        if(cat==='special') return '#16a34a';
+        return '#9ca3af';
+      };
+
+      const dated = tasks
+        .filter(t=>!!t.date && ['important','family','special'].includes(t.category))
+        .sort((a,b)=>{
+          const da = String(a.date); const db = String(b.date);
+          if(da!==db) return da.localeCompare(db);
+          return (order[a.category]||99) - (order[b.category]||99);
+        });
+
+      const undated = tasks
+        .filter(t=>!t.date || String(t.date).trim()==='')
+        .sort((a,b)=>{
+          // 미완료 우선, 그 다음 최신순
+          const ca = !!a.complete, cb = !!b.complete;
+          if(ca!==cb) return ca ? 1 : -1;
+          return Number(b.id||0) - Number(a.id||0);
+        });
+
+      const makeRow = (t, {showDate})=>{
+        const row = document.createElement('div');
+        row.className = 'agenda-item';
+
+        const dot = document.createElement('div');
+        dot.className = 'agenda-dot';
+        dot.style.background = dotColor(t.category);
+
+        const date = document.createElement('div');
+        date.className = 'agenda-date';
+        date.textContent = showDate ? (String(t.date||'').replaceAll('-','.')) : '할 일';
+
+        const text = document.createElement('div');
+        text.className = 'agenda-text';
+        text.textContent = t.title;
+        if(t.complete){ text.style.textDecoration='line-through'; text.style.opacity='.7'; }
+
+        const actions = document.createElement('div');
+        actions.className = 'agenda-actions';
+
+        // 완료 체크
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.checked = !!t.complete;
+        chk.addEventListener('click', async (e)=>{
+          e.stopPropagation();
+          if(!window.ensureLogin||!window.ensureLogin()) { chk.checked = !!t.complete; return; }
+          t.complete = !t.complete;
+          await window.cloudSaveAll();
+          renderCalendar();
+        });
+
+        const editBtn = document.createElement('div');
+        editBtn.className = 'agenda-btn';
+        editBtn.textContent = '편집';
+        editBtn.addEventListener('click',(e)=>{ e.stopPropagation(); openModal(t); });
+
+        const delBtn = document.createElement('div');
+        delBtn.className = 'agenda-btn';
+        delBtn.textContent = '삭제';
+        delBtn.addEventListener('click', async (e)=>{
+          e.stopPropagation();
+          if(!window.ensureLogin||!window.ensureLogin()) return;
+          window.currentTask = t;
+          if(window.deleteTask) await window.deleteTask();
+          renderCalendar();
+        });
+
+        actions.appendChild(chk);
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+
+        row.appendChild(dot);
+        row.appendChild(date);
+        row.appendChild(text);
+        row.appendChild(actions);
+
+        row.addEventListener('click',()=>openModal(t));
+        return row;
+      };
+
+      agendaListEl.innerHTML = '';
+
+      const title1 = document.createElement('div');
+      title1.className = 'agenda-section-title';
+      title1.textContent = '날짜 있는 일정';
+      agendaListEl.appendChild(title1);
+
+      if(dated.length===0){
+        const empty = document.createElement('div');
+        empty.className = 'text-sm opacity-70';
+        empty.style.padding='6px 2px';
+        empty.textContent = '등록된 일정이 없습니다.';
+        agendaListEl.appendChild(empty);
+      } else {
+        dated.forEach(t=>agendaListEl.appendChild(makeRow(t,{showDate:true})));
+      }
+
+      const title2 = document.createElement('div');
+      title2.className = 'agenda-section-title';
+      title2.textContent = '날짜 없는 할 일';
+      agendaListEl.appendChild(title2);
+
+      if(undated.length===0){
+        const empty2 = document.createElement('div');
+        empty2.className = 'text-sm opacity-70';
+        empty2.style.padding='6px 2px';
+        empty2.textContent = '등록된 할 일이 없습니다.';
+        agendaListEl.appendChild(empty2);
+      } else {
+        undated.forEach(t=>agendaListEl.appendChild(makeRow(t,{showDate:false})));
       }
     };
 
@@ -484,9 +636,36 @@
     // 작업 모달
     const openModal=(task=null)=>{
       window.currentTask=task;
-      if(task&&task.id){ document.getElementById('modalTitle').textContent='작업 수정'; taskTitleInput.value=task.title; taskDescriptionInput.value=task.description||''; taskDateInput.value=task.date||''; deleteTaskBtn.classList.remove('hidden'); }
-      else if(task&&task.date){ document.getElementById('modalTitle').textContent='새 작업'; taskTitleInput.value=''; taskDescriptionInput.value=''; taskDateInput.value=task.date; deleteTaskBtn.classList.add('hidden'); }
-      else{ document.getElementById('modalTitle').textContent='새 작업'; taskTitleInput.value=''; taskDescriptionInput.value=''; taskDateInput.value=''; deleteTaskBtn.classList.add('hidden'); }
+      if(task&&task.id){
+        document.getElementById('modalTitle').textContent='작업 수정';
+        taskTitleInput.value=task.title;
+        taskDescriptionInput.value=task.description||'';
+        taskDateInput.value=task.date||'';
+        if(taskCategorySelect) taskCategorySelect.value = task.category || '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = !!task.todoOnly || !task.date;
+        if(taskDateInput) taskDateInput.disabled = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
+        deleteTaskBtn.classList.remove('hidden');
+      }
+      else if(task&&('date' in task)){
+        document.getElementById('modalTitle').textContent='새 작업';
+        taskTitleInput.value='';
+        taskDescriptionInput.value='';
+        taskDateInput.value=task.date||'';
+        if(taskCategorySelect) taskCategorySelect.value = task.category || '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = !!task.todoOnly || !task.date;
+        if(taskDateInput) taskDateInput.disabled = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
+        deleteTaskBtn.classList.add('hidden');
+      }
+      else{
+        document.getElementById('modalTitle').textContent='새 작업';
+        taskTitleInput.value='';
+        taskDescriptionInput.value='';
+        taskDateInput.value='';
+        if(taskCategorySelect) taskCategorySelect.value = '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = false;
+        if(taskDateInput) taskDateInput.disabled = false;
+        deleteTaskBtn.classList.add('hidden');
+      }
       taskModal.style.display='flex';
     };
     const closeModal=()=>{ taskModal.style.display='none'; };
@@ -495,8 +674,19 @@
       if(!window.ensureLogin||!window.ensureLogin()) return;
       window.customTasks=window.customTasks||[]; window.taskStatus=window.taskStatus||{};
       const title=taskTitleInput.value.trim(); const description=taskDescriptionInput.value.trim(); const date=taskDateInput.value;
+      const category = taskCategorySelect ? (taskCategorySelect.value || '') : '';
+      const todoOnly = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
       if(!title){ showFeedbackMessage('제목을 입력해주세요.'); return; }
-      const data={ id: window.currentTask&&window.currentTask.id ? window.currentTask.id : Date.now(), title, description, date, complete: window.currentTask?.complete ?? false };
+      const finalDate = todoOnly ? '' : date;
+      const data={ 
+        id: window.currentTask&&window.currentTask.id ? window.currentTask.id : Date.now(),
+        title, 
+        description, 
+        date: finalDate,
+        category,
+        todoOnly,
+        complete: window.currentTask?.complete ?? false 
+      };
       const idx=window.customTasks.findIndex(t=>t.id===data.id); if(idx>-1) window.customTasks[idx]=data; else window.customTasks.push(data);
       await window.cloudSaveAll(); closeModal(); renderCalendar();
     };
@@ -541,6 +731,9 @@
         attachEventListeners(); 
         renderCalendar(); 
     })();
+
+    // main.js(모듈)에서도 호출할 수 있도록 노출
+    window.renderCalendar = renderCalendar;
 
     // ===== D&D/붙여넣기/클릭-자동붙여넣기 =====
     function isImageUrl(u){
