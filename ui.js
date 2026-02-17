@@ -12,13 +12,13 @@
     window.currentEditingBookmark = null; // 현재 편집 중인 북마크 항목
     let currentDate = new Date();
     window.isAuthReady = false;
-    // **수정: 기본 정렬 키를 'sourceDomain'으로 설정**
-    window.bookmarkSortKey = 'sourceDomain'; // 기본 정렬 키: sourceDomain (사이트별)
+    // 북마크는 최신순 고정(정렬 UI 제거)
+    window.bookmarkSortKey = 'timestamp';
 
     // DOM 요소
     const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
     const tabContents = document.querySelectorAll('.tab-content');
-    const mainNotepadTabs = document.querySelectorAll('#notes-section .notepad-tabs .notepad-tab');
+    // 메모 탭 UI는 notes.js가 관리 (여기서는 관여하지 않음)
     const notesArea = document.getElementById('notesArea');
     const dragArea = document.getElementById('drag-area');
     const imageGrid = document.getElementById('image-grid');
@@ -32,8 +32,13 @@
     const saveTitleBtn = document.getElementById('saveTitleBtn');
     const cancelTitleBtn = document.getElementById('cancelTitleBtn');
     const currentUrlDisplay = document.getElementById('currentUrlDisplay');
-    // 정렬 선택 요소
+    // 정렬 선택 요소(현재는 UI 제거됨)
     const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
+
+    // 링크 미리보기(붙여넣기) 모달
+    const previewUploadModal = document.getElementById('previewUploadModal');
+    const closePreviewUploadBtn = document.getElementById('closePreviewUploadBtn');
+    let currentPreviewEditingBookmark = null;
 
 
     // 유틸리티 함수
@@ -95,19 +100,51 @@
     }
     showTab('calendar');
     tabButtons.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-    mainNotepadTabs.forEach(tab=>{
-      tab.addEventListener('click',()=>{
-        mainNotepadTabs.forEach(t=>t.classList.remove('active')); tab.classList.add('active');
-        window.activeTab = tab.dataset.tab;
-        notesArea.value = (window.__notesTabs||{})[window.activeTab] || '';
-      });
-    });
+    // (주의) 과거 메모 탭 선택 로직은 제거됨. notes.js가 담당.
 
     // 시간/날짜 관련 유틸리티
     const TZ='Asia/Seoul';
     function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
-    function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=0&&d<=4)c++; cur.setDate(cur.getDate()+1);} return c;}
+    function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=1&&d<=5)c++; cur.setDate(cur.getDate()+1);} return c;}
+    // ===== Simplified episode calculator (no timezone shifting; Korea local time assumed) =====
+    function isEpisodeDay(dateObj){
+      const dow = dateObj.getDay(); // 0=Sun ... 6=Sat
+      return dow >= 0 && dow <= 4;  // Sun~Thu (요청사항)
+    }
+
+    function countEpisodeDaysInclusive(fromDateObj, toDateObj){
+      // counts eligible days from fromDate to toDate inclusive, assuming fromDate <= toDate
+      let count = 0;
+      const cur = new Date(fromDateObj.getFullYear(), fromDateObj.getMonth(), fromDateObj.getDate());
+      const end = new Date(toDateObj.getFullYear(), toDateObj.getMonth(), toDateObj.getDate());
+      while(cur <= end){
+        if(isEpisodeDay(cur)) count++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return count;
+    }
+
+    function episodeNumberForDate(targetDateObj){
+      // Base: 2026-02-23 is 2137화 (inclusive)
+      const baseDate = new Date(2026, 1, 23); // monthIndex: 1 = Feb
+      const baseEpisode = 2137;
+
+      const t = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate());
+
+      if(t.getTime() === baseDate.getTime()){
+        return baseEpisode;
+      }
+
+      if(t > baseDate){
+        const n = countEpisodeDaysInclusive(baseDate, t);
+        return baseEpisode + n - 1;
+      } else {
+        const n = countEpisodeDaysInclusive(t, baseDate);
+        return baseEpisode - (n - 1);
+      }
+    }
+
 
     // const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
 
@@ -119,15 +156,28 @@
     const taskTitleInput=document.getElementById('taskTitle');
     const taskDescriptionInput=document.getElementById('taskDescription');
     const taskDateInput=document.getElementById('taskDate');
+    const taskCategorySelect=document.getElementById('taskCategory');
+    const todoOnlyCheckbox=document.getElementById('todoOnly');
+
+    // 달력 아래 리스트
+    const agendaListEl=document.getElementById('agendaList');
 
     // 이벤트 리스너 부착
     const attachEventListeners=()=>{
       const prevMonthBtn=document.getElementById('prevMonthBtn');
       const nextMonthBtn=document.getElementById('nextMonthBtn');
-      const addTaskBtn=document.getElementById('addTaskBtn');
       prevMonthBtn?.addEventListener('click',()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
       nextMonthBtn?.addEventListener('click',()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
-      addTaskBtn?.addEventListener('click',()=>openModal());
+      // 상단/하단의 "+추가" 버튼은 제거됨. (날짜 클릭/설정 버튼으로 추가/편집)
+
+      // "달력에는 표시하지 않고 할 일로만" 토글
+      todoOnlyCheckbox?.addEventListener('change',()=>{
+        const on = !!todoOnlyCheckbox.checked;
+        if(taskDateInput){
+          taskDateInput.disabled = on;
+          if(on) taskDateInput.value = '';
+        }
+      });
       if(notesArea){
         notesArea.addEventListener('input',()=>window.cloudSaveNotesDebounced&&window.cloudSaveNotesDebounced());
         notesArea.addEventListener('blur',()=>window.cloudSaveNotes&&window.cloudSaveNotes());
@@ -160,11 +210,7 @@
           }
       });
       
-      // 정렬 선택 변경 이벤트 리스너
-      bookmarkSortSelect.addEventListener('change', (e) => {
-          window.bookmarkSortKey = e.target.value;
-          renderImageBookmarks();
-      });
+      // 정렬 UI는 제거됨 (최신순 고정)
     };
 
     // 달력 렌더링
@@ -173,25 +219,20 @@
       const currentMonthYear=document.getElementById('currentMonthYear');
       const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
       currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
-      const firstDay=toKST(new Date(year,month,1)).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
+      const firstDay=new Date(year,month,1).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
       for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
       for(let day=1;day<=daysInMonth;day++){
         const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
-        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=toKST(thisDate).getDay();
-        const today=toKST(new Date()); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
+        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=thisDate.getDay();
+        const today=new Date(); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
         const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
 
-        // 1. 에피소드 정보 (평일만 표시)
-        if(dayOfWeek>=0&&dayOfWeek<=4){
-          const milestoneDate=new Date('2025-09-01'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
-          const milestoneEpisode=2014; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
-          const epItem=document.createElement('div'); epItem.classList.add('task-item','episode-task'); epItem.textContent=`${episodeNumber}화`;
-          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; if((window.taskStatus||{})[key]) epItem.classList.add('complete');
-          epItem.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.ensureLogin||!window.ensureLogin()) return; window.taskStatus=window.taskStatus||{}; window.taskStatus[key]=!window.taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar();});
-          dayDiv.appendChild(epItem);
-        }
+        // 날짜 숫자 아래 구분선
+        const divider = document.createElement('div');
+        divider.className = 'day-divider';
+        dayDiv.appendChild(divider);
 
-        // 2. [NEW] 매일 쇼츠/웹툰 체크 버튼 그룹
+        // 1) 매일 쇼츠/웹툰 체크 버튼 그룹 (항상 최상단)
         const checkGroup = document.createElement('div');
         checkGroup.className = 'daily-check-group';
 
@@ -229,10 +270,34 @@
         checkGroup.appendChild(webtoonBtn);
         dayDiv.appendChild(checkGroup);
 
+        // 2) 에피소드 정보 (일~목만 표시) - 쇼츠/웹툰 아래
+        if(dayOfWeek>=0&&dayOfWeek<=4){
+          const episodeNumber = episodeNumberForDate(thisDate);
+          const epItem=document.createElement('div'); 
+          epItem.classList.add('task-item','episode-task'); 
+          epItem.textContent=`${episodeNumber}화`;
+          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; 
+          if((window.taskStatus||{})[key]) epItem.classList.add('complete');
+          epItem.addEventListener('click',async(e)=>{ 
+            e.stopPropagation(); 
+            if(!window.ensureLogin||!window.ensureLogin()) return; 
+            window.taskStatus=window.taskStatus||{}; 
+            window.taskStatus[key]=!window.taskStatus[key]; 
+            await window.cloudSaveStateOnly(); 
+            renderCalendar();
+          });
+          dayDiv.appendChild(epItem);
+        }
 
-        // 3. 사용자 커스텀 태스크
+
+        // 3) 사용자 커스텀 태스크 (개인작업) - 에피소드 아래
         (window.customTasks||[]).filter(t=>t.date===fullDate).forEach(task=>{
-          const el=document.createElement('div'); el.classList.add('task-item','custom-task'); el.textContent=task.title;
+          const el=document.createElement('div'); 
+          el.classList.add('task-item','custom-task');
+          if(task.category==='important') el.classList.add('custom-important');
+          if(task.category==='family') el.classList.add('custom-family');
+          if(task.category==='special') el.classList.add('custom-special');
+          el.textContent=task.title;
           if(task.complete) el.classList.add('complete');
           el.addEventListener('click',async(e)=>{ if(e.detail===1){ if(!window.ensureLogin||!window.ensureLogin()) return; task.complete=!task.complete; await window.cloudSaveAll(); renderCalendar(); } else if(e.detail===2){ openModal(task); }});
           dayDiv.appendChild(el);
@@ -241,6 +306,100 @@
         dayDiv.addEventListener('click',(e)=>{ if(e.target.classList.contains('calendar-day')||e.target.classList.contains('day-number')) openModal({date:fullDate});});
         calendarGrid.appendChild(dayDiv);
       }
+
+      // 달력 아래 리스트도 함께 갱신
+      renderAgendaList();
+    };
+
+    // 달력 아래 리스트 (문구/추가버튼/체크박스 제거)
+    const renderAgendaList = ()=>{
+      if(!agendaListEl) return;
+      const tasks = (window.customTasks||[]).slice();
+      const order = { important: 1, family: 2, special: 3 };
+      const dotColor = (cat)=>{
+        if(cat==='important') return '#dc2626';
+        if(cat==='family') return '#2563eb';
+        if(cat==='special') return '#16a34a';
+        return '#9ca3af';
+      };
+
+      const dated = tasks
+        .filter(t=>!!t.date && ['important','family','special'].includes(t.category))
+        .sort((a,b)=>{
+          const ca = !!a.complete, cb = !!b.complete;
+          if(ca!==cb) return ca ? 1 : -1; // 완료는 아래로
+          const da = String(a.date); const db = String(b.date);
+          if(da!==db) return da.localeCompare(db);
+          return (order[a.category]||99) - (order[b.category]||99);
+        });
+
+      const undated = tasks
+        .filter(t=>!t.date || String(t.date).trim()==='')
+        .sort((a,b)=>{
+          // 미완료 우선, 그 다음 최신순
+          const ca = !!a.complete, cb = !!b.complete;
+          if(ca!==cb) return ca ? 1 : -1;
+          return Number(b.id||0) - Number(a.id||0);
+        });
+
+      const makeRow = (t, {showDate})=>{
+        const row = document.createElement('div');
+        row.className = 'agenda-item';
+
+        const dot = document.createElement('div');
+        dot.className = 'agenda-dot';
+        dot.style.background = dotColor(t.category);
+
+        const date = document.createElement('div');
+        date.className = 'agenda-date';
+        date.textContent = showDate ? (String(t.date||'').replaceAll('-','.')) : '';
+
+        const text = document.createElement('div');
+        text.className = 'agenda-text';
+        text.textContent = t.title;
+        if(t.complete){
+          text.style.textDecoration='line-through';
+          text.style.opacity='.75';
+          text.style.color = '#9ca3af';
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'agenda-actions';
+
+        // 설정(편집) 버튼만 유지
+        const settingsBtn = document.createElement('button');
+        settingsBtn.className = 'agenda-settings-btn';
+        settingsBtn.type = 'button';
+        settingsBtn.setAttribute('title','설정');
+        settingsBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:18px;height:18px;opacity:.9">
+            <path d="M12 20a1 1 0 0 1-1-1v-1.1a7.8 7.8 0 0 1-1.9-.8l-.8.8a1 1 0 0 1-1.4 0l-1.4-1.4a1 1 0 0 1 0-1.4l.8-.8a7.8 7.8 0 0 1-.8-1.9H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1.1a7.8 7.8 0 0 1 .8-1.9l-.8-.8a1 1 0 0 1 0-1.4l1.4-1.4a1 1 0 0 1 1.4 0l.8.8a7.8 7.8 0 0 1 1.9-.8V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.1a7.8 7.8 0 0 1 1.9.8l.8-.8a1 1 0 0 1 1.4 0l1.4 1.4a1 1 0 0 1 0 1.4l-.8.8a7.8 7.8 0 0 1 .8 1.9H20a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1.1a7.8 7.8 0 0 1-.8 1.9l.8.8a1 1 0 0 1 0 1.4l-1.4 1.4a1 1 0 0 1-1.4 0l-.8-.8a7.8 7.8 0 0 1-1.9.8V19a1 1 0 0 1-1 1z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>`;
+        settingsBtn.addEventListener('click',(e)=>{ e.stopPropagation(); openModal(t); });
+        actions.appendChild(settingsBtn);
+
+        row.appendChild(dot);
+        row.appendChild(date);
+        row.appendChild(text);
+        row.appendChild(actions);
+
+        // 항목 클릭: 완료 토글(체크박스 대신)
+        row.addEventListener('click', async ()=>{
+          if(!window.ensureLogin||!window.ensureLogin()) return;
+          t.complete = !t.complete;
+          await window.cloudSaveAll();
+          renderCalendar();
+        });
+        return row;
+      };
+
+      agendaListEl.innerHTML = '';
+
+      // 1) 날짜 없는 항목을 위로
+      undated.forEach(t=>agendaListEl.appendChild(makeRow(t,{showDate:false})));
+      // 2) 날짜 있는 일정은 아래로
+      dated.forEach(t=>agendaListEl.appendChild(makeRow(t,{showDate:true})));
     };
 
     // 유튜브 썸네일 URL 추출
@@ -289,23 +448,8 @@
       
       let sortedBookmarks = [...(window.imageBookmarks || [])];
 
-      // 1. 정렬 로직 적용
-      let currentSortKey = window.bookmarkSortKey || 'sourceDomain'; // 기본값 반영
-      bookmarkSortSelect.value = currentSortKey; // 선택 박스 값 업데이트
-
-      if (currentSortKey === 'sourceDomain') {
-          // 사이트별 정렬: 도메인 이름순으로 정렬
-          sortedBookmarks.sort((a, b) => {
-              const domainA = a.sourceDomain || 'Unknown Source';
-              const domainB = b.sourceDomain || 'Unknown Source';
-              return domainA.localeCompare(domainB);
-          });
-      } else { // 'timestamp' (Newest first)
-          // 최신순 정렬: 타임스탬프 역순 (가장 큰 값이 맨 위)
-          sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
-      }
-
-      let lastDomain = null; // 그룹 구분을 위한 변수
+      // 최신순 고정
+      sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
 
       sortedBookmarks.forEach(d=>{
         const isVideo = d.type === 'video';
@@ -319,31 +463,25 @@
         const pageUrl = d.pageUrl; // 일반 URL, 동영상 URL 또는 인스타그램 게시물 URL
         const sourceDomain = d.sourceDomain || 'Unknown Source';
 
-        // **2. 사이트별 정렬 시 헤더 추가**
-        if (currentSortKey === 'sourceDomain' && sourceDomain !== lastDomain) {
-            const header = document.createElement('h3');
-            header.className = 'domain-header';
-            header.textContent = sourceDomain;
-            imageGrid.appendChild(header);
-            lastDomain = sourceDomain;
-        }
+        // (사이트별 헤더 제거)
         
         let thumbnail = isVideo ? getYoutubeThumbnail(pageUrl) : imageUrl;
         let iconHtml = '';
         let urlToOpen = pageUrl;
 
         if (isLink) {
-            // 일반 페이지 링크 북마크
-            const displayTitle = d.title || '일반 페이지 링크';
-            const displayUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-            
-            iconHtml = `<div class="link-title-overlay">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.708l4-4a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" />
-                            </svg>
-                            <span class="link-title-text">${displayTitle}</span>
-                            <span class="link-url-text">${displayUrl}</span>
-                        </div>`;
+            // 일반 페이지 링크 북마크: 제목/URL 미표시. previewImageUrl이 있으면 그 이미지만 표시.
+            const prevImg = d.previewImageUrl || null;
+            if (prevImg) {
+                iconHtml = `<img src="${prevImg}" alt="링크 미리보기" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=미리보기+오류'"/>`;
+            } else {
+                iconHtml = `<div class="icon-overlay">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;opacity:.9">
+                                <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4"/>
+                                <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 20"/>
+                              </svg>
+                            </div>`;
+            }
         } else if (isInstagram) {
              // 인스타그램 게시물 북마크 (퍼가기 코드 사용)
              // 원본 URL 추출 (클릭 시 이동용)
@@ -446,7 +584,12 @@
                  showAlert('북마크 삭제 중 오류가 발생했습니다.'); 
              }
           } else if (action === 'edit' && bookmark) {
-             openEditModal(bookmark);
+             // 링크 북마크는 제목 수정 대신 "미리보기 이미지 붙여넣기" 모달을 사용
+             if (bookmark.type === 'link') {
+                 openPreviewUploadModal(bookmark);
+             } else {
+                 openEditModal(bookmark);
+             }
           }
         };
       });
@@ -458,9 +601,36 @@
     // 작업 모달
     const openModal=(task=null)=>{
       window.currentTask=task;
-      if(task&&task.id){ document.getElementById('modalTitle').textContent='작업 수정'; taskTitleInput.value=task.title; taskDescriptionInput.value=task.description||''; taskDateInput.value=task.date||''; deleteTaskBtn.classList.remove('hidden'); }
-      else if(task&&task.date){ document.getElementById('modalTitle').textContent='새 작업'; taskTitleInput.value=''; taskDescriptionInput.value=''; taskDateInput.value=task.date; deleteTaskBtn.classList.add('hidden'); }
-      else{ document.getElementById('modalTitle').textContent='새 작업'; taskTitleInput.value=''; taskDescriptionInput.value=''; taskDateInput.value=''; deleteTaskBtn.classList.add('hidden'); }
+      if(task&&task.id){
+        document.getElementById('modalTitle').textContent='작업 수정';
+        taskTitleInput.value=task.title;
+        taskDescriptionInput.value=task.description||'';
+        taskDateInput.value=task.date||'';
+        if(taskCategorySelect) taskCategorySelect.value = task.category || '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = !!task.todoOnly || !task.date;
+        if(taskDateInput) taskDateInput.disabled = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
+        deleteTaskBtn.classList.remove('hidden');
+      }
+      else if(task&&('date' in task)){
+        document.getElementById('modalTitle').textContent='새 작업';
+        taskTitleInput.value='';
+        taskDescriptionInput.value='';
+        taskDateInput.value=task.date||'';
+        if(taskCategorySelect) taskCategorySelect.value = task.category || '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = !!task.todoOnly || !task.date;
+        if(taskDateInput) taskDateInput.disabled = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
+        deleteTaskBtn.classList.add('hidden');
+      }
+      else{
+        document.getElementById('modalTitle').textContent='새 작업';
+        taskTitleInput.value='';
+        taskDescriptionInput.value='';
+        taskDateInput.value='';
+        if(taskCategorySelect) taskCategorySelect.value = '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = false;
+        if(taskDateInput) taskDateInput.disabled = false;
+        deleteTaskBtn.classList.add('hidden');
+      }
       taskModal.style.display='flex';
     };
     const closeModal=()=>{ taskModal.style.display='none'; };
@@ -469,18 +639,66 @@
       if(!window.ensureLogin||!window.ensureLogin()) return;
       window.customTasks=window.customTasks||[]; window.taskStatus=window.taskStatus||{};
       const title=taskTitleInput.value.trim(); const description=taskDescriptionInput.value.trim(); const date=taskDateInput.value;
+      const category = taskCategorySelect ? (taskCategorySelect.value || '') : '';
+      const todoOnly = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
       if(!title){ showFeedbackMessage('제목을 입력해주세요.'); return; }
-      const data={ id: window.currentTask&&window.currentTask.id ? window.currentTask.id : Date.now(), title, description, date, complete: window.currentTask?.complete ?? false };
+      const finalDate = todoOnly ? '' : date;
+      const data={ 
+        id: window.currentTask&&window.currentTask.id ? window.currentTask.id : Date.now(),
+        title, 
+        description, 
+        date: finalDate,
+        category,
+        todoOnly,
+        complete: window.currentTask?.complete ?? false 
+      };
       const idx=window.customTasks.findIndex(t=>t.id===data.id); if(idx>-1) window.customTasks[idx]=data; else window.customTasks.push(data);
       await window.cloudSaveAll(); closeModal(); renderCalendar();
     };
 
+    // 링크 미리보기 모달
+    const openPreviewUploadModal = (bookmark) => {
+        currentPreviewEditingBookmark = bookmark;
+        if (previewUploadModal) previewUploadModal.style.display = 'flex';
+    };
+    const closePreviewUploadModal = () => {
+        currentPreviewEditingBookmark = null;
+        if (previewUploadModal) previewUploadModal.style.display = 'none';
+    };
+    closePreviewUploadBtn?.addEventListener('click', closePreviewUploadModal);
+    previewUploadModal?.addEventListener('click', (e)=>{ if(e.target===previewUploadModal) closePreviewUploadModal(); });
+
+    // 붙여넣기 처리(모달이 열려 있을 때만)
+    document.addEventListener('paste', async (e)=>{
+        if(!previewUploadModal || previewUploadModal.style.display !== 'flex') return;
+        if(!currentPreviewEditingBookmark) return;
+        const items = e.clipboardData?.items;
+        if(!items) return;
+        const imgItem = [...items].find(it=>it.type && it.type.startsWith('image/'));
+        if(!imgItem) return;
+        e.preventDefault();
+        const blob = imgItem.getAsFile();
+        if(!blob) return;
+        const fileName = `preview_${currentPreviewEditingBookmark.id}.png`;
+        const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+        try{
+            showFeedbackMessage('미리보기 이미지 업로드 중...');
+            await window.uploadBookmarkPreviewImage(currentPreviewEditingBookmark.id, file);
+            showFeedbackMessage('미리보기 이미지가 저장되었습니다.');
+            closePreviewUploadModal();
+        }catch(err){
+            console.error(err);
+            showAlert('미리보기 이미지 업로드 중 오류가 발생했습니다.');
+        }
+    });
+
     (function init(){ 
         attachEventListeners(); 
-        // 초기화 시 기본 정렬 키를 'sourceDomain'으로 설정했으므로 선택 상자 값을 업데이트합니다.
-        bookmarkSortSelect.value = window.bookmarkSortKey;
         renderCalendar(); 
     })();
+
+    // main.js(모듈)에서도 호출할 수 있도록 노출
+    window.renderCalendar = renderCalendar;
 
     // ===== D&D/붙여넣기/클릭-자동붙여넣기 =====
     function isImageUrl(u){

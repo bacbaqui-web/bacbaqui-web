@@ -106,9 +106,71 @@ import { initBookmarks } from "./bookmarks.js";
       const st=await getDoc(stateDoc);
       const prev=st.exists()?(st.data()||{}):{};
       const notesTabs=prev.notesTabs||{};
-      const activeTabButton=document.querySelector('#notes-section .notepad-tab.active');
-      if(activeTabButton){ notesTabs[activeTabButton.dataset.tab]=document.getElementById('notesArea')?.value ?? ''; }
-      await setDoc(stateDoc,{notesTabs},{merge:true});
+      const activeId = window.__notesActiveTabId || prev.notesActiveTabId || 'memo';
+      const notesAreaEl=document.getElementById('notesArea');
+      if(notesAreaEl){ notesTabs[activeId]=notesAreaEl.value ?? ''; }
+      await setDoc(stateDoc,{notesTabs, notesActiveTabId: activeId},{merge:true});
+    };
+
+    // 메모 탭 CRUD (stateDoc 내부 notesTabList / notesTabs 사용)
+    window.cloudSetActiveNotesTab = async (tabId)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      await setDoc(stateDoc,{ notesActiveTabId: tabId },{ merge:true });
+    };
+
+    window.cloudAddNotesTab = async ({id, name})=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const list = Array.isArray(prev.notesTabList) ? prev.notesTabList : [];
+      const maxOrder = list.reduce((m,t)=>Math.max(m, Number(t.order||0)), 0);
+      const next = [...list, { id, name, order: maxOrder + 10 }];
+      await setDoc(stateDoc,{ notesTabList: next, notesActiveTabId: id },{ merge:true });
+    };
+
+    window.cloudRenameNotesTab = async (tabId, newName)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const list = Array.isArray(prev.notesTabList) ? prev.notesTabList : [];
+      const next = list.map(t=> t.id===tabId ? ({...t, name:newName}) : t);
+      await setDoc(stateDoc,{ notesTabList: next },{ merge:true });
+    };
+
+    window.cloudReorderNotesTabs = async (orderedList)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      // orderedList는 [{id,name,order},...] 형태
+      await setDoc(stateDoc,{ notesTabList: orderedList },{ merge:true });
+    };
+
+    window.cloudDeleteNotesTab = async (tabId)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const list = Array.isArray(prev.notesTabList) ? prev.notesTabList : [];
+      const notesTabs = prev.notesTabs || {};
+      const nextList = list.filter(t=>t.id!==tabId);
+      const nextNotes = {...notesTabs};
+      delete nextNotes[tabId];
+
+      // 최소 1개 탭 유지 (없어지면 기본 '메모' 생성)
+      let nextActive = prev.notesActiveTabId || window.__notesActiveTabId || 'memo';
+      if(nextActive===tabId){
+        nextActive = nextList[0]?.id || 'memo';
+      }
+      if(nextList.length===0){
+        nextList.push({ id:'memo', name:'메모', order:0 });
+        nextActive = 'memo';
+        // 기본 탭은 빈 메모
+        nextNotes['memo'] = nextNotes['memo'] || '';
+      }
+
+      await setDoc(stateDoc,{ notesTabList: nextList, notesTabs: nextNotes, notesActiveTabId: nextActive },{ merge:true });
     };
 
     window.deleteTask=async ()=>{
@@ -222,6 +284,30 @@ import { initBookmarks } from "./bookmarks.js";
         }
     };
 
+    // 링크 북마크 미리보기 이미지 업로드 (붙여넣기 전용)
+    // - Firebase Storage에 업로드 후, 해당 북마크 문서에 previewImageUrl 저장
+    // - 기존 preview는 유지(이전 파일 삭제하지 않음)
+    window.uploadBookmarkPreviewImage = async (bookmarkId, file) => {
+        if(!ensureLogin()) return;
+        if(!bookmarkId || !file) throw new Error('bookmarkId/file required');
+
+        const { imagesCol } = await cloudRefs();
+        const user = auth.currentUser;
+        if(!user) throw new Error('로그인이 필요합니다.');
+
+        // 파일명/타입 보정
+        const contentType = file.type || 'image/png';
+        const safeName = (file.name && file.name.trim()) ? file.name : `preview_${bookmarkId}.png`;
+        const storagePath = `users/${user.uid}/uploads/bookmark_preview_${bookmarkId}_${Date.now()}_${safeName}`;
+        const storageRef = ref(storage, storagePath);
+
+        const uploadResult = await uploadBytes(storageRef, file, { contentType });
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        const docRef = doc(imagesCol, bookmarkId);
+        await updateDoc(docRef, { previewImageUrl: downloadURL, previewStoragePath: storagePath });
+    };
+
 
     // [수정 5] window.deleteImage 함수 전체 교체 (Firebase Storage 삭제 로직 추가)
     window.deleteImage = async (id)=>{
@@ -280,12 +366,38 @@ import { initBookmarks } from "./bookmarks.js";
     window.__unsubs=[];
     async function setupRealtimeSync(){
       const { tasksCol, stateDoc, imagesCol } = await cloudRefs();
+
+      // ===== 메모 탭 스키마 초기화 (기존 메모/탭을 정리하고 '메모' 탭 1개로 시작) =====
+      try{
+        const st=await getDoc(stateDoc);
+        const prev=st.exists()?(st.data()||{}):{};
+        const ver = Number(prev.notesSchemaVersion || 0);
+        if(ver < 2){
+          // 기존 메모 정리(요청사항: 깔끔하게 초기화)
+          const defaultTabs=[{ id:'memo', name:'메모', order:0 }];
+          await setDoc(stateDoc,{
+            notesSchemaVersion: 2,
+            notesTabList: defaultTabs,
+            notesTabs: { memo: '' },
+            notesActiveTabId: 'memo'
+          },{ merge:true });
+        }
+      }catch(_){}
+
       window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
 
       const unsubTasks = onSnapshot(tasksCol,(snap)=>{ window.customTasks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderCalendar==='function') renderCalendar(); });
       window.__unsubs.push(unsubTasks);
 
-      const unsubState = onSnapshot(stateDoc,(ds)=>{ const data=ds.exists()?(ds.data()||{}):{}; window.taskStatus=data.taskStatus||{}; window.__notesTabs=data.notesTabs||{}; const activeTabButton=document.querySelector('#notes-section .notepad-tab.active'); const notesAreaEl=document.getElementById('notesArea'); if(notesAreaEl&&activeTabButton){ notesAreaEl.value=window.__notesTabs[activeTabButton.dataset.tab]||''; } if(typeof renderCalendar==='function') renderCalendar(); });
+      const unsubState = onSnapshot(stateDoc,(ds)=>{
+        const data=ds.exists()?(ds.data()||{}):{};
+        window.taskStatus=data.taskStatus||{};
+        window.__notesTabList = Array.isArray(data.notesTabList) && data.notesTabList.length ? data.notesTabList : [{ id:'memo', name:'메모', order:0 }];
+        window.__notesTabs = data.notesTabs || {};
+        window.__notesActiveTabId = data.notesActiveTabId || window.__notesActiveTabId || 'memo';
+        if(typeof window.renderNotesUI==='function') window.renderNotesUI();
+        if(typeof renderCalendar==='function') renderCalendar();
+      });
       window.__unsubs.push(unsubState);
 
       const unsubImages = onSnapshot(imagesCol,(snap)=>{ 
@@ -306,7 +418,7 @@ import { initBookmarks } from "./bookmarks.js";
       }else{
         userInfoEl.textContent=''; signOutBtn.classList.add('hidden'); signInBtn.classList.remove('hidden');
         window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
-        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={};
+        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={}; window.__notesTabList=[{id:'memo',name:'메모',order:0}]; window.__notesActiveTabId='memo';
         if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); const na=document.getElementById('notesArea'); if(na) na.value='';
       }
       loadingOverlay.classList.add('hidden'); window.isAuthReady=true;
