@@ -163,13 +163,14 @@
     };
 
     // 달력 렌더링
-    const renderCalendar=()=>{
+    function renderCalendar(){
       const year=currentDate.getFullYear(), month=currentDate.getMonth();
       const currentMonthYear=document.getElementById('currentMonthYear');
       const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
       currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
       const firstDayRaw=toKST(new Date(year,month,1)).getDay();
-      const firstDay=(firstDayRaw+6)%7; // 월요일 시작(월화수목금토일)으로 보정 const daysInMonth=new Date(year,month+1,0).getDate();
+      const firstDay=(firstDayRaw+6)%7; // 월요일 시작(월화수목금토일)으로 보정
+      const daysInMonth=new Date(year,month+1,0).getDate();
       for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
       for(let day=1;day<=daysInMonth;day++){
         const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
@@ -245,7 +246,7 @@ dayDiv.appendChild(checkGroup);
         dayDiv.addEventListener('click',(e)=>{ if(e.target.classList.contains('calendar-day')||e.target.classList.contains('day-number')) openModal({date:fullDate});});
         calendarGrid.appendChild(dayDiv);
       }
-    };
+    }
 
     // 유튜브 썸네일 URL 추출
     function getYoutubeThumbnail(url) {
