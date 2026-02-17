@@ -102,15 +102,12 @@
 }
 .daily-check-btn:hover { opacity: 0.92; }
 
-/* state: 0(미체크) / 1(완료) / 2(보류/특이) */
+/* state: 0(미체크) / 1(완료) */
 .daily-check-btn[data-state="0"] { background:#444; color:#ccc; border-color: transparent; }
 .daily-check-btn.shorts[data-state="1"] { background:#dc2626; color:#fff; }
 .daily-check-btn.toon[data-state="1"] { background:#eab308; color:#000; }
-.daily-check-btn.bac[data-state="1"] { background:#2563eb; color:#fff; }
-
-.daily-check-btn.shorts[data-state="2"] { background:#1f1f1f; color:#dc2626; border-color:#dc2626; }
-.daily-check-btn.toon[data-state="2"] { background:#1f1f1f; color:#eab308; border-color:#eab308; }
-.daily-check-btn.bac[data-state="2"] { background:#1f1f1f; color:#2563eb; border-color:#2563eb; }
+/* 밬: 완료 시 흰색 */
+.daily-check-btn.bac[data-state="1"] { background:#ffffff; color:#000; }
 
     /* 북마크 Masonry 레이아웃 */
     #image-grid {
@@ -312,8 +309,8 @@
       <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
     </div>
     <div class="calendar-header mb-2">
-      <div class="day-label">월</div><div class="day-label">화</div><div class="day-label">수</div>
-      <div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div><div class="day-label">일</div>
+      <div class="day-label">일</div><div class="day-label">월</div><div class="day-label">화</div>
+      <div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div>
     </div>
     <div id="calendarGrid" class="calendar-grid"></div>
     <div class="mt-8 text-center">

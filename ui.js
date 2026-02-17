@@ -181,20 +181,20 @@
         const checkGroup = document.createElement('div');
         checkGroup.className = 'daily-check-group';
 
-// 상태 값은 0(미체크) -> 1(완료) -> 2(보류/특이) -> 0 순으로 순환
+// 상태 값은 0(미체크) <-> 1(완료) 만 토글
 function normalizeState(v){
     if (v === true) return 1; // 이전 버전 호환
     if (v === false || v == null) return 0;
     const n = Number(v);
-    return Number.isFinite(n) ? Math.max(0, Math.min(2, n)) : 0;
+    return n === 1 ? 1 : 0;
 }
-async function cycleState(key){
+async function toggleState(key){
     if (!window.ensureLogin || !window.ensureLogin()) return;
     window.taskStatus = window.taskStatus || {};
     const cur = normalizeState(window.taskStatus[key]);
-    const next = (cur + 1) % 3;
+    const next = cur === 1 ? 0 : 1;
     if (next === 0) delete window.taskStatus[key];
-    else window.taskStatus[key] = next;
+    else window.taskStatus[key] = 1;
     await window.cloudSaveStateOnly();
     renderCalendar();
 }
@@ -209,7 +209,7 @@ shortsBtn.className = 'daily-check-btn shorts';
 shortsBtn.textContent = '숏';
 const shortsKey = `${fullDate}_daily_shorts`;
 applyState(shortsBtn, shortsKey);
-shortsBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleState(shortsKey); });
+shortsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleState(shortsKey); });
 
 // 툰 버튼
 const toonBtn = document.createElement('div');
@@ -217,7 +217,7 @@ toonBtn.className = 'daily-check-btn toon';
 toonBtn.textContent = '툰';
 const toonKey = `${fullDate}_daily_toon`;
 applyState(toonBtn, toonKey);
-toonBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleState(toonKey); });
+toonBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleState(toonKey); });
 
 // 밬 버튼
 const bacBtn = document.createElement('div');
@@ -225,7 +225,7 @@ bacBtn.className = 'daily-check-btn bac';
 bacBtn.textContent = '밬';
 const bacKey = `${fullDate}_daily_bac`;
 applyState(bacBtn, bacKey);
-bacBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleState(bacKey); });
+bacBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleState(bacKey); });
 
 checkGroup.appendChild(shortsBtn);
 checkGroup.appendChild(toonBtn);

@@ -42,8 +42,8 @@ export function initCalendar() {
     currentMonthYear.textContent=`${year}년 ${month+1}월`;
     calendarGrid.innerHTML='';
 
-    const firstDayRaw=toKST(new Date(year,month,1)).getDay();
-    const firstDay=(firstDayRaw+6)%7; // Monday-first
+    // 달력 UI는 일요일 시작(일월화수목금토) 기준
+    const firstDay=toKST(new Date(year,month,1)).getDay();
     const daysInMonth=new Date(year,month+1,0).getDate();
 
     for(let i=0;i<firstDay;i++){
