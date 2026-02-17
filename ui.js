@@ -177,9 +177,7 @@
         const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
 
         // 2. [NEW] 매일 체크 버튼 그룹 (숏/툰/밬)
-        const checkGroup = document.createElement('div');
-        checkGroup.className = 'daily-check-group';
-
+        // (중복 선언으로 스크립트가 중단되는 문제 수정)
         const checkGroup = document.createElement('div');
         checkGroup.className = 'daily-check-group';
 
