@@ -106,7 +106,7 @@
     const TZ='Asia/Seoul';
     function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
-    function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=1&&d<=5)c++; cur.setDate(cur.getDate()+1);} return c;}
+    function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=0&&d<=4)c++; cur.setDate(cur.getDate()+1);} return c;}
 
     // const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
 
@@ -163,14 +163,12 @@
     };
 
     // 달력 렌더링
-    function renderCalendar(){
+    const renderCalendar=()=>{
       const year=currentDate.getFullYear(), month=currentDate.getMonth();
       const currentMonthYear=document.getElementById('currentMonthYear');
       const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
       currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
-      const firstDayRaw=toKST(new Date(year,month,1)).getDay();
-      const firstDay=(firstDayRaw+6)%7; // 월요일 시작(월화수목금토일)으로 보정
-      const daysInMonth=new Date(year,month+1,0).getDate();
+      const firstDay=toKST(new Date(year,month,1)).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
       for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
       for(let day=1;day<=daysInMonth;day++){
         const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
@@ -178,61 +176,53 @@
         const today=toKST(new Date()); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
         const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
 
-        // 2. [NEW] 매일 체크 버튼 그룹 (숏/툰/밬)
-        // (중복 선언으로 스크립트가 중단되는 문제 수정)
+        // 1. 에피소드 정보 (평일만 표시)
+        if(dayOfWeek>=0&&dayOfWeek<=4){
+          const milestoneDate=new Date('2025-09-01'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
+          const milestoneEpisode=2014; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
+          const epItem=document.createElement('div'); epItem.classList.add('task-item','episode-task'); epItem.textContent=`${episodeNumber}화`;
+          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; if((window.taskStatus||{})[key]) epItem.classList.add('complete');
+          epItem.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.ensureLogin||!window.ensureLogin()) return; window.taskStatus=window.taskStatus||{}; window.taskStatus[key]=!window.taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar();});
+          dayDiv.appendChild(epItem);
+        }
+
+        // 2. [NEW] 매일 쇼츠/웹툰 체크 버튼 그룹
         const checkGroup = document.createElement('div');
         checkGroup.className = 'daily-check-group';
 
-// 상태 값은 0(미체크) <-> 1(완료) 만 토글
-function normalizeState(v){
-    if (v === true) return 1; // 이전 버전 호환
-    if (v === false || v == null) return 0;
-    const n = Number(v);
-    return n === 1 ? 1 : 0;
-}
-async function toggleState(key){
-    if (!window.ensureLogin || !window.ensureLogin()) return;
-    window.taskStatus = window.taskStatus || {};
-    const cur = normalizeState(window.taskStatus[key]);
-    const next = cur === 1 ? 0 : 1;
-    if (next === 0) delete window.taskStatus[key];
-    else window.taskStatus[key] = 1;
-    await window.cloudSaveStateOnly();
-    renderCalendar();
-}
-function applyState(el, key){
-    const v = normalizeState((window.taskStatus||{})[key]);
-    el.dataset.state = String(v);
-}
+        // 쇼츠 버튼
+        const shortsBtn = document.createElement('div');
+        shortsBtn.className = 'daily-check-btn shorts';
+        shortsBtn.textContent = '쇼츠';
+        const shortsKey = `${fullDate}_daily_shorts`;
+        if ((window.taskStatus || {})[shortsKey]) shortsBtn.classList.add('active');
+        shortsBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!window.ensureLogin || !window.ensureLogin()) return;
+            window.taskStatus = window.taskStatus || {};
+            window.taskStatus[shortsKey] = !window.taskStatus[shortsKey];
+            await window.cloudSaveStateOnly();
+            renderCalendar();
+        });
 
-// 숏 버튼
-const shortsBtn = document.createElement('div');
-shortsBtn.className = 'daily-check-btn shorts';
-shortsBtn.textContent = '숏';
-const shortsKey = `${fullDate}_daily_shorts`;
-applyState(shortsBtn, shortsKey);
-shortsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleState(shortsKey); });
+        // 웹툰 버튼
+        const webtoonBtn = document.createElement('div');
+        webtoonBtn.className = 'daily-check-btn webtoon';
+        webtoonBtn.textContent = '웹툰';
+        const webtoonKey = `${fullDate}_daily_webtoon`;
+        if ((window.taskStatus || {})[webtoonKey]) webtoonBtn.classList.add('active');
+        webtoonBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!window.ensureLogin || !window.ensureLogin()) return;
+            window.taskStatus = window.taskStatus || {};
+            window.taskStatus[webtoonKey] = !window.taskStatus[webtoonKey];
+            await window.cloudSaveStateOnly();
+            renderCalendar();
+        });
 
-// 툰 버튼
-const toonBtn = document.createElement('div');
-toonBtn.className = 'daily-check-btn toon';
-toonBtn.textContent = '툰';
-const toonKey = `${fullDate}_daily_toon`;
-applyState(toonBtn, toonKey);
-toonBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleState(toonKey); });
-
-// 밬 버튼
-const bacBtn = document.createElement('div');
-bacBtn.className = 'daily-check-btn bac';
-bacBtn.textContent = '밬';
-const bacKey = `${fullDate}_daily_bac`;
-applyState(bacBtn, bacKey);
-bacBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleState(bacKey); });
-
-checkGroup.appendChild(shortsBtn);
-checkGroup.appendChild(toonBtn);
-checkGroup.appendChild(bacBtn);
-dayDiv.appendChild(checkGroup);
+        checkGroup.appendChild(shortsBtn);
+        checkGroup.appendChild(webtoonBtn);
+        dayDiv.appendChild(checkGroup);
 
 
         // 3. 사용자 커스텀 태스크
@@ -246,7 +236,7 @@ dayDiv.appendChild(checkGroup);
         dayDiv.addEventListener('click',(e)=>{ if(e.target.classList.contains('calendar-day')||e.target.classList.contains('day-number')) openModal({date:fullDate});});
         calendarGrid.appendChild(dayDiv);
       }
-    }
+    };
 
     // 유튜브 썸네일 URL 추출
     function getYoutubeThumbnail(url) {
@@ -686,77 +676,3 @@ dayDiv.appendChild(checkGroup);
       
       showAlert('붙여넣기한 항목에 유효한 이미지, 동영상 URL, 일반 페이지 URL 또는 인스타그램 퍼가기 코드가 없습니다.');
     });
-
-
-
-// 캘린더 TODO UI
-(function(){
-  let wired=false;
-  window.renderCalendarTodoUI = function(){
-    const wrap=document.getElementById('calendarTodoWrap');
-    if(!wrap) return;
-    const listEl=document.getElementById('todoList');
-    const input=document.getElementById('todoInput');
-    const addBtn=document.getElementById('todoAddBtn');
-    const clearBtn=document.getElementById('clearDoneTodoBtn');
-    if(!listEl||!input||!addBtn) return;
-
-    if(!wired){
-      wired=true;
-      addBtn.addEventListener('click', async ()=>{
-        const t=input.value;
-        input.value='';
-        await (window.cloudAddCalendarTodo && window.cloudAddCalendarTodo(t));
-      });
-      input.addEventListener('keydown', async (e)=>{
-        if(e.key==='Enter'){
-          const t=input.value;
-          input.value='';
-          await (window.cloudAddCalendarTodo && window.cloudAddCalendarTodo(t));
-        }
-      });
-      clearBtn?.addEventListener('click', async ()=>{
-        await (window.cloudClearDoneCalendarTodo && window.cloudClearDoneCalendarTodo());
-      });
-    }
-
-    const items = Array.isArray(window.__calendarTodoList) ? window.__calendarTodoList : [];
-    listEl.innerHTML='';
-    items.slice().sort((a,b)=> (a.done===b.done? (a.createdAt||0)-(b.createdAt||0) : (a.done?1:-1))).forEach(it=>{
-      const row=document.createElement('div');
-      row.style.display='flex';
-      row.style.alignItems='center';
-      row.style.gap='10px';
-      row.style.background='#1b1b1b';
-      row.style.border='1px solid #2f2f2f';
-      row.style.borderRadius='12px';
-      row.style.padding='10px 12px';
-
-      const chk=document.createElement('input');
-      chk.type='checkbox';
-      chk.checked=!!it.done;
-      chk.addEventListener('change', ()=>window.cloudToggleCalendarTodo&&window.cloudToggleCalendarTodo(it.id));
-
-      const txt=document.createElement('div');
-      txt.textContent=it.text||'';
-      txt.style.flex='1';
-      txt.style.color=it.done?'#888':'#fff';
-      txt.style.textDecoration=it.done?'line-through':'none';
-      txt.style.fontSize='.9rem';
-
-      const del=document.createElement('button');
-      del.textContent='삭제';
-      del.style.background='transparent';
-      del.style.border='none';
-      del.style.color='#bbb';
-      del.style.cursor='pointer';
-      del.style.fontSize='.8rem';
-      del.addEventListener('click', ()=>window.cloudDeleteCalendarTodo&&window.cloudDeleteCalendarTodo(it.id));
-
-      row.appendChild(chk);
-      row.appendChild(txt);
-      row.appendChild(del);
-      listEl.appendChild(row);
-    });
-  };
-})();

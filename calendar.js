@@ -22,7 +22,7 @@ export function initCalendar() {
     let cur=new Date(start);
     while(cur<=end){
       const d=cur.getDay();
-      if(d>=1 && d<=5) c++;
+      if(d>=0 && d<=4) c++;
       cur.setDate(cur.getDate()+1);
     }
     return c;
@@ -42,7 +42,6 @@ export function initCalendar() {
     currentMonthYear.textContent=`${year}년 ${month+1}월`;
     calendarGrid.innerHTML='';
 
-    // 달력 UI는 일요일 시작(일월화수목금토) 기준
     const firstDay=toKST(new Date(year,month,1)).getDay();
     const daysInMonth=new Date(year,month+1,0).getDate();
 

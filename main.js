@@ -112,51 +112,7 @@ import { initBookmarks } from "./bookmarks.js";
       await setDoc(stateDoc,{notesTabs, notesActiveTabId: activeId},{merge:true});
     };
 
-    
-    // 캘린더 TODO 리스트 (stateDoc.calendarTodoList 사용)
-    window.cloudAddCalendarTodo = async (text) => {
-      if(!ensureLogin()) return;
-      const t = String(text||'').trim();
-      if(!t) return;
-      const { stateDoc } = await cloudRefs();
-      const snap = await getDoc(stateDoc);
-      const prev = snap.exists() ? (snap.data()||{}) : {};
-      const list = Array.isArray(prev.calendarTodoList) ? prev.calendarTodoList : [];
-      const item = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), text: t, done: false, createdAt: Date.now() };
-      await setDoc(stateDoc, { calendarTodoList: [...list, item] }, { merge:true });
-    };
-
-    window.cloudToggleCalendarTodo = async (id) => {
-      if(!ensureLogin()) return;
-      const { stateDoc } = await cloudRefs();
-      const snap = await getDoc(stateDoc);
-      const prev = snap.exists() ? (snap.data()||{}) : {};
-      const list = Array.isArray(prev.calendarTodoList) ? prev.calendarTodoList : [];
-      const next = list.map(it => it.id===id ? ({...it, done: !it.done}) : it);
-      await setDoc(stateDoc, { calendarTodoList: next }, { merge:true });
-    };
-
-    window.cloudDeleteCalendarTodo = async (id) => {
-      if(!ensureLogin()) return;
-      const { stateDoc } = await cloudRefs();
-      const snap = await getDoc(stateDoc);
-      const prev = snap.exists() ? (snap.data()||{}) : {};
-      const list = Array.isArray(prev.calendarTodoList) ? prev.calendarTodoList : [];
-      const next = list.filter(it => it.id!==id);
-      await setDoc(stateDoc, { calendarTodoList: next }, { merge:true });
-    };
-
-    window.cloudClearDoneCalendarTodo = async () => {
-      if(!ensureLogin()) return;
-      const { stateDoc } = await cloudRefs();
-      const snap = await getDoc(stateDoc);
-      const prev = snap.exists() ? (snap.data()||{}) : {};
-      const list = Array.isArray(prev.calendarTodoList) ? prev.calendarTodoList : [];
-      const next = list.filter(it => !it.done);
-      await setDoc(stateDoc, { calendarTodoList: next }, { merge:true });
-    };
-
-// 메모 탭 CRUD (stateDoc 내부 notesTabList / notesTabs 사용)
+    // 메모 탭 CRUD (stateDoc 내부 notesTabList / notesTabs 사용)
     window.cloudSetActiveNotesTab = async (tabId)=>{
       if(!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
@@ -439,8 +395,6 @@ import { initBookmarks } from "./bookmarks.js";
         window.__notesTabList = Array.isArray(data.notesTabList) && data.notesTabList.length ? data.notesTabList : [{ id:'memo', name:'메모', order:0 }];
         window.__notesTabs = data.notesTabs || {};
         window.__notesActiveTabId = data.notesActiveTabId || window.__notesActiveTabId || 'memo';
-        window.__calendarTodoList = Array.isArray(data.calendarTodoList) ? data.calendarTodoList : [];
-        if(typeof window.renderCalendarTodoUI==='function') window.renderCalendarTodoUI();
         if(typeof window.renderNotesUI==='function') window.renderNotesUI();
         if(typeof renderCalendar==='function') renderCalendar();
       });

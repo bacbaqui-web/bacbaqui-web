@@ -15,47 +15,18 @@
     .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
 
     /* ===== 메모(내부) 탭 전용 스타일: 메인 탭(.notepad-tab)과 분리 ===== */
-/* 메모 공간과 분리된 '둥근 네모' 탭 */
-#notesHeaderRow{margin-top:8px;margin-bottom:8px}
-#notesTabsContainer{
-  justify-content:flex-start;
-  align-items:center;
-  gap:8px;
-  padding-left:10px;
-  margin-top:0;
-}
+    #notesTabsContainer{justify-content:flex-start;align-items:flex-end;gap:.5rem;padding-left:10px}
+    .notes-tab{background:#3a3a3a;padding:8px 14px;border-radius:10px 10px 0 0;cursor:pointer;transition:background .2s,color .2s,transform .15s ease; font-weight:700;color:#bdbdbd;font-size:.85rem;position:relative;z-index:1}
+    .notes-tab:hover{filter:brightness(1.05)}
+    .notes-tab.active{background:#000;color:#fff;z-index:3;margin-bottom:0;box-shadow:none}
 
-.notes-tab{
-  background:#3a3a3a;
-  padding:8px 16px;
-  border-radius:12px;
-  cursor:pointer;
-  transition:background .2s,color .2s,transform .15s ease;
-  font-weight:700;
-  color:#ddd;
-  font-size:.85rem;
-  position:relative;
-  z-index:1;
-  border:1px solid transparent;
-}
-.notes-tab:hover{background:#4a4a4a}
-.notes-tab.active{
-  background:#111;
-  color:#fff;
-  border-color:#2a2a2a;
-  z-index:2;
-}
+    .notes-tab.dragging{opacity:.3}
+    .notes-tab.placeholder{opacity:1}
+    #notesArea{margin-top:-1px}
 
-.notes-tab.dragging{opacity:.3}
-.notes-tab.placeholder{opacity:1}
+    .notes-tab .tab-del{margin-left:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#555;color:#fff;font-size:12px;line-height:1}
 
-/* 메모 입력 영역은 탭과 분리되게 약간 간격 */
-#notesArea{margin-top:10px}
-
-.notes-tab .tab-del{margin-left:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#555;color:#fff;font-size:12px;line-height:1}
-
-/* 아이콘 버튼 (메모 + / 편집) */
-
+    /* 아이콘 버튼 (메모 + / 편집) */
     .icon-btn{background:transparent;border:none;padding:6px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer}
     .icon-btn:hover{background:rgba(255,255,255,.08)}
     .icon-btn svg{width:18px;height:18px;display:block}
@@ -79,35 +50,41 @@
     .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
     .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
     
-    /* 일일 체크 버튼 그룹 (숏/툰/밬) 스타일 */
-.daily-check-group {
-    display: flex;
-    width: 100%;
-    gap: 2px;
-    margin-top: 2px;
-}
-.daily-check-btn {
-    flex: 1;
-    text-align: center;
-    font-size: 0.75rem;
-    padding: 4px 0;
-    border-radius: 4px;
-    background: #444; /* 기본(미체크) */
-    color: #ccc;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-    font-weight: 600;
-    border: 1px solid transparent;
-    user-select: none;
-}
-.daily-check-btn:hover { opacity: 0.92; }
+    /* 일일 체크 버튼 그룹 (쇼츠/웹툰) 스타일 */
+    .daily-check-group {
+        display: flex;
+        width: 100%;
+        gap: 2px;
+        margin-top: 2px;
+    }
+    .daily-check-btn {
+        flex: 1;
+        text-align: center;
+        font-size: 0.75rem;
+        padding: 4px 0;
+        border-radius: 4px;
+        background: #444; /* 기본 회색 */
+        color: #ccc;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+        font-weight: 500;
+    }
+    .daily-check-btn:hover {
+        opacity: 0.9;
+    }
+    /* 쇼츠 활성 상태: 빨강 */
+    .daily-check-btn.shorts.active {
+        background: #dc2626; 
+        color: white;
+        font-weight: 700;
+    }
+    /* 웹툰 활성 상태: 노랑 */
+    .daily-check-btn.webtoon.active {
+        background: #eab308;
+        color: #000;
+        font-weight: 700;
+    }
 
-/* state: 0(미체크) / 1(완료) */
-.daily-check-btn[data-state="0"] { background:#444; color:#ccc; border-color: transparent; }
-.daily-check-btn.shorts[data-state="1"] { background:#dc2626; color:#fff; }
-.daily-check-btn.toon[data-state="1"] { background:#eab308; color:#000; }
-/* 밬: 완료 시 흰색 */
-.daily-check-btn.bac[data-state="1"] { background:#ffffff; color:#000; }
 
     /* 북마크 Masonry 레이아웃 */
     #image-grid {
@@ -309,26 +286,17 @@
       <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
     </div>
     <div class="calendar-header mb-2">
-      <div class="day-label">월</div><div class="day-label">화</div><div class="day-label">수</div>
-      <div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div><div class="day-label">일</div>
+      <div class="day-label">일</div><div class="day-label">월</div><div class="day-label">화</div>
+      <div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div>
     </div>
     <div id="calendarGrid" class="calendar-grid"></div>
-    <div id="calendarTodoWrap" class="mt-6" style="text-align:left;">
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:0 6px 8px 6px;">
-        <div style="font-weight:700;color:#fff;opacity:.9;">TODO</div>
-        <button id="clearDoneTodoBtn" style="background:transparent;border:none;color:#bbb;font-size:.8rem;cursor:pointer;">완료 삭제</button>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;margin:0 6px 10px 6px;">
-        <input id="todoInput" type="text" placeholder="할 일 추가" style="flex:1;background:#1f1f1f;border:1px solid #333;color:#fff;border-radius:12px;padding:10px 12px;outline:none;">
-        <button id="todoAddBtn" style="background:#2d4059;border:none;color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;">추가</button>
-      </div>
-      <div id="todoList" style="display:flex;flex-direction:column;gap:6px;margin:0 6px 6px 6px;"></div>
+    <div class="mt-8 text-center">
+      <button id="addTaskBtn" class="add-task-btn px-6 py-3 rounded-full font-bold text-white shadow-md">+ 개인 작업 추가</button>
     </div>
-
-</div>
+  </div>
 
   <div id="notes-section" class="section-card tab-content">
-    <div class="flex items-center justify-between mb-2" id="notesHeaderRow">
+    <div class="flex items-center justify-between mb-2">
       <div id="notesTabsContainer" class="notepad-tabs flex flex-wrap gap-2"></div>
       <div class="flex items-center gap-2">
         <button id="addNotesTabBtn" class="icon-btn" title="새 탭">
