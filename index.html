@@ -271,17 +271,20 @@
       background:#000;
       color:#fff;
       z-index:3;
-      transform:translateY(10px);
+      transform:none;
       box-shadow:none;
+      margin-bottom:-10px; /* attach to memo area */
     }
     #notes-section #notesTabsContainer .notepad-tab:not(.active){
-      transform:translateY(0);
+      transform:none;
       z-index:0;
       opacity:.9;
     }
     /* make textarea attach to active tab */
     #notes-section #notesArea{
-      margin-top:-10px;
+      margin-top:0;
+      position:relative;
+      z-index:1;
       border-top-left-radius:12px;
       border-top-right-radius:12px;
     }
