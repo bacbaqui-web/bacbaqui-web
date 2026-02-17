@@ -1,9 +1,9 @@
 export function initCalendar() {
-  // Calendar rendering is based on Korea Standard Time (Asia/Seoul),
-  // regardless of the user's local browser timezone.
+  // 달력은 '날짜(연/월/일)' 기반으로 요일을 계산합니다.
+  // (시간대/브라우저 로컬 타임존에 영향받지 않도록) 순수한 달력 알고리즘을 사용합니다.
   const TZ = 'Asia/Seoul';
 
-  // Get today's date parts in KST.
+  // 오늘 날짜를 KST 기준으로 가져와 "현재 보고 있는 월"을 정합니다.
   function getKSTParts(date = new Date()) {
     const fmt = new Intl.DateTimeFormat('en-CA', {
       timeZone: TZ,
@@ -15,31 +15,29 @@ export function initCalendar() {
     return { y, m, d };
   }
 
-  // Weekday in KST as number: 0=Sun ... 6=Sat
-  // Uses Intl with a "safe" UTC time (noon) to avoid day-boundary issues.
-  function getKSTWeekday(y, monthIndex, day) {
-    const dt = new Date(Date.UTC(y, monthIndex, day, 12, 0, 0)); // 12:00 UTC
-    const wd = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' }).format(dt);
-    const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-    return map[wd];
+  // 요일 계산(0=일 ... 6=토): Tomohiko Sakamoto 알고리즘 (그레고리력)
+  // 시간대와 무관하게 "그 날짜의 요일"을 안정적으로 계산합니다.
+  function weekdaySun0(y, m1to12, d) {
+    const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+    let y2 = y;
+    if (m1to12 < 3) y2 -= 1;
+    return (y2 + Math.floor(y2 / 4) - Math.floor(y2 / 100) + Math.floor(y2 / 400) + t[m1to12 - 1] + d) % 7;
   }
 
-  // Days in month in (y, monthIndex)
   function getDaysInMonth(y, monthIndex) {
+    // monthIndex: 0-11
     return new Date(Date.UTC(y, monthIndex + 1, 0)).getUTCDate();
   }
 
-  // Convert to a YYYY-MM-DD string in KST (kept for compatibility / future hooks)
   function ymdKSTFromParts(y, monthIndex, day) {
     const mm = String(monthIndex + 1).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
     return `${y}-${mm}-${dd}`;
   }
 
-  // Track current view as year + month index (0-11), anchored to KST.
-  const nowParts = getKSTParts();
-  let viewYear = nowParts.y;
-  let viewMonth = nowParts.m - 1;
+  const now = getKSTParts();
+  let viewYear = now.y;
+  let viewMonth = now.m - 1; // 0-11
 
   function stepMonth(delta) {
     const total = viewYear * 12 + viewMonth + delta;
@@ -51,7 +49,6 @@ export function initCalendar() {
     }
   }
 
-  // Keep the original global function name in case other modules call it.
   window.renderCalendar = function () {
     const currentMonthYear = document.getElementById('currentMonthYear');
     const calendarGrid = document.getElementById('calendarGrid');
@@ -63,9 +60,10 @@ export function initCalendar() {
 
     calendarGrid.innerHTML = '';
 
-    // Monday-first display: Mon=0 ... Sun=6
-    const firstDowSun0 = getKSTWeekday(viewYear, viewMonth, 1); // 0=Sun..6=Sat (KST)
-    const firstDowMon0 = (firstDowSun0 + 6) % 7; // shift so Mon becomes 0
+    // 월요일 시작 표기: Mon=0 ... Sun=6
+    // 먼저 그 달 1일의 요일을 0=일..6=토로 구한 뒤, 월요일 시작으로 쉬프트합니다.
+    const firstDowSun0 = weekdaySun0(viewYear, viewMonth + 1, 1); // 0=일..6=토
+    const firstDowMon0 = (firstDowSun0 + 6) % 7; // Mon=0 ... Sun=6
 
     const daysInMonth = getDaysInMonth(viewYear, viewMonth);
 
@@ -79,7 +77,7 @@ export function initCalendar() {
       const dayDiv = document.createElement('div');
       dayDiv.classList.add('calendar-day', 'relative');
 
-      // Preserve existing variables (even if unused) to avoid breaking any future hooks.
+      // 호환용(다른 기능에서 날짜키로 쓸 수 있음)
       const fullDate = ymdKSTFromParts(viewYear, viewMonth, day);
       void fullDate;
 
