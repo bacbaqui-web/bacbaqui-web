@@ -168,7 +168,8 @@
       const currentMonthYear=document.getElementById('currentMonthYear');
       const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
       currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
-      const firstDay=toKST(new Date(year,month,1)).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
+      const firstDayRaw=toKST(new Date(year,month,1)).getDay();
+      const firstDay=(firstDayRaw+6)%7; // 월요일 시작(월화수목금토일)으로 보정 const daysInMonth=new Date(year,month+1,0).getDate();
       for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
       for(let day=1;day<=daysInMonth;day++){
         const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
@@ -684,3 +685,77 @@ dayDiv.appendChild(checkGroup);
       
       showAlert('붙여넣기한 항목에 유효한 이미지, 동영상 URL, 일반 페이지 URL 또는 인스타그램 퍼가기 코드가 없습니다.');
     });
+
+
+
+// 캘린더 TODO UI
+(function(){
+  let wired=false;
+  window.renderCalendarTodoUI = function(){
+    const wrap=document.getElementById('calendarTodoWrap');
+    if(!wrap) return;
+    const listEl=document.getElementById('todoList');
+    const input=document.getElementById('todoInput');
+    const addBtn=document.getElementById('todoAddBtn');
+    const clearBtn=document.getElementById('clearDoneTodoBtn');
+    if(!listEl||!input||!addBtn) return;
+
+    if(!wired){
+      wired=true;
+      addBtn.addEventListener('click', async ()=>{
+        const t=input.value;
+        input.value='';
+        await (window.cloudAddCalendarTodo && window.cloudAddCalendarTodo(t));
+      });
+      input.addEventListener('keydown', async (e)=>{
+        if(e.key==='Enter'){
+          const t=input.value;
+          input.value='';
+          await (window.cloudAddCalendarTodo && window.cloudAddCalendarTodo(t));
+        }
+      });
+      clearBtn?.addEventListener('click', async ()=>{
+        await (window.cloudClearDoneCalendarTodo && window.cloudClearDoneCalendarTodo());
+      });
+    }
+
+    const items = Array.isArray(window.__calendarTodoList) ? window.__calendarTodoList : [];
+    listEl.innerHTML='';
+    items.slice().sort((a,b)=> (a.done===b.done? (a.createdAt||0)-(b.createdAt||0) : (a.done?1:-1))).forEach(it=>{
+      const row=document.createElement('div');
+      row.style.display='flex';
+      row.style.alignItems='center';
+      row.style.gap='10px';
+      row.style.background='#1b1b1b';
+      row.style.border='1px solid #2f2f2f';
+      row.style.borderRadius='12px';
+      row.style.padding='10px 12px';
+
+      const chk=document.createElement('input');
+      chk.type='checkbox';
+      chk.checked=!!it.done;
+      chk.addEventListener('change', ()=>window.cloudToggleCalendarTodo&&window.cloudToggleCalendarTodo(it.id));
+
+      const txt=document.createElement('div');
+      txt.textContent=it.text||'';
+      txt.style.flex='1';
+      txt.style.color=it.done?'#888':'#fff';
+      txt.style.textDecoration=it.done?'line-through':'none';
+      txt.style.fontSize='.9rem';
+
+      const del=document.createElement('button');
+      del.textContent='삭제';
+      del.style.background='transparent';
+      del.style.border='none';
+      del.style.color='#bbb';
+      del.style.cursor='pointer';
+      del.style.fontSize='.8rem';
+      del.addEventListener('click', ()=>window.cloudDeleteCalendarTodo&&window.cloudDeleteCalendarTodo(it.id));
+
+      row.appendChild(chk);
+      row.appendChild(txt);
+      row.appendChild(del);
+      listEl.appendChild(row);
+    });
+  };
+})();
