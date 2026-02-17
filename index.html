@@ -13,52 +13,6 @@
     .notepad-tabs{display:flex;justify-content:center;align-items:center;gap:1rem;width:100%;max-width:800px}
     .notepad-tab{background:#1a1a1a;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700;color:#737373;font-size:.85rem}
     .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
-
-    /* ===== 메모(내부) 탭 전용 스타일: 메인 탭(.notepad-tab)과 분리 ===== */
-/* 메모 공간과 분리된 '둥근 네모' 탭 */
-#notesHeaderRow{margin-top:8px;margin-bottom:8px}
-#notesTabsContainer{
-  justify-content:flex-start;
-  align-items:center;
-  gap:8px;
-  padding-left:10px;
-  margin-top:0;
-}
-
-.notes-tab{
-  background:#3a3a3a;
-  padding:8px 16px;
-  border-radius:12px;
-  cursor:pointer;
-  transition:background .2s,color .2s,transform .15s ease;
-  font-weight:700;
-  color:#ddd;
-  font-size:.85rem;
-  position:relative;
-  z-index:1;
-  border:1px solid transparent;
-}
-.notes-tab:hover{background:#4a4a4a}
-.notes-tab.active{
-  background:#111;
-  color:#fff;
-  border-color:#2a2a2a;
-  z-index:2;
-}
-
-.notes-tab.dragging{opacity:.3}
-.notes-tab.placeholder{opacity:1}
-
-/* 메모 입력 영역은 탭과 분리되게 약간 간격 */
-#notesArea{margin-top:10px}
-
-.notes-tab .tab-del{margin-left:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#555;color:#fff;font-size:12px;line-height:1}
-
-/* 아이콘 버튼 (메모 + / 편집) */
-
-    .icon-btn{background:transparent;border:none;padding:6px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer}
-    .icon-btn:hover{background:rgba(255,255,255,.08)}
-    .icon-btn svg{width:18px;height:18px;display:block}
     .notes-area{flex-grow:1;resize:vertical}
     textarea#notesArea::-webkit-scrollbar{width:8px;background-color:#2a2a2a;border-radius:10px}
     textarea#notesArea::-webkit-scrollbar-thumb{background-color:#555;border-radius:10px}
@@ -69,12 +23,8 @@
     .calendar-day{min-height:160px;padding-top:16px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;gap:2px}
     .calendar-day.today{border:2px solid #ccc}
     .day-number{position:absolute;top:8px;left:8px;font-size:.85rem;font-weight:700;color:#aaa;z-index:10}
-    .day-divider{height:1px;background:#3a3a3a;margin:18px 6px 2px;border-radius:999px;opacity:.95}
     .task-item{font-size:.85rem;padding:5px 6px;border-radius:8px;margin-top:4px;word-wrap:break-word;cursor:pointer;text-align:left}
     .task-item.custom-task{background:#4c78a8}
-    .task-item.custom-task.custom-important{background:#dc2626;color:#fff}
-    .task-item.custom-task.custom-family{background:#2563eb;color:#fff}
-    .task-item.custom-task.custom-special{background:#16a34a;color:#fff}
     .task-item.episode-task{background:#444;color:#ddd}
     .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
     .add-task-btn{background:#666;transition:.2s}.add-task-btn:hover{background:#777;transform:scale(1.02)}
@@ -117,16 +67,6 @@
         color: #000;
         font-weight: 700;
     }
-
-    /* 달력 아래 일정 & 할 일 리스트 */
-    .agenda-item{display:flex;align-items:center;gap:10px;background:#2a2a2a;border-radius:10px;padding:10px 10px}
-    .agenda-dot{width:10px;height:10px;border-radius:999px;flex:0 0 10px}
-    .agenda-date{font-size:.8rem;color:#bbb;min-width:92px}
-    .agenda-text{flex:1 1 auto;word-break:break-word}
-    .agenda-actions{display:flex;gap:6px;flex:0 0 auto}
-    .agenda-btn{background:#3a3a3a;border-radius:10px;padding:6px 8px;font-size:.8rem;color:#fff;cursor:pointer;user-select:none}
-    .agenda-btn:hover{background:#4a4a4a}
-    .agenda-section-title{margin-top:10px;margin-bottom:6px;color:#ddd;font-weight:700;font-size:.9rem;opacity:.95}
 
 
     /* 북마크 Masonry 레이아웃 */
@@ -329,46 +269,38 @@
       <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
     </div>
     <div class="calendar-header mb-2">
-      <div class="day-label">월</div><div class="day-label">화</div><div class="day-label">수</div>
-      <div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div><div class="day-label">일</div>
+      <div class="day-label">일</div><div class="day-label">월</div><div class="day-label">화</div>
+      <div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div>
     </div>
     <div id="calendarGrid" class="calendar-grid"></div>
     <div class="mt-8 text-center">
       <button id="addTaskBtn" class="add-task-btn px-6 py-3 rounded-full font-bold text-white shadow-md">+ 개인 작업 추가</button>
     </div>
-
-    <!-- 일정 & 할 일 (달력 아래 리스트) -->
-    <div id="agendaPanel" class="mt-6 text-left" style="background:#1f1f1f;border-radius:12px;padding:14px;box-shadow:inset 0 0 10px rgba(0,0,0,.25)">
-      <div class="flex items-center justify-between mb-3">
-        <div class="font-bold" style="font-size:1rem;">📌 일정 &amp; 할 일</div>
-        <button id="addTodoBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">+ 할 일 추가</button>
-      </div>
-      <div id="agendaList" class="space-y-2"></div>
-    </div>
   </div>
 
   <div id="notes-section" class="section-card tab-content">
-    <div class="flex items-center justify-between mb-2" id="notesHeaderRow">
-      <div id="notesTabsContainer" class="notepad-tabs flex flex-wrap gap-2"></div>
-      <div class="flex items-center gap-2">
-        <button id="addNotesTabBtn" class="icon-btn" title="새 탭">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 5v14"/><path d="M5 12h14"/>
-          </svg>
-        </button>
-        <button id="toggleNotesEditBtn" class="icon-btn" title="탭 편집">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-          </svg>
-        </button>
-      </div>
+    <div class="notepad-tabs">
+      <button class="notepad-tab active" data-tab="바퀴멘터리">바퀴멘터리</button>
+      <button class="notepad-tab" data-tab="짐승육아">짐승육아</button>
+      <button class="notepad-tab" data-tab="그거아세요">그거아세요</button>
+      <button class="notepad-tab" data-tab="메모">메모</button>
     </div>
     <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg"></textarea>
   </div>
 
   <div id="bookmarks-section" class="section-card tab-content text-left">
-    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="붙여넣기(Ctrl/Cmd+V)">
-      <div class="text-4xl font-bold select-none">+</div>
+    
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2 items-center text-sm">
+            <span class="text-gray-400">정렬 기준:</span>
+            <select id="bookmarkSortSelect" class="bg-gray-700 p-1 rounded text-white focus:outline-none">
+                <option value="timestamp">최신순</option>
+                <option value="sourceDomain" selected>사이트별 정렬</option>
+            </select>
+        </div>
+    </div>
+    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
+      <div>이미지/동영상/일반 페이지 URL 또는 인스타그램 퍼가기 코드를 붙여넣기 또는 드래그하세요. 캡쳐/이미지는 붙여넣기(Ctrl/Cmd+V)를 사용하세요.</div>
     </section>
     <section id="image-grid"></section>
   </div>
@@ -382,19 +314,6 @@
       <textarea id="taskDescription" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24"></textarea>
       <label class="block mb-2">날짜:</label>
       <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
-
-      <label class="block mb-2">분류:</label>
-      <select id="taskCategory" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
-        <option value="">(기본)</option>
-        <option value="important">중요한일 (빨강)</option>
-        <option value="family">가족행사 (파랑)</option>
-        <option value="special">특별한날 (초록)</option>
-      </select>
-
-      <label class="flex items-center gap-2 mb-4 text-sm opacity-90" style="user-select:none;">
-        <input type="checkbox" id="todoOnly" />
-        달력에는 표시하지 않고 <b>할 일</b>로만 추가
-      </label>
       <div class="flex justify-end gap-2">
         <button id="saveTaskBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
         <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
@@ -421,20 +340,6 @@
       <div class="flex justify-end gap-2">
         <button id="saveTitleBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
         <button id="cancelTitleBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 링크 북마크 미리보기 이미지 업로드(붙여넣기 전용) 모달 -->
-  <div id="previewUploadModal" class="modal">
-    <div class="modal-content" style="background:#2a2a2a;max-width:420px;">
-      <h2 class="text-xl font-bold mb-3">미리보기 이미지</h2>
-      <p class="text-sm opacity-80 mb-4">캡쳐한 이미지를 이 창에서 <b>붙여넣기(Ctrl/Cmd+V)</b> 하세요.</p>
-      <div id="previewPasteArea" class="drag-area rounded-lg p-10 flex items-center justify-center text-center cursor-default" style="border-style:dashed;">
-        <div class="text-5xl font-bold select-none">+</div>
-      </div>
-      <div class="flex justify-end gap-2 mt-4">
-        <button id="closePreviewUploadBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">닫기</button>
       </div>
     </div>
   </div>
