@@ -176,53 +176,63 @@
         const today=toKST(new Date()); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
         const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
 
-        // 1. 에피소드 정보 (평일만 표시)
-        if(dayOfWeek>=0&&dayOfWeek<=4){
-          const milestoneDate=new Date('2026-02-23'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
-          const milestoneEpisode=2137; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
-          const epItem=document.createElement('div'); epItem.classList.add('task-item','episode-task'); epItem.textContent=`${episodeNumber}화`;
-          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; if((window.taskStatus||{})[key]) epItem.classList.add('complete');
-          epItem.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.ensureLogin||!window.ensureLogin()) return; window.taskStatus=window.taskStatus||{}; window.taskStatus[key]=!window.taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar();});
-          dayDiv.appendChild(epItem);
-        }
-
-        // 2. [NEW] 매일 쇼츠/웹툰 체크 버튼 그룹
+        // 2. [NEW] 매일 체크 버튼 그룹 (숏/툰/밬)
         const checkGroup = document.createElement('div');
         checkGroup.className = 'daily-check-group';
 
-        // 쇼츠 버튼
-        const shortsBtn = document.createElement('div');
-        shortsBtn.className = 'daily-check-btn shorts';
-        shortsBtn.textContent = '쇼츠';
-        const shortsKey = `${fullDate}_daily_shorts`;
-        if ((window.taskStatus || {})[shortsKey]) shortsBtn.classList.add('active');
-        shortsBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (!window.ensureLogin || !window.ensureLogin()) return;
-            window.taskStatus = window.taskStatus || {};
-            window.taskStatus[shortsKey] = !window.taskStatus[shortsKey];
-            await window.cloudSaveStateOnly();
-            renderCalendar();
-        });
+        const checkGroup = document.createElement('div');
+        checkGroup.className = 'daily-check-group';
 
-        // 웹툰 버튼
-        const webtoonBtn = document.createElement('div');
-        webtoonBtn.className = 'daily-check-btn webtoon';
-        webtoonBtn.textContent = '웹툰';
-        const webtoonKey = `${fullDate}_daily_webtoon`;
-        if ((window.taskStatus || {})[webtoonKey]) webtoonBtn.classList.add('active');
-        webtoonBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (!window.ensureLogin || !window.ensureLogin()) return;
-            window.taskStatus = window.taskStatus || {};
-            window.taskStatus[webtoonKey] = !window.taskStatus[webtoonKey];
-            await window.cloudSaveStateOnly();
-            renderCalendar();
-        });
+// 상태 값은 0(미체크) -> 1(완료) -> 2(보류/특이) -> 0 순으로 순환
+function normalizeState(v){
+    if (v === true) return 1; // 이전 버전 호환
+    if (v === false || v == null) return 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.max(0, Math.min(2, n)) : 0;
+}
+async function cycleState(key){
+    if (!window.ensureLogin || !window.ensureLogin()) return;
+    window.taskStatus = window.taskStatus || {};
+    const cur = normalizeState(window.taskStatus[key]);
+    const next = (cur + 1) % 3;
+    if (next === 0) delete window.taskStatus[key];
+    else window.taskStatus[key] = next;
+    await window.cloudSaveStateOnly();
+    renderCalendar();
+}
+function applyState(el, key){
+    const v = normalizeState((window.taskStatus||{})[key]);
+    el.dataset.state = String(v);
+}
 
-        checkGroup.appendChild(shortsBtn);
-        checkGroup.appendChild(webtoonBtn);
-        dayDiv.appendChild(checkGroup);
+// 숏 버튼
+const shortsBtn = document.createElement('div');
+shortsBtn.className = 'daily-check-btn shorts';
+shortsBtn.textContent = '숏';
+const shortsKey = `${fullDate}_daily_shorts`;
+applyState(shortsBtn, shortsKey);
+shortsBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleState(shortsKey); });
+
+// 툰 버튼
+const toonBtn = document.createElement('div');
+toonBtn.className = 'daily-check-btn toon';
+toonBtn.textContent = '툰';
+const toonKey = `${fullDate}_daily_toon`;
+applyState(toonBtn, toonKey);
+toonBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleState(toonKey); });
+
+// 밬 버튼
+const bacBtn = document.createElement('div');
+bacBtn.className = 'daily-check-btn bac';
+bacBtn.textContent = '밬';
+const bacKey = `${fullDate}_daily_bac`;
+applyState(bacBtn, bacKey);
+bacBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleState(bacKey); });
+
+checkGroup.appendChild(shortsBtn);
+checkGroup.appendChild(toonBtn);
+checkGroup.appendChild(bacBtn);
+dayDiv.appendChild(checkGroup);
 
 
         // 3. 사용자 커스텀 태스크

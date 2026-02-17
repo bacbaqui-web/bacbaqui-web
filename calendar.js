@@ -22,7 +22,7 @@ export function initCalendar() {
     let cur=new Date(start);
     while(cur<=end){
       const d=cur.getDay();
-      if(d>=0 && d<=4) c++;
+      if(d>=1 && d<=5) c++;
       cur.setDate(cur.getDate()+1);
     }
     return c;
@@ -42,7 +42,8 @@ export function initCalendar() {
     currentMonthYear.textContent=`${year}년 ${month+1}월`;
     calendarGrid.innerHTML='';
 
-    const firstDay=toKST(new Date(year,month,1)).getDay();
+    const firstDayRaw=toKST(new Date(year,month,1)).getDay();
+    const firstDay=(firstDayRaw+6)%7; // Monday-first
     const daysInMonth=new Date(year,month+1,0).getDate();
 
     for(let i=0;i<firstDay;i++){
