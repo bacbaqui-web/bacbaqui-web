@@ -15,21 +15,47 @@
     .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
 
     /* ===== 메모(내부) 탭 전용 스타일: 메인 탭(.notepad-tab)과 분리 ===== */
-    /* 탭이 살짝 떠 보이지 않도록 전체 줄을 5px 아래로 내림 */
-    #notesTabsContainer{justify-content:flex-start;align-items:flex-end;gap:.5rem;padding-left:10px;margin-top:5px}
-#notesHeaderRow{margin-top:5px;margin-bottom:6px}
+/* 메모 공간과 분리된 '둥근 네모' 탭 */
+#notesHeaderRow{margin-top:8px;margin-bottom:8px}
+#notesTabsContainer{
+  justify-content:flex-start;
+  align-items:center;
+  gap:8px;
+  padding-left:10px;
+  margin-top:0;
+}
 
-    .notes-tab{background:#3a3a3a;padding:8px 14px;border-radius:10px 10px 0 0;cursor:pointer;transition:background .2s,color .2s,transform .15s ease; font-weight:700;color:#bdbdbd;font-size:.85rem;position:relative;z-index:1}
-    .notes-tab:hover{filter:brightness(1.05)}
-    .notes-tab.active{background:#000;color:#fff;z-index:3;margin-bottom:0;box-shadow:none}
+.notes-tab{
+  background:#3a3a3a;
+  padding:8px 16px;
+  border-radius:12px;
+  cursor:pointer;
+  transition:background .2s,color .2s,transform .15s ease;
+  font-weight:700;
+  color:#ddd;
+  font-size:.85rem;
+  position:relative;
+  z-index:1;
+  border:1px solid transparent;
+}
+.notes-tab:hover{background:#4a4a4a}
+.notes-tab.active{
+  background:#111;
+  color:#fff;
+  border-color:#2a2a2a;
+  z-index:2;
+}
 
-    .notes-tab.dragging{opacity:.3}
-    .notes-tab.placeholder{opacity:1}
-    #notesArea{margin-top:-1px}
+.notes-tab.dragging{opacity:.3}
+.notes-tab.placeholder{opacity:1}
 
-    .notes-tab .tab-del{margin-left:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#555;color:#fff;font-size:12px;line-height:1}
+/* 메모 입력 영역은 탭과 분리되게 약간 간격 */
+#notesArea{margin-top:10px}
 
-    /* 아이콘 버튼 (메모 + / 편집) */
+.notes-tab .tab-del{margin-left:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#555;color:#fff;font-size:12px;line-height:1}
+
+/* 아이콘 버튼 (메모 + / 편집) */
+
     .icon-btn{background:transparent;border:none;padding:6px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer}
     .icon-btn:hover{background:rgba(255,255,255,.08)}
     .icon-btn svg{width:18px;height:18px;display:block}
