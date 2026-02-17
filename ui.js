@@ -358,6 +358,7 @@
         text.className = 'agenda-text';
         text.textContent = t.title;
         if(t.complete){
+          row.classList.add('complete');
           text.style.textDecoration='line-through';
           text.style.opacity='.75';
           text.style.color = '#9ca3af';

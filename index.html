@@ -107,14 +107,14 @@
     }
     /* 쇼츠 활성 상태: 빨강 */
     .daily-check-btn.shorts.active {
-        background: #dc2626; 
+        background: #7c3aed; 
         color: white;
         font-weight: 700;
     }
     /* 웹툰 활성 상태: 노랑 */
     .daily-check-btn.webtoon.active {
-        background: #eab308;
-        color: #000;
+        background: #f59e0b;
+        color: white;
         font-weight: 700;
     }
 
@@ -131,7 +131,10 @@
     .agenda-settings-btn:hover{background:#4a4a4a}
 
 
-    /* 북마크 Masonry 레이아웃 */
+    
+    .agenda-item.complete{opacity:.85}
+    .agenda-item.complete .agenda-text{color:#9ca3af !important;text-decoration:line-through}
+/* 북마크 Masonry 레이아웃 */
     #image-grid {
         column-count: 2; /* 기본 2열 */
         column-gap: 1rem;
