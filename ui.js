@@ -13,7 +13,7 @@
     let currentDate = new Date();
     window.isAuthReady = false;
     // **수정: 기본 정렬 키를 'sourceDomain'으로 설정**
-    window.bookmarkSortKey = 'sourceDomain'; // 기본 정렬 키: sourceDomain (사이트별)
+    window.bookmarkSortKey = 'timestamp'; // 기본 정렬 키: 최신순(고정)
 
     // DOM 요소
     const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
@@ -32,8 +32,8 @@
     const saveTitleBtn = document.getElementById('saveTitleBtn');
     const cancelTitleBtn = document.getElementById('cancelTitleBtn');
     const currentUrlDisplay = document.getElementById('currentUrlDisplay');
-    // 정렬 선택 요소
-    const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
+    // 정렬 UI 제거됨 (최신순 고정)
+    const bookmarkSortSelect = null;
 
 
     // 유틸리티 함수
@@ -88,17 +88,12 @@
 
 
     function showTab(tabId){
-      tabContents.forEach(c=>c.classList.remove('active'));
+      tabContents.forEach(c=>{ c.classList.remove('active'); c.style.display='none'; });
       tabButtons.forEach(b=>b.classList.remove('active'));
-      document.getElementById(`${tabId}-section`).classList.add('active');
-      /* enforce section visibility */
-      ['calendar','notes','bookmarks'].forEach(id=>{
-        const el=document.getElementById(`${id}-section`);
-        if(!el) return;
-        el.style.display = (id===tabId) ? '' : 'none';
-      });
-
-      const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`); if(btn) btn.classList.add('active');
+      const section=document.getElementById(`${tabId}-section`);
+      if(section){ section.classList.add('active'); section.style.display='flex'; }
+      const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`);
+      if(btn) btn.classList.add('active');
     }
     showTab('calendar');
     tabButtons.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
@@ -168,10 +163,7 @@
       });
       
       // 정렬 선택 변경 이벤트 리스너
-      if(bookmarkSortSelect) bookmarkSortSelect.addEventListener('change', (e) => {
-          window.bookmarkSortKey = e.target.value;
-          renderImageBookmarks();
-      });
+            });
     };
 
     // 달력 렌더링
@@ -297,22 +289,10 @@
       let sortedBookmarks = [...(window.imageBookmarks || [])];
 
       // 1. 정렬 로직 적용
-      let currentSortKey = window.bookmarkSortKey || 'sourceDomain'; // 기본값 반영
-      if(bookmarkSortSelect) bookmarkSortSelect.value = currentSortKey; // 선택 박스 값 업데이트
+      let currentSortKey = 'timestamp'; // 최신순 고정
 
-      if (currentSortKey === 'sourceDomain') {
-          // 사이트별 정렬: 도메인 이름순으로 정렬
-          sortedBookmarks.sort((a, b) => {
-              const domainA = a.sourceDomain || 'Unknown Source';
-              const domainB = b.sourceDomain || 'Unknown Source';
-              return domainA.localeCompare(domainB);
-          });
-      } else { // 'timestamp' (Newest first)
-          // 최신순 정렬: 타임스탬프 역순 (가장 큰 값이 맨 위)
-          sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
-      }
-
-      let lastDomain = null; // 그룹 구분을 위한 변수
+      // 최신순 정렬: 타임스탬프 역순 (가장 큰 값이 맨 위)
+      sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
 
       sortedBookmarks.forEach(d=>{
         const isVideo = d.type === 'video';
@@ -325,15 +305,6 @@
         const imageUrl = d.url;
         const pageUrl = d.pageUrl; // 일반 URL, 동영상 URL 또는 인스타그램 게시물 URL
         const sourceDomain = d.sourceDomain || 'Unknown Source';
-
-        // **2. 사이트별 정렬 시 헤더 추가**
-        if (currentSortKey === 'sourceDomain' && sourceDomain !== lastDomain) {
-            const header = document.createElement('h3');
-            header.className = 'domain-header';
-            header.textContent = sourceDomain;
-            imageGrid.appendChild(header);
-            lastDomain = sourceDomain;
-        }
         
         let thumbnail = isVideo ? getYoutubeThumbnail(pageUrl) : imageUrl;
         let iconHtml = '';
@@ -485,7 +456,7 @@
     (function init(){ 
         attachEventListeners(); 
         // 초기화 시 기본 정렬 키를 'sourceDomain'으로 설정했으므로 선택 상자 값을 업데이트합니다.
-        if(bookmarkSortSelect) bookmarkSortSelect.value = window.bookmarkSortKey;
+        bookmarkSortSelect.value = window.bookmarkSortKey;
         renderCalendar(); 
     })();
 

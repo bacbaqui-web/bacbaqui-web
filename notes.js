@@ -6,21 +6,8 @@ export function initNotes(){
 
   if(!tabsContainer || !notesArea) return;
 
-  // 아이콘 버튼 UI (텍스트 제거)
-  if(addTabBtn){ addTabBtn.innerHTML = '<span class="text-xl leading-none">＋</span>'; addTabBtn.setAttribute('aria-label','탭 추가'); }
-  if(toggleEditBtn){ toggleEditBtn.innerHTML = '<span class="text-xl leading-none">⚙︎</span>'; toggleEditBtn.setAttribute('aria-label','탭 편집'); }
-
-
   // Local UI state
   let editMode = false;
-
-  const ICON_PLUS = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
-  const ICON_GEAR = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a7.97 7.97 0 0 0 .1-6l-2.1.8a6 6 0 0 0-1.3-1.3l.8-2.1a7.97 7.97 0 0 0-6-.1l.8 2.1a6 6 0 0 0-1.3 1.3L6 8.9a7.97 7.97 0 0 0-.1 6l2.1-.8a6 6 0 0 0 1.3 1.3l-.8 2.1a7.97 7.97 0 0 0 6 .1l-.8-2.1a6 6 0 0 0 1.3-1.3l2.4.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
-  const ICON_CHECK = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
-  // Set icon buttons
-  if(addTabBtn) addTabBtn.innerHTML = ICON_PLUS;
-  if(toggleEditBtn) toggleEditBtn.innerHTML = ICON_GEAR;
 
   // Helpers
   const genId = ()=> 'tab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
@@ -51,7 +38,7 @@ export function initNotes(){
 
     sorted.forEach((t)=>{
       const btn = document.createElement('button');
-      btn.className = 'memo-tab' + (t.id===activeId ? ' active' : '');
+      btn.className = 'notepad-tab' + (t.id===activeId ? ' active' : '');
       btn.dataset.tabId = t.id;
       btn.draggable = editMode;
       btn.innerHTML = `
@@ -70,7 +57,9 @@ export function initNotes(){
     notesArea.value = notes[useId] || '';
 
     // Toggle button label
-    if(toggleEditBtn){ toggleEditBtn.innerHTML = editMode ? '<span class="text-xl leading-none">✓</span>' : '<span class="text-xl leading-none">⚙︎</span>'; toggleEditBtn.setAttribute('aria-label', editMode ? '편집 완료' : '탭 편집'); }
+    if(toggleEditBtn){
+      toggleEditBtn.textContent = editMode ? '완료' : '편집';
+    }
   };
 
   const escapeHtml = (s)=> String(s)

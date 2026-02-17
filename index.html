@@ -13,9 +13,7 @@
     .notepad-tabs{display:flex;justify-content:center;align-items:center;gap:1rem;width:100%;max-width:800px}
     .notepad-tab{background:#1a1a1a;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700;color:#737373;font-size:.85rem}
     .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
-
-    .notepad-tab:hover{background:#3a3a3a;color:#fff}
-    .notes-area{flex-grow:1;resize:vertical;border-top-left-radius:0;border-top-right-radius:0}
+    .notes-area{flex-grow:1;resize:vertical}
     textarea#notesArea::-webkit-scrollbar{width:8px;background-color:#2a2a2a;border-radius:10px}
     textarea#notesArea::-webkit-scrollbar-thumb{background-color:#555;border-radius:10px}
     .calendar-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
@@ -34,6 +32,8 @@
     .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
     .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
     .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
+    .bookmark-plus{font-size:48px;line-height:1;color:#777;font-weight:700}
+    #drag-area{min-height:140px}
     
     /* 일일 체크 버튼 그룹 (쇼츠/웹툰) 스타일 */
     .daily-check-group {
@@ -198,7 +198,8 @@
 
     @media (max-width:768px){
       body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
-      .notepad-tabs{gap:.5rem}.calendar-day{min-height:120px;padding:1.5rem .2rem .2rem;gap:1px}.day-number{font-size:.75rem;top:.5rem;left:.5rem}
+      .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
+      .calendar-day{min-height:120px;padding:1.5rem .2rem .2rem;gap:1px}.day-number{font-size:.75rem;top:.5rem;left:.5rem}
       .task-item{font-size:.85rem;padding:2px 4px;margin-top:2px}
       .calendar-grid,.calendar-header{gap:0}.add-task-btn{width:100%;font-size:.9rem}
       .modal-content{padding:16px;width:95%}
@@ -249,26 +250,45 @@
         box-shadow: 0 10px 30px rgba(0,0,0,.5);
     }
   
-    .bookmark-plus{font-size:48px;line-height:1;color:#888;font-weight:700}
+    /* --- Fix: main tab clicks always available --- */
+    #main-tabs{position:relative;z-index:50}
+    .section-card{position:relative;z-index:1}
 
-    .bookmark-card{position:relative;overflow:hidden;border-radius:14px;background:#111;border:1px solid #2a2a2a;margin:12px 0}
-    .bookmark-toolbar{position:absolute;top:8px;left:8px;display:flex;gap:6px;z-index:4}
-    .bookmark-toolbar button{background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:10px;padding:6px 8px;cursor:pointer}
-    .bm-edit{position:absolute;top:8px;right:8px;z-index:4;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:10px;padding:6px 10px;cursor:pointer}
-    #image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+    /* --- Notes sub-tabs look & spacing (only inside notes) --- */
+    #notes-section #notesTabsContainer{position:relative;z-index:5;align-items:flex-end}
+    #notes-section #notesTabsContainer .notepad-tab{
+      font-size:.85rem; /* match main tabs */
+      padding:8px 16px;
+      border-radius:10px 10px 0 0;
+      background:#3a3a3a;
+      color:#bdbdbd;
+      transition:all .2s ease;
+      position:relative;
+      z-index:0;
+      margin-bottom:0;
+    }
+    #notes-section #notesTabsContainer .notepad-tab.active{
+      background:#000;
+      color:#fff;
+      z-index:3;
+      transform:translateY(10px);
+      box-shadow:none;
+    }
+    #notes-section #notesTabsContainer .notepad-tab:not(.active){
+      transform:translateY(0);
+      z-index:0;
+      opacity:.9;
+    }
+    /* make textarea attach to active tab */
+    #notes-section #notesArea{
+      margin-top:-10px;
+      border-top-left-radius:12px;
+      border-top-right-radius:12px;
+    }
 
-    /* Memo sub-tabs (inside Notes) */
-    .memo-tabs{display:flex;gap:8px;justify-content:flex-start;align-items:flex-end;margin:0;padding:0}
-    .memo-tab{background:#3a3a3a;color:#cfcfcf;border-radius:10px 10px 0 0;padding:10px 14px;font-weight:700;position:relative;top:6px}
-    .memo-tab:not(.active){background:#3a3a3a;color:#bdbdbd;opacity:.7;top:10px}
-    .memo-tab.active{background:#000;color:#fff;top:6px;margin-bottom:-1px;z-index:2}
-    .memo-tab .tab-del{margin-left:8px;color:#aaa;font-weight:700}
-    .memo-tab.active .tab-del{color:#777}
-    .memo-tabs-bar{padding-bottom:0}
-    .memo-notes-area{border-top-left-radius:0;border-top-right-radius:0;margin-top:0}
-    /* Icon-only buttons in memo tab bar */
-    .icon-btn{background:transparent;border:none;padding:8px;border-radius:10px;display:flex;align-items:center;justify-content:center;opacity:.9}
-    .icon-btn:hover{opacity:1}
+    /* --- Notes action icons: icon-only, no background --- */
+    .icon-btn{background:transparent !important;border:none !important;padding:6px !important;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+    .icon-btn:hover{background:rgba(255,255,255,.08) !important}
     .icon-btn svg{width:20px;height:20px;display:block}
 
   </style>
@@ -287,11 +307,6 @@
   </div>
 
   <div id="calendar-section" class="section-card tab-content active">
-    <div class="flex justify-between items-center mb-4">
-      <button id="prevMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">&lt; 이전 달</button>
-      <h2 id="currentMonthYear" class="text-lg font-bold"></h2>
-      <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
-    </div>
     <div class="calendar-header mb-2">
       <div class="day-label">일</div><div class="day-label">월</div><div class="day-label">화</div>
       <div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div>
@@ -303,22 +318,28 @@
   </div>
 
   <div id="notes-section" class="section-card tab-content">
-    <div class="flex items-center justify-between mb-0 memo-tabs-bar">
-      <div id="notesTabsContainer" class="memo-tabs flex flex-wrap"></div>
-      <div class="flex items-center gap-2 memo-tabs-actions">
-        <button id="addNotesTabBtn" class="icon-btn" aria-label="탭 추가" title="탭 추가"></button>
-        <button id="toggleNotesEditBtn" class="icon-btn" aria-label="탭 편집" title="탭 편집"></button>
+    <div class="flex items-center justify-between mb-2">
+      <div id="notesTabsContainer" class="notepad-tabs flex flex-wrap gap-2"></div>
+      <div class="flex items-center gap-2">
+        <button id="addNotesTabBtn" class="icon-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button id="toggleNotesEditBtn" class="icon-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a7.9 7.9 0 0 0 .1-2l2-1.5-2-3.5-2.4 1a7.7 7.7 0 0 0-1.7-1l-.4-2.6h-4l-.4 2.6a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.9 7.9 0 0 0 .1 2l-2 1.5 2 3.5 2.4-1a7.7 7.7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5Z"/></svg></button>
       </div>
     </div>
-    <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg memo-notes-area"></textarea>
+    <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg"></textarea>
   </div>
 
   <div id="bookmarks-section" class="section-card tab-content text-left">
     
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2 items-center text-sm">
+            <span class="text-gray-400">정렬 기준:</span>
+            <select id="bookmarkSortSelect" class="bg-gray-700 p-1 rounded text-white focus:outline-none">
+                <option value="timestamp">최신순</option>
+                <option value="sourceDomain" selected>사이트별 정렬</option>
+            </select>
+        </div>
     </div>
-    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
-            <div class="bookmark-plus">+</div>
-    </section>
+    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="클릭하면 클립보드에서 자동 붙여넣기 시도"><div class="bookmark-plus">+</div></section>
     <section id="image-grid"></section>
   </div>
 

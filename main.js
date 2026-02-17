@@ -285,40 +285,7 @@ import { initBookmarks } from "./bookmarks.js";
     };
 
 
-    
-    // ===== 링크 북마크 미리보기 이미지 업로드 (Firebase Storage) =====
-    window.uploadBookmarkPreviewImage = async (bookmarkId, file)=>{
-      if(!ensureLogin()) return;
-      try{
-        const { imagesCol } = await cloudRefs();
-        const user = auth.currentUser;
-        if(!user) throw new Error('로그인이 필요합니다.');
-        if(!bookmarkId) throw new Error('북마크 ID가 없습니다.');
-        if(!(file instanceof File)) throw new Error('이미지 파일이 아닙니다.');
-
-        const safeName = (file.name && String(file.name).trim()) ? file.name : `preview_${Date.now()}.png`;
-        const storagePath = `users/${user.uid}/uploads/bookmark_preview_${bookmarkId}_${Date.now()}_${safeName}`;
-        const storageRef = ref(storage, storagePath);
-
-        showFeedbackMessage('미리보기 이미지 업로드 중...');
-        const uploadResult = await uploadBytes(storageRef, file, { contentType: file.type || 'image/png' });
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-
-        const docRef = doc(imagesCol, bookmarkId);
-        await updateDoc(docRef, {
-          previewImageUrl: downloadURL,
-          previewStoragePath: storagePath,
-          previewUpdatedAt: new Date()
-        });
-
-        showFeedbackMessage('미리보기가 업데이트되었습니다.');
-      }catch(err){
-        console.error("미리보기 업로드 실패:", err);
-        throw err;
-      }
-    };
-
-// [수정 5] window.deleteImage 함수 전체 교체 (Firebase Storage 삭제 로직 추가)
+    // [수정 5] window.deleteImage 함수 전체 교체 (Firebase Storage 삭제 로직 추가)
     window.deleteImage = async (id)=>{
       if(!ensureLogin()) return;
       try{
