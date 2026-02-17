@@ -6,6 +6,11 @@ export function initNotes(){
 
   if(!tabsContainer || !notesArea) return;
 
+  // 아이콘 버튼 UI (텍스트 제거)
+  if(addTabBtn){ addTabBtn.innerHTML = '<span class="text-xl leading-none">＋</span>'; addTabBtn.setAttribute('aria-label','탭 추가'); }
+  if(toggleEditBtn){ toggleEditBtn.innerHTML = '<span class="text-xl leading-none">⚙︎</span>'; toggleEditBtn.setAttribute('aria-label','탭 편집'); }
+
+
   // Local UI state
   let editMode = false;
 
@@ -57,9 +62,7 @@ export function initNotes(){
     notesArea.value = notes[useId] || '';
 
     // Toggle button label
-    if(toggleEditBtn){
-      toggleEditBtn.textContent = editMode ? '완료' : '편집';
-    }
+    if(toggleEditBtn){ toggleEditBtn.innerHTML = editMode ? '<span class="text-xl leading-none">✓</span>' : '<span class="text-xl leading-none">⚙︎</span>'; toggleEditBtn.setAttribute('aria-label', editMode ? '편집 완료' : '탭 편집'); }
   };
 
   const escapeHtml = (s)=> String(s)

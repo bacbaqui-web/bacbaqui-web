@@ -161,7 +161,7 @@
       });
       
       // 정렬 선택 변경 이벤트 리스너
-      bookmarkSortSelect.addEventListener('change', (e) => {
+      if(bookmarkSortSelect) bookmarkSortSelect.addEventListener('change', (e) => {
           window.bookmarkSortKey = e.target.value;
           renderImageBookmarks();
       });
@@ -291,7 +291,7 @@
 
       // 1. 정렬 로직 적용
       let currentSortKey = window.bookmarkSortKey || 'sourceDomain'; // 기본값 반영
-      bookmarkSortSelect.value = currentSortKey; // 선택 박스 값 업데이트
+      if(bookmarkSortSelect) bookmarkSortSelect.value = currentSortKey; // 선택 박스 값 업데이트
 
       if (currentSortKey === 'sourceDomain') {
           // 사이트별 정렬: 도메인 이름순으로 정렬
@@ -478,7 +478,7 @@
     (function init(){ 
         attachEventListeners(); 
         // 초기화 시 기본 정렬 키를 'sourceDomain'으로 설정했으므로 선택 상자 값을 업데이트합니다.
-        bookmarkSortSelect.value = window.bookmarkSortKey;
+        if(bookmarkSortSelect) bookmarkSortSelect.value = window.bookmarkSortKey;
         renderCalendar(); 
     })();
 
