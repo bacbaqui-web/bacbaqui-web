@@ -107,6 +107,44 @@
     function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
     function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=1&&d<=5)c++; cur.setDate(cur.getDate()+1);} return c;}
+    // ===== Simplified episode calculator (no timezone shifting; Korea local time assumed) =====
+    function isEpisodeDay(dateObj){
+      const dow = dateObj.getDay(); // 0=Sun ... 6=Sat
+      return dow >= 0 && dow <= 4;  // Sun~Thu (요청사항)
+    }
+
+    function countEpisodeDaysInclusive(fromDateObj, toDateObj){
+      // counts eligible days from fromDate to toDate inclusive, assuming fromDate <= toDate
+      let count = 0;
+      const cur = new Date(fromDateObj.getFullYear(), fromDateObj.getMonth(), fromDateObj.getDate());
+      const end = new Date(toDateObj.getFullYear(), toDateObj.getMonth(), toDateObj.getDate());
+      while(cur <= end){
+        if(isEpisodeDay(cur)) count++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return count;
+    }
+
+    function episodeNumberForDate(targetDateObj){
+      // Base: 2026-02-23 is 2137화 (inclusive)
+      const baseDate = new Date(2026, 1, 23); // monthIndex: 1 = Feb
+      const baseEpisode = 2137;
+
+      const t = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate());
+
+      if(t.getTime() === baseDate.getTime()){
+        return baseEpisode;
+      }
+
+      if(t > baseDate){
+        const n = countEpisodeDaysInclusive(baseDate, t);
+        return baseEpisode + n - 1;
+      } else {
+        const n = countEpisodeDaysInclusive(t, baseDate);
+        return baseEpisode - (n - 1);
+      }
+    }
+
 
     // const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
 
@@ -168,21 +206,30 @@
       const currentMonthYear=document.getElementById('currentMonthYear');
       const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
       currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
-      const firstDay=toKST(new Date(year,month,1)).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
+      const firstDay=new Date(year,month,1).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
       for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
       for(let day=1;day<=daysInMonth;day++){
         const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
-        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=toKST(thisDate).getDay();
-        const today=toKST(new Date()); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
+        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=thisDate.getDay();
+        const today=new Date(); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
         const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
 
-        // 1. 에피소드 정보 (평일만 표시)
+        // 1. 에피소드 정보 (일~목만 표시)
         if(dayOfWeek>=0&&dayOfWeek<=4){
-          const milestoneDate=new Date('2026-02-23'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
-          const milestoneEpisode=2137; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
-          const epItem=document.createElement('div'); epItem.classList.add('task-item','episode-task'); epItem.textContent=`${episodeNumber}화`;
-          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; if((window.taskStatus||{})[key]) epItem.classList.add('complete');
-          epItem.addEventListener('click',async(e)=>{ e.stopPropagation(); if(!window.ensureLogin||!window.ensureLogin()) return; window.taskStatus=window.taskStatus||{}; window.taskStatus[key]=!window.taskStatus[key]; await window.cloudSaveStateOnly(); renderCalendar();});
+          const episodeNumber = episodeNumberForDate(thisDate);
+          const epItem=document.createElement('div'); 
+          epItem.classList.add('task-item','episode-task'); 
+          epItem.textContent=`${episodeNumber}화`;
+          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; 
+          if((window.taskStatus||{})[key]) epItem.classList.add('complete');
+          epItem.addEventListener('click',async(e)=>{ 
+            e.stopPropagation(); 
+            if(!window.ensureLogin||!window.ensureLogin()) return; 
+            window.taskStatus=window.taskStatus||{}; 
+            window.taskStatus[key]=!window.taskStatus[key]; 
+            await window.cloudSaveStateOnly(); 
+            renderCalendar();
+          });
           dayDiv.appendChild(epItem);
         }
 
