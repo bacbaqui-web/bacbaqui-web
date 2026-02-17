@@ -91,6 +91,13 @@
       tabContents.forEach(c=>c.classList.remove('active'));
       tabButtons.forEach(b=>b.classList.remove('active'));
       document.getElementById(`${tabId}-section`).classList.add('active');
+      /* enforce section visibility */
+      ['calendar','notes','bookmarks'].forEach(id=>{
+        const el=document.getElementById(`${id}-section`);
+        if(!el) return;
+        el.style.display = (id===tabId) ? '' : 'none';
+      });
+
       const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`); if(btn) btn.classList.add('active');
     }
     showTab('calendar');

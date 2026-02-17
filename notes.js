@@ -14,6 +14,14 @@ export function initNotes(){
   // Local UI state
   let editMode = false;
 
+  const ICON_PLUS = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+  const ICON_GEAR = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a7.97 7.97 0 0 0 .1-6l-2.1.8a6 6 0 0 0-1.3-1.3l.8-2.1a7.97 7.97 0 0 0-6-.1l.8 2.1a6 6 0 0 0-1.3 1.3L6 8.9a7.97 7.97 0 0 0-.1 6l2.1-.8a6 6 0 0 0 1.3 1.3l-.8 2.1a7.97 7.97 0 0 0 6 .1l-.8-2.1a6 6 0 0 0 1.3-1.3l2.4.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
+  const ICON_CHECK = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  // Set icon buttons
+  if(addTabBtn) addTabBtn.innerHTML = ICON_PLUS;
+  if(toggleEditBtn) toggleEditBtn.innerHTML = ICON_GEAR;
+
   // Helpers
   const genId = ()=> 'tab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
 
@@ -43,7 +51,7 @@ export function initNotes(){
 
     sorted.forEach((t)=>{
       const btn = document.createElement('button');
-      btn.className = 'notepad-tab' + (t.id===activeId ? ' active' : '');
+      btn.className = 'memo-tab' + (t.id===activeId ? ' active' : '');
       btn.dataset.tabId = t.id;
       btn.draggable = editMode;
       btn.innerHTML = `
