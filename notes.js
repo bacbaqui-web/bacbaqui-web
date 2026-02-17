@@ -107,44 +107,105 @@ export function initNotes(){
     window.cloudRenameNotesTab && await window.cloudRenameNotesTab(tabId, newName);
   });
 
-  // Drag reorder (edit mode only)
+  // Drag reorder (edit mode only) - live reflow + smooth-ish
   let dragFromId = null;
+  let draggingEl = null;
+  let placeholderEl = null;
+
+  function ensurePlaceholder(width){
+    if(placeholderEl) return;
+    placeholderEl = document.createElement('div');
+    placeholderEl.className = 'notes-tab placeholder';
+    placeholderEl.style.width = (width || 80) + 'px';
+    placeholderEl.style.height = '32px';
+    placeholderEl.style.borderRadius = '10px 10px 0 0';
+    placeholderEl.style.border = '1px dashed rgba(255,255,255,.25)';
+    placeholderEl.style.background = 'transparent';
+  }
+
+  function getDragAfterElement(container, x){
+    const els = [...container.querySelectorAll('.notes-tab:not(.dragging):not(.placeholder)')];
+    let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+    for(const child of els){
+      const box = child.getBoundingClientRect();
+      const offset = x - (box.left + box.width/2);
+      if(offset < 0 && offset > closest.offset){
+        closest = { offset, element: child };
+      }
+    }
+    return closest.element;
+  }
 
   tabsContainer.addEventListener('dragstart', (e)=>{
     if(!editMode) return;
     const tabBtn = e.target.closest('.notes-tab');
     if(!tabBtn) return;
     dragFromId = tabBtn.dataset.tabId;
-    e.dataTransfer && (e.dataTransfer.effectAllowed = 'move');
+    draggingEl = tabBtn;
+    draggingEl.classList.add('dragging');
+
+    // placeholder for live layout
+    const w = tabBtn.getBoundingClientRect().width;
+    ensurePlaceholder(w);
+    placeholderEl.style.width = w + 'px';
+    tabBtn.after(placeholderEl);
+
+    // Better drag image (avoid huge ghost)
+    if(e.dataTransfer){
+      e.dataTransfer.effectAllowed = 'move';
+      try{
+        const img = tabBtn.cloneNode(true);
+        img.style.position = 'absolute';
+        img.style.top = '-9999px';
+        img.style.left = '-9999px';
+        img.style.opacity = '0.9';
+        document.body.appendChild(img);
+        e.dataTransfer.setDragImage(img, 10, 10);
+        setTimeout(()=>img.remove(), 0);
+      }catch(_){}
+    }
   });
 
   tabsContainer.addEventListener('dragover', (e)=>{
-    if(!editMode) return;
+    if(!editMode || !draggingEl) return;
     e.preventDefault();
-    e.dataTransfer && (e.dataTransfer.dropEffect = 'move');
+    const afterEl = getDragAfterElement(tabsContainer, e.clientX);
+    if(!afterEl){
+      tabsContainer.appendChild(placeholderEl);
+    }else{
+      tabsContainer.insertBefore(placeholderEl, afterEl);
+    }
   });
+
+  async function finalizeReorder(){
+    if(!draggingEl || !placeholderEl) return;
+    placeholderEl.replaceWith(draggingEl);
+    draggingEl.classList.remove('dragging');
+
+    // compute order from DOM
+    const ids = [...tabsContainer.querySelectorAll('.notes-tab')].filter(el=>!el.classList.contains('placeholder')).map(el=>el.dataset.tabId).filter(Boolean);
+    const { tabs } = getState();
+    const map = new Map(tabs.map(t=>[t.id, t]));
+    const next = ids.map((id,i)=>({ ...map.get(id), order: i*10 })).filter(Boolean);
+    window.cloudReorderNotesTabs && await window.cloudReorderNotesTabs(next);
+
+    dragFromId = null;
+    draggingEl = null;
+    placeholderEl = null;
+  }
 
   tabsContainer.addEventListener('drop', async (e)=>{
     if(!editMode) return;
     e.preventDefault();
-    const tabBtn = e.target.closest('.notes-tab');
-    if(!tabBtn || !dragFromId) return;
-    const dropId = tabBtn.dataset.tabId;
-    if(dropId === dragFromId) return;
+    await finalizeReorder();
+  });
 
-    const { tabs } = getState();
-    const sorted = [...tabs].sort((a,b)=>(a.order??0)-(b.order??0));
-    const fromIdx = sorted.findIndex(t=>t.id===dragFromId);
-    const toIdx = sorted.findIndex(t=>t.id===dropId);
-    if(fromIdx<0 || toIdx<0) return;
-
-    const [moved] = sorted.splice(fromIdx,1);
-    sorted.splice(toIdx,0,moved);
-
-    // reassign orders in steps of 10
-    const next = sorted.map((t,i)=>({ ...t, order: i*10 }));
-    window.cloudReorderNotesTabs && await window.cloudReorderNotesTabs(next);
-    dragFromId = null;
+  tabsContainer.addEventListener('dragend', async ()=>{
+    if(!editMode) return;
+    // If dropped outside, still finalize to clean placeholder
+    if(placeholderEl && draggingEl){
+      await finalizeReorder();
+    }
   });
 
   // Add tab
