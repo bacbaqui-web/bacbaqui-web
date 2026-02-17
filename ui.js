@@ -177,7 +177,7 @@
         const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
 
         // 1. 에피소드 정보 (평일만 표시)
-        if(dayOfWeek >= 1 && dayOfWeek <= 5){
+        if(dayOfWeek>=0&&dayOfWeek<=4){
           const milestoneDate=new Date('2026-02-23'); const weekdaysBetween=countWeekdaysBetweenKST(milestoneDate.getTime(), thisDate.getTime());
           const milestoneEpisode=2137; const episodeNumber=(toKST(thisDate)>=toKST(milestoneDate))? milestoneEpisode+weekdaysBetween-1 : milestoneEpisode-(weekdaysBetween-1);
           const epItem=document.createElement('div'); epItem.classList.add('task-item','episode-task'); epItem.textContent=`${episodeNumber}화`;

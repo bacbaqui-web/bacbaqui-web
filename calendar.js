@@ -60,10 +60,10 @@ export function initCalendar() {
 
     calendarGrid.innerHTML = '';
 
-    // 월요일 시작 표기: Mon=0 ... Sun=6
+    // 일요일 시작 표기: Sun=0 ... Sat=6
     // 먼저 그 달 1일의 요일을 0=일..6=토로 구한 뒤, 월요일 시작으로 쉬프트합니다.
     const firstDowSun0 = weekdaySun0(viewYear, viewMonth + 1, 1); // 0=일..6=토
-    const firstDowMon0 = (firstDowSun0 + 6) % 7; // Monday start (fixed) // Mon=0 ... Sun=6
+    const firstDowMon0 = firstDowSun0; // Sunday start (simplified) // Mon=0 ... Sun=6
 
     const daysInMonth = getDaysInMonth(viewYear, viewMonth);
 
