@@ -279,18 +279,29 @@
   </div>
 
   <div id="notes-section" class="section-card tab-content">
-    <div class="notepad-tabs">
-      <button class="notepad-tab active" data-tab="바퀴멘터리">바퀴멘터리</button>
-      <button class="notepad-tab" data-tab="짐승육아">짐승육아</button>
-      <button class="notepad-tab" data-tab="그거아세요">그거아세요</button>
-      <button class="notepad-tab" data-tab="메모">메모</button>
+    <div class="flex items-center justify-between mb-2">
+      <div id="notesTabsContainer" class="notepad-tabs flex flex-wrap gap-2"></div>
+      <div class="flex items-center gap-2">
+        <button id="addNotesTabBtn" class="px-3 py-1 rounded bg-gray-700 text-white text-sm">+ 탭</button>
+        <button id="toggleNotesEditBtn" class="px-3 py-1 rounded bg-gray-800 text-white text-sm">편집</button>
+      </div>
     </div>
     <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg"></textarea>
   </div>
 
   <div id="bookmarks-section" class="section-card tab-content text-left">
+    
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2 items-center text-sm">
+            <span class="text-gray-400">정렬 기준:</span>
+            <select id="bookmarkSortSelect" class="bg-gray-700 p-1 rounded text-white focus:outline-none">
+                <option value="timestamp">최신순</option>
+                <option value="sourceDomain" selected>사이트별 정렬</option>
+            </select>
+        </div>
+    </div>
     <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="클릭하면 클립보드에서 자동 붙여넣기 시도">
-      <div style="font-size:42px; line-height:1;">+</div>
+      <div>이미지/동영상/일반 페이지 URL 또는 인스타그램 퍼가기 코드를 붙여넣기 또는 드래그하세요. 캡쳐/이미지는 붙여넣기(Ctrl/Cmd+V)를 사용하세요.</div>
     </section>
     <section id="image-grid"></section>
   </div>
@@ -332,20 +343,6 @@
         <button id="cancelTitleBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
       </div>
     </div>
-  </div>
-
-  <!-- 링크 북마크 미리보기 이미지 첨부 모달 -->
-  <div id="attachPreviewModal" class="modal">
-    <div class="modal-content">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold">미리보기 이미지</h2>
-        <button id="closePreviewModalBtn" class="text-white bg-[#424242] rounded-full p-1" aria-label="닫기">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-      <div id="previewDropzone" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium" style="min-height:180px;">
-        <div style="font-size:42px; line-height:1;">+</div>
-      </div>    </div>
   </div>
 
 
