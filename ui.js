@@ -108,7 +108,7 @@
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
     function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=1&&d<=5)c++; cur.setDate(cur.getDate()+1);} return c;}
     // ===== Episode calculator: episodes increase on weekdays (Mon~Fri) =====
-    // 기준: 2026-02-01 = 2123화
+    // 기준: 2026-02-02(월) = 2123화 (주말은 회차 진행 없음)
     function isEpisodeDay(dateObj){
       const dow = dateObj.getDay(); // 0=Sun ... 6=Sat
       return dow >= 1 && dow <= 5;  // Mon~Fri
@@ -128,7 +128,7 @@
     }
 
     function episodeNumberForDate(targetDateObj){
-      const baseDate = new Date(2026, 1, 1); // 2026-02-01
+      const baseDate = new Date(2026, 1, 2); // 2026-02-02 (Mon)
       const baseEpisode = 2123;
 
       const t = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate());
