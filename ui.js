@@ -320,10 +320,31 @@
         if(cat==='family') return '#2563eb';
         if(cat==='special') return '#16a34a';
         return '#9ca3af';
+      
+      // D-day 계산 (로컬 타임존 기준 자정)
+      const toLocalMidnight = (d)=>{
+        const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        return x;
       };
+      const parseYMD = (s)=>{
+        const [y,m,dd] = String(s).split('-').map(Number);
+        return new Date(y, (m||1)-1, dd||1);
+      };
+      const diffDaysFromToday = (ymd)=>{
+        const today = toLocalMidnight(new Date());
+        const target = toLocalMidnight(parseYMD(ymd));
+        return Math.round((target - today) / (1000*60*60*24));
+      };
+      const formatDday = (ymd)=>{
+        const diff = diffDaysFromToday(ymd);
+        if(diff === 0) return 'D-day';
+        if(diff > 0) return `D-${diff}`;
+        return null; // 지난 일정은 표시하지 않음
+      };
+};
 
       const dated = tasks
-        .filter(t=>!!t.date && ['important','family','special'].includes(t.category))
+        .filter(t=>!!t.date && ['important','family','special'].includes(t.category) && formatDday(t.date))
         .sort((a,b)=>{
           const ca = !!a.complete, cb = !!b.complete;
           if(ca!==cb) return ca ? 1 : -1; // 완료는 아래로
@@ -351,7 +372,7 @@
 
         const date = document.createElement('div');
         date.className = 'agenda-date';
-        date.textContent = showDate ? (String(t.date||'').replaceAll('-','.')) : '';
+        date.textContent = showDate ? (formatDday(t.date) || '') : '';
 
         const text = document.createElement('div');
         text.className = 'agenda-text';
