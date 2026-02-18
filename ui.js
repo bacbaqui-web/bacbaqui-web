@@ -271,8 +271,9 @@
         checkGroup.appendChild(webtoonBtn);
         dayDiv.appendChild(checkGroup);
 
-        // 2) 에피소드 정보 (일~목만 표시) - 쇼츠/웹툰 아래
-        if(dayOfWeek>=0&&dayOfWeek<=4){
+        // 2) 에피소드 정보 (월~금만 표시) - 쇼츠/웹툰 아래
+        //    주말(토/일)은 회차 진행이 없으므로 표시하지 않음.
+        if(isEpisodeDay(thisDate)){
           const episodeNumber = episodeNumberForDate(thisDate);
           const epItem=document.createElement('div'); 
           epItem.classList.add('task-item','episode-task'); 
