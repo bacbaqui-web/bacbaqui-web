@@ -320,19 +320,20 @@
         if(cat==='family') return '#2563eb';
         if(cat==='special') return '#16a34a';
         return '#9ca3af';
-      
-      // D-day 계산 (로컬 타임존 기준 자정)
-      const toLocalMidnight = (d)=>{
-        const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        return x;
+      };
+
+      // D-day 계산 (KST 자정 기준)
+      const toKSTMidnight = (d)=>{
+        const k = toKST(d);
+        return new Date(k.getFullYear(), k.getMonth(), k.getDate());
       };
       const parseYMD = (s)=>{
         const [y,m,dd] = String(s).split('-').map(Number);
         return new Date(y, (m||1)-1, dd||1);
       };
       const diffDaysFromToday = (ymd)=>{
-        const today = toLocalMidnight(new Date());
-        const target = toLocalMidnight(parseYMD(ymd));
+        const today = toKSTMidnight(new Date());
+        const target = toKSTMidnight(parseYMD(ymd));
         return Math.round((target - today) / (1000*60*60*24));
       };
       const formatDday = (ymd)=>{
@@ -341,7 +342,6 @@
         if(diff > 0) return `D-${diff}`;
         return null; // 지난 일정은 표시하지 않음
       };
-};
 
       const dated = tasks
         .filter(t=>!!t.date && ['important','family','special'].includes(t.category) && formatDday(t.date))
