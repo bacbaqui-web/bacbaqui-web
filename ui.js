@@ -219,7 +219,9 @@
       const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
       currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
       const firstDay=new Date(year,month,1).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
-      for(let i=0;i<firstDay;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
+      // Week starts on Monday (월~일). Convert JS getDay() (Sun=0..Sat=6) to Monday-first index.
+      const leadingBlanks=(firstDay+6)%7;
+      for(let i=0;i<leadingBlanks;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
       for(let day=1;day<=daysInMonth;day++){
         const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
         const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=thisDate.getDay();
