@@ -76,7 +76,10 @@
     .task-item.custom-task.custom-family{background:#2563eb;color:#fff}
     .task-item.custom-task.custom-special{background:#16a34a;color:#fff}
     .task-item.episode-task{background:#444;color:#ddd}
+    /* 완료(complete) 공통 */
     .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
+    /* 커스텀(개인작업) 완료 시: 카테고리 색상보다 우선해서 회색 처리 */
+    .task-item.custom-task.complete{background:#666 !important;color:#bdbdbd !important;text-decoration:line-through;opacity:.95}
     .add-task-btn{background:#666;transition:.2s}.add-task-btn:hover{background:#777;transform:scale(1.02)}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
     .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
