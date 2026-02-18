@@ -108,7 +108,7 @@
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
     function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=1&&d<=5)c++; cur.setDate(cur.getDate()+1);} return c;}
     // ===== Episode calculator: episodes increase on weekdays (Mon~Fri) =====
-    // 기준: 2026-02-01 = 2122화
+    // 기준: 2026-02-01 = 2123화
     function isEpisodeDay(dateObj){
       const dow = dateObj.getDay(); // 0=Sun ... 6=Sat
       return dow >= 1 && dow <= 5;  // Mon~Fri
@@ -129,7 +129,7 @@
 
     function episodeNumberForDate(targetDateObj){
       const baseDate = new Date(2026, 1, 1); // 2026-02-01
-      const baseEpisode = 2122;
+      const baseEpisode = 2123;
 
       const t = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate());
 
@@ -388,6 +388,26 @@
         row.addEventListener('click', async ()=>{
           if(!window.ensureLogin||!window.ensureLogin()) return;
           t.complete = !t.complete;
+
+          // 즉시 UI 반영: 회색 + 취소선 (원래처럼)
+          row.classList.toggle('complete', !!t.complete);
+          if(t.complete){
+            text.style.textDecoration='line-through';
+            text.style.opacity='.75';
+            text.style.color = '#9ca3af';
+          } else {
+            text.style.textDecoration='';
+            text.style.opacity='';
+            text.style.color = '';
+          }
+
+          // 완료 항목은 아래로 이동
+          if(row.parentElement){
+            const parent = row.parentElement;
+            if(t.complete) parent.appendChild(row);
+            else parent.prepend(row);
+          }
+
           await window.cloudSaveAll();
           renderCalendar();
         });
