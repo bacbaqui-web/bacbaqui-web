@@ -358,9 +358,10 @@
         text.textContent = t.title;
         if(t.complete){
           row.classList.add('complete');
+          // 완료 표시(원래처럼): 회색 + 취소선
           text.style.textDecoration='line-through';
-          text.style.opacity='.75';
-          text.style.color = '#9ca3af';
+          text.style.opacity='.9';
+          text.style.color = '#7a7a7a';
         }
 
         const actions = document.createElement('div');
@@ -393,8 +394,8 @@
           row.classList.toggle('complete', !!t.complete);
           if(t.complete){
             text.style.textDecoration='line-through';
-            text.style.opacity='.75';
-            text.style.color = '#9ca3af';
+            text.style.opacity='.9';
+            text.style.color = '#7a7a7a';
           } else {
             text.style.textDecoration='';
             text.style.opacity='';

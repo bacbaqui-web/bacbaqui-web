@@ -132,8 +132,10 @@
 
 
     
-    .agenda-item.complete{opacity:.85}
-    .agenda-item.complete .agenda-text{color:#9ca3af !important;text-decoration:line-through}
+    /* 완료된 할일(리스트): 원래처럼 '회색 + 취소선'이 확실히 보이도록 강제 */
+    .agenda-item.complete{opacity:.9;background:#242424}
+    .agenda-item.complete .agenda-text{color:#7a7a7a !important;text-decoration:line-through}
+    .agenda-item.complete .agenda-date{color:#6b7280 !important}
 /* 북마크 Masonry 레이아웃 */
     #image-grid {
         column-count: 2; /* 기본 2열 */
