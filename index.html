@@ -5,26 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>만화 일정 관리</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght400;700&display=swap" rel="stylesheet"/>
   <style>
-    /* CSS: 원본 index.html 및 ui.js 관련 스타일 통합 */
     body{font-family:'Noto Sans KR',sans-serif;background:#000;color:#fff;display:flex;justify-content:flex-start;align-items:center;min-height:100vh;padding:16px;flex-direction:column;gap:0}
     .tab-content{display:none}.tab-content.active{display:flex;flex-direction:column;flex-grow:1}
     .section-card{background:#2a2a2a;border-radius:12px;padding:20px;box-shadow:inset 0 0 10px rgba(0,0,0,.3);text-align:center;width:100%;max-width:800px}
     .notepad-tabs{display:flex;justify-content:center;align-items:center;gap:1rem;width:100%;max-width:800px}
     .notepad-tab{background:#1a1a1a;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700;color:#737373;font-size:.85rem}
     .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
-    
-    /* 메모 탭 전용 */
-    #notesHeaderRow{margin-top:8px;margin-bottom:8px}
-    #notesTabsContainer{justify-content:flex-start;align-items:center;gap:8px;padding-left:10px;margin-top:0;}
-    .notes-tab{background:#3a3a3a;padding:8px 16px;border-radius:12px;cursor:pointer;transition:background .2s,color .2s,transform .15s ease;font-weight:700;color:#ddd;font-size:.85rem;position:relative;z-index:1;border:1px solid transparent;user-select:none;}
-    .notes-tab:hover{background:#4a4a4a}
-    .notes-tab.active{background:#111;color:#fff;border-color:#2a2a2a;z-index:2;}
-    .notes-tab.dragging{opacity:.3}
-    .notes-tab.placeholder{opacity:1; background:transparent; border:1px dashed rgba(255,255,255,.25); border-radius:12px; height:36px; display:inline-block;}
-    #notesArea{margin-top:10px}
-    .notes-tab .tab-del{margin-left:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#555;color:#fff;font-size:12px;line-height:1}
+
+    /* ===== 메모(내부) 탭 전용 스타일: 메인 탭(.notepad-tab)과 분리 ===== */
+/* 메모 공간과 분리된 '둥근 네모' 탭 */
+#notesHeaderRow{margin-top:8px;margin-bottom:8px}
+#notesTabsContainer{
+  justify-content:flex-start;
+  align-items:center;
+  gap:8px;
+  padding-left:10px;
+  margin-top:0;
+}
+
+.notes-tab{
+  background:#3a3a3a;
+  padding:8px 16px;
+  border-radius:12px;
+  cursor:pointer;
+  transition:background .2s,color .2s,transform .15s ease;
+  font-weight:700;
+  color:#ddd;
+  font-size:.85rem;
+  position:relative;
+  z-index:1;
+  border:1px solid transparent;
+}
+.notes-tab:hover{background:#4a4a4a}
+.notes-tab.active{
+  background:#111;
+  color:#fff;
+  border-color:#2a2a2a;
+  z-index:2;
+}
+
+.notes-tab.dragging{opacity:.3}
+.notes-tab.placeholder{opacity:1}
+
+/* 메모 입력 영역은 탭과 분리되게 약간 간격 */
+#notesArea{margin-top:10px}
+
+.notes-tab .tab-del{margin-left:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#555;color:#fff;font-size:12px;line-height:1}
+
+/* 아이콘 버튼 (메모 + / 편집) */
 
     .icon-btn{background:transparent;border:none;padding:6px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer}
     .icon-btn:hover{background:rgba(255,255,255,.08)}
@@ -32,8 +62,6 @@
     .notes-area{flex-grow:1;resize:vertical}
     textarea#notesArea::-webkit-scrollbar{width:8px;background-color:#2a2a2a;border-radius:10px}
     textarea#notesArea::-webkit-scrollbar-thumb{background-color:#555;border-radius:10px}
-
-    /* 달력 전용 */
     .calendar-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
     .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
     .day-label,.calendar-day{text-align:center;padding:8px 2px;border-radius:8px;background:#2a2a2a;position:relative;overflow:hidden;word-wrap:break-word}
@@ -42,49 +70,253 @@
     .calendar-day.today{border:2px solid #ccc}
     .day-number{position:absolute;top:8px;left:8px;font-size:.85rem;font-weight:700;color:#aaa;z-index:10}
     .day-divider{height:1px;background:#3a3a3a;margin:18px 6px 2px;border-radius:999px;opacity:.95}
-    
     .task-item{font-size:.85rem;padding:5px 6px;border-radius:8px;margin-top:4px;word-wrap:break-word;cursor:pointer;text-align:left}
     .task-item.custom-task{background:#4c78a8}
     .task-item.custom-task.custom-important{background:#dc2626;color:#fff}
     .task-item.custom-task.custom-family{background:#2563eb;color:#fff}
     .task-item.custom-task.custom-special{background:#16a34a;color:#fff}
     .task-item.episode-task{background:#444;color:#ddd}
+    /* 완료(complete) 공통 */
     .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
+    /* 커스텀(개인작업) 완료 시: 카테고리 색상보다 우선해서 회색 처리 */
     .task-item.custom-task.complete{background:#666 !important;color:#bdbdbd !important;text-decoration:line-through;opacity:.95}
+    .add-task-btn{background:#666;transition:.2s}.add-task-btn:hover{background:#777;transform:scale(1.02)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
+    .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
+    .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
+    .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
+    
+    /* 일일 체크 버튼 그룹 (쇼츠/웹툰) 스타일 */
+    .daily-check-group {
+        display: flex;
+        width: 100%;
+        gap: 2px;
+        margin-top: 2px;
+    }
+    .daily-check-btn {
+        flex: 1;
+        text-align: center;
+        font-size: 0.75rem;
+        padding: 4px 0;
+        border-radius: 4px;
+        background: #444; /* 기본 회색 */
+        color: #ccc;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+        font-weight: 500;
+    }
+    .daily-check-btn:hover {
+        opacity: 0.9;
+    }
+    /* 쇼츠 활성 상태: 빨강 */
+    .daily-check-btn.shorts.active {
+        background: #7c3aed; 
+        color: white;
+        font-weight: 700;
+    }
+    /* 웹툰 활성 상태: 노랑 */
+    .daily-check-btn.webtoon.active {
+        background: #f59e0b;
+        color: white;
+        font-weight: 700;
+    }
 
-    .daily-check-group {display: flex;width: 100%;gap: 2px;margin-top: 2px;}
-    .daily-check-btn {flex: 1;text-align: center;font-size: 0.75rem;padding: 4px 0;border-radius: 4px;background: #444;color: #ccc;cursor: pointer;transition: background 0.2s, color 0.2s;font-weight: 500;}
-    .daily-check-btn.shorts.active {background: #7c3aed; color: white;font-weight: 700;}
-    .daily-check-btn.webtoon.active {background: #f59e0b; color: white;font-weight: 700;}
-
+    /* 달력 아래 일정 & 할 일 리스트 */
     .agenda-item{display:flex;align-items:center;gap:10px;background:#2a2a2a;border-radius:10px;padding:10px 10px}
     .agenda-dot{width:10px;height:10px;border-radius:999px;flex:0 0 10px}
     .agenda-date{font-size:.8rem;color:#bbb;min-width:92px}
     .agenda-text{flex:1 1 auto;word-break:break-word}
     .agenda-actions{display:flex;gap:6px;flex:0 0 auto}
+    .agenda-btn{background:#3a3a3a;border-radius:10px;padding:6px 8px;font-size:.8rem;color:#fff;cursor:pointer;user-select:none}
+    .agenda-btn:hover{background:#4a4a4a}
+    .agenda-section-title{margin-top:10px;margin-bottom:6px;color:#ddd;font-weight:700;font-size:.9rem;opacity:.95}
     .agenda-settings-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;background:#3a3a3a;border-radius:10px;color:#fff;border:none;cursor:pointer;user-select:none}
+    .agenda-settings-btn:hover{background:#4a4a4a}
+
+
+    
+    /* 완료된 할일(리스트): 원래처럼 '회색 + 취소선'이 확실히 보이도록 강제 */
     .agenda-item.complete{opacity:.9;background:#242424}
     .agenda-item.complete .agenda-text{color:#7a7a7a !important;text-decoration:line-through}
+    .agenda-item.complete .agenda-date{color:#6b7280 !important}
+/* 북마크 Masonry 레이아웃 */
+    #image-grid {
+        column-count: 2; /* 기본 2열 */
+        column-gap: 1rem;
+        margin-top: 1.5rem; /* mt-6 */
+        display: block;
+    }
+    @media (min-width: 640px) { /* sm: 3열 */
+        #image-grid { column-count: 3; }
+    }
+    @media (min-width: 1024px) { /* lg: 4열 */
+        #image-grid { column-count: 4; }
+    }
 
-    /* 북마크Masonry 레이아웃 */
-    #image-grid {column-count: 2; column-gap: 1rem; margin-top: 1.5rem; display: block;}
-    @media (min-width: 640px) { #image-grid { column-count: 3; } }
-    @media (min-width: 1024px) { #image-grid { column-count: 4; } }
-    .bookmark-card{position: relative; transition: transform .2s ease-in-out; background: #333; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; break-inside: avoid; width: 100%; display: block;}
+    /* 북마크 카드 스타일 */
+    .bookmark-card{
+        position: relative;
+        transition: transform .2s ease-in-out; 
+        background: #333; 
+        border-radius: 8px; 
+        overflow: hidden; 
+        margin-bottom: 1rem; /* 세로 간격 */
+        break-inside: avoid; /* 카드 분할 방지 */
+        width: 100%; /* Column 아이템으로 사용 */
+        display: block;
+    }
     .bookmark-card:hover{transform:translateY(-5px)}
-    .bookmark-card .content {display: block; width: 100%; height: auto; overflow: hidden; background-color: #1a1a1a; min-height: 80px; position: relative;}
-    .bookmark-card img {width: 100%; height: auto; display: block; object-fit: contain;}
-    .bookmark-card .img-fit-cover {object-fit: cover; height: 100%;}
-    .bookmark-card .icon-overlay {position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; color: white; font-size: 3rem;}
-    .bookmark-card .video-title-overlay {position: absolute; inset: 0; background: rgba(80, 0, 0, 0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 10px; text-align: center;}
-    .bookmark-card .video-title-text {font-size: 1rem; font-weight: 700; margin-bottom: 5px; word-break: break-all;}
+    
+    /* 콘텐츠 영역: 이미지/아이콘 높이에 따라 크기 결정 */
+    .bookmark-card .content {
+        display: block; 
+        width: 100%;
+        height: auto;
+        overflow: hidden;
+        background-color: #1a1a1a;
+        /* 링크나 동영상 썸네일이 없을 때 최소 높이 보장 */
+        min-height: 80px; 
+        position: relative; /* 오버레이를 위한 기준점 */
+    }
+    
+    .bookmark-card img {
+        position: static; 
+        width: 100%;
+        height: auto; /* 실제 비율 사용 */
+        display: block;
+        /* 기본: 이미지가 잘리지 않고 전체가 보이도록 contain 설정 */
+        object-fit: contain; 
+    }
 
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
-    .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
-    #imageModal.modal .modal-content {background-color: transparent; padding: 0; box-shadow: none; max-width: 90vw; max-height: 90vh; width: auto; height: auto; display: flex; justify-content: center; align-items: center; cursor: pointer;}
-    #modalImage {max-width: 100%; max-height: 100%; object-fit: contain;}
-    .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
-    .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
+    .bookmark-card .img-fit-cover {
+        /* 비디오 썸네일용: 영역을 꽉 채우도록 cover 설정 */
+        object-fit: cover; 
+        height: 100%; /* content의 높이를 꽉 채우도록 설정 */
+    }
+    
+    /* 아이콘/텍스트 오버레이 */
+    .bookmark-card .icon-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex; justify-content: center; align-items: center;
+        color: white; font-size: 3rem;
+    }
+    /* 링크 북마크의 제목 표시 */
+    .bookmark-card .link-title-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        color: white; padding: 10px;
+        text-align: center;
+    }
+    .bookmark-card .link-title-text {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+        word-break: break-all;
+    }
+    .bookmark-card .link-url-text {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        word-break: break-all;
+    }
+    
+    /* 신규 Video title overlay (썸네일 없을 때) */
+    .bookmark-card .video-title-overlay {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(80, 0, 0, 0.7); /* Reddish background for video emphasis */
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        color: white; padding: 10px;
+        text-align: center;
+    }
+    .bookmark-card .video-title-text {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+        word-break: break-all;
+    }
+    .bookmark-card .video-url-text {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        word-break: break-all;
+    }
+    
+    /* 인스타그램 스타일 (이제 직접 임베드 코드를 사용하므로 이 스타일은 사용하지 않음) */
+    .bookmark-card .instagram-overlay { display: none; } 
+    
+    /* 인스타그램 임베드 짤림 방지: 임베드 콘텐츠가 부모 카드 너비를 넘지 않도록 설정 */
+    .bookmark-card .content > div[style*="max-width:540px"] {
+        max-width: 100% !important; 
+        width: 100% !important;
+        box-sizing: border-box; /* 패딩/보더 포함 너비 계산 */
+    }
+
+    /* 사이트별 구분 헤더 스타일 */
+    .domain-header {
+        column-span: all; /* Masonry 레이아웃에서 전체 너비를 차지 */
+        width: 100%;
+        margin: 20px 0 10px;
+        padding: 8px 0;
+        color: #fff;
+        font-size: 1.25rem;
+        font-weight: 700;
+        border-bottom: 2px solid #555;
+        text-align: left;
+    }
+
+    @media (max-width:768px){
+      body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
+      .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
+      .calendar-day{min-height:120px;padding:1.5rem .2rem .2rem;gap:1px}.day-number{font-size:.75rem;top:.5rem;left:.5rem}
+      .task-item{font-size:.85rem;padding:2px 4px;margin-top:2px}
+      .calendar-grid,.calendar-header{gap:0}.add-task-btn{width:100%;font-size:.9rem}
+      .modal-content{padding:16px;width:95%}
+      .domain-header { font-size: 1rem; }
+    }
+    .calendar-grid{grid-gap:4px}
+    @media (max-width:768px){.calendar-grid{grid-gap:0}}
+
+    /* 이미지 모달 스타일 */
+    #imageModal.modal {
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 9999;
+    }
+    #imageModal .modal-content {
+        background-color: transparent;
+        padding: 0;
+        box-shadow: none;
+        /* Set max dimensions based on viewport to prioritize height */
+        max-width: 90vw; /* 90% viewport width */
+        max-height: 90vh; /* 90% viewport height (세로에 맞춤) */
+        width: auto; 
+        height: auto; 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer; /* 모달 내용을 클릭해서 닫기 위해 커서 추가 */
+    }
+    #modalImage {
+        /* Fill the constrained container while maintaining aspect ratio */
+        width: auto; 
+        height: auto; 
+        max-width: 100%; /* 모달 콘텐츠 크기 내에서 최대화 */
+        max-height: 100%; /* 모달 콘텐츠 크기 내에서 최대화 */
+        object-fit: contain; /* Crucial: Ensures the whole image is visible within 90vw/90vh without being cut off */
+    }
+    
+    /* 북마크 제목 수정 모달 스타일 */
+    #editTitleModal.modal { z-index: 1001; }
+    #editTitleModal .modal-content {
+        background: #2a2a2a; 
+        max-width: 400px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    }
   </style>
 </head>
 <body class="text-white">
@@ -107,9 +339,12 @@
       <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
     </div>
     <div class="calendar-header mb-2">
-      <div class="day-label">월</div><div class="day-label">화</div><div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div><div class="day-label">일</div>
+      <div class="day-label">월</div><div class="day-label">화</div><div class="day-label">수</div>
+      <div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div><div class="day-label">일</div>
     </div>
     <div id="calendarGrid" class="calendar-grid"></div>
+
+    <!-- (달력 아래 리스트) : 문구/추가버튼 제거, 항목만 표시 -->
     <div id="agendaPanel" class="mt-6 text-left" style="background:#1f1f1f;border-radius:12px;padding:14px;box-shadow:inset 0 0 10px rgba(0,0,0,.25)">
       <div id="agendaList" class="space-y-2"></div>
     </div>
@@ -120,50 +355,64 @@
       <div id="notesTabsContainer" class="notepad-tabs flex flex-wrap gap-2"></div>
       <div class="flex items-center gap-2">
         <button id="addNotesTabBtn" class="icon-btn" title="새 탭">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 5v14"/><path d="M5 12h14"/>
+          </svg>
         </button>
         <button id="toggleNotesEditBtn" class="icon-btn" title="탭 편집">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+          </svg>
         </button>
       </div>
     </div>
-    <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none rounded-lg"></textarea>
+    <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 rounded-lg"></textarea>
   </div>
 
   <div id="bookmarks-section" class="section-card tab-content text-left">
-    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="붙여넣기(Ctrl+V)">
+    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="붙여넣기(Ctrl/Cmd+V)">
       <div class="text-4xl font-bold select-none">+</div>
     </section>
     <section id="image-grid"></section>
   </div>
 
-  <!-- 모달들 -->
   <div id="taskModal" class="modal">
     <div class="modal-content">
-      <h2 id="modalTitle" class="text-2xl font-bold mb-4">작업</h2>
-      <input type="text" id="taskTitle" placeholder="제목" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
-      <textarea id="taskDescription" placeholder="설명" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24 text-white"></textarea>
-      <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
-      <select id="taskCategory" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
+      <h2 id="modalTitle" class="text-2xl font-bold mb-4">새 작업</h2>
+      <label class="block mb-2">제목:</label>
+      <input type="text" id="taskTitle" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
+      <label class="block mb-2">설명:</label>
+      <textarea id="taskDescription" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24"></textarea>
+      <label class="block mb-2">날짜:</label>
+      <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
+
+      <label class="block mb-2">분류:</label>
+      <select id="taskCategory" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
         <option value="">(기본)</option>
         <option value="important">중요한일 (빨강)</option>
         <option value="family">가족행사 (파랑)</option>
         <option value="special">특별한날 (초록)</option>
       </select>
-      <label class="flex items-center gap-2 mb-4 text-sm opacity-90"><input type="checkbox" id="todoOnly" /> 달력 표시 안 함</label>
+
+      <label class="flex items-center gap-2 mb-4 text-sm opacity-90" style="user-select:none;">
+        <input type="checkbox" id="todoOnly" />
+        달력에는 표시하지 않고 <b>할 일</b>로만 추가
+      </label>
       <div class="flex justify-end gap-2">
-        <button id="saveTaskBtn" class="bg-blue-600 px-4 py-2 rounded">저장</button>
-        <button id="cancelBtn" class="bg-gray-500 px-4 py-2 rounded">취소</button>
-        <button id="deleteTaskBtn" class="bg-red-600 px-4 py-2 rounded hidden">삭제</button>
+        <button id="saveTaskBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
+        <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
+        <button id="deleteTaskBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hidden">삭제</button>
       </div>
     </div>
   </div>
 
   <div id="imageModal" class="modal">
     <div class="modal-content relative">
-      <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">&times;</button>
-      <img id="modalImage" src="" />
-      <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg z-50">원본 이동</button>
+      <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <img id="modalImage" src="" alt="확대 이미지" />
+      <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">원본 페이지로 이동</button>
     </div>
   </div>
 
@@ -173,403 +422,1689 @@
       <label class="block mb-2 text-sm opacity-80" id="currentUrlDisplay"></label>
       <input type="text" id="editTitleInput" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
       <div class="flex justify-end gap-2">
-        <button id="saveTitleBtn" class="bg-blue-600 px-4 py-2 rounded">저장</button>
-        <button id="cancelTitleBtn" class="bg-gray-500 px-4 py-2 rounded">취소</button>
+        <button id="saveTitleBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
+        <button id="cancelTitleBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
       </div>
     </div>
   </div>
 
+  <!-- 링크 북마크 미리보기 이미지 업로드(붙여넣기 전용) 모달 -->
   <div id="previewUploadModal" class="modal">
     <div class="modal-content" style="background:#2a2a2a;max-width:420px;">
       <h2 class="text-xl font-bold mb-3">미리보기 이미지</h2>
+      <p class="text-sm opacity-80 mb-4">캡쳐한 이미지를 이 창에서 <b>붙여넣기(Ctrl/Cmd+V)</b> 하세요.</p>
       <div id="previewPasteArea" class="drag-area rounded-lg p-10 flex items-center justify-center text-center cursor-default" style="border-style:dashed;">
         <div class="text-5xl font-bold select-none">+</div>
       </div>
       <div class="flex justify-end gap-2 mt-4">
-        <button id="closePreviewUploadBtn" class="bg-gray-500 px-4 py-2 rounded">닫기</button>
+        <button id="closePreviewUploadBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">닫기</button>
       </div>
     </div>
   </div>
 
-  <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+
+  <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
-      <p id="modal-message" class="text-white text-center"></p>
-      <div class="mt-4 flex justify-center"><button id="modal-close-btn" class="px-4 py-2 bg-gray-600 rounded">확인</button></div>
+      <p id="modal-message" class="text-white text-lg text-center font-medium"></p>
+      <div class="mt-4 flex justify-center">
+        <button id="modal-close-btn" class="px-4 py-2 bg-[#424242] text-white rounded-md hover:bg-[#525252]">확인</button>
+      </div>
     </div>
   </div>
 
   <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-[1001] flex items-center justify-center hidden">
-    <div class="text-white flex flex-col items-center">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-white mb-2"></div>
-      <div>로딩 중...</div>
+    <div class="flex flex-col items-center">
+      <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+      <p class="text-white mt-4 text-lg">데이터를 불러오는 중...</p>
     </div>
   </div>
 
-  <!-- UI & Logic Script (ui.js 기반 세부 로직 복구) -->
-  <script>
+<script>
+  // ImgBB API Key (이미지 업로드용)
+    // const IMGBB_API_KEY = "f64175972f4e4178332db9ae8559969b"; // [수정 1] 더 이상 필요 없으므로 주석 처리
+    
+    // (이 아래 UI 스크립트 내용은 변경 사항 없음)
+    
     // 전역 상태
-    window.customTasks = []; window.taskStatus = {}; window.__notesTabs = {}; window.imageBookmarks = [];
-    window.currentTask = null; let currentDate = new Date(); window.isAuthReady = false;
+    window.customTasks = window.customTasks || [];
+    window.taskStatus = window.taskStatus || {};
+    window.__notesTabs = window.__notesTabs || {};
+    window.imageBookmarks = window.imageBookmarks || []; // 북마크는 이미지와 동영상, 일반 링크 모두 포함
+    window.currentTask = null;
+    window.currentEditingBookmark = null; // 현재 편집 중인 북마크 항목
+    let currentDate = new Date();
+    window.isAuthReady = false;
+    // 북마크는 최신순 고정(정렬 UI 제거)
+    window.bookmarkSortKey = 'timestamp';
 
-    // 유틸리티
-    const showFeedbackMessage = (msg) => {
-      const el = document.createElement('div'); el.textContent = msg;
-      el.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;max-width:90%;";
-      document.body.appendChild(el); setTimeout(()=>el.remove(), 2000);
+    // DOM 요소
+    const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    // 메모 탭 UI는 notes.js가 관리 (여기서는 관여하지 않음)
+    const notesArea = document.getElementById('notesArea');
+    const dragArea = document.getElementById('drag-area');
+    const imageGrid = document.getElementById('image-grid');
+    const imageModal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const closeImageModalBtn = document.getElementById('closeImageModalBtn');
+    const goToPageBtn = document.getElementById('goToPageBtn');
+    // 제목 수정 모달 요소
+    const editTitleModal = document.getElementById('editTitleModal');
+    const editTitleInput = document.getElementById('editTitleInput');
+    const saveTitleBtn = document.getElementById('saveTitleBtn');
+    const cancelTitleBtn = document.getElementById('cancelTitleBtn');
+    const currentUrlDisplay = document.getElementById('currentUrlDisplay');
+    // 정렬 선택 요소(현재는 UI 제거됨)
+    const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
+
+    // 링크 미리보기(붙여넣기) 모달
+    const previewUploadModal = document.getElementById('previewUploadModal');
+    const closePreviewUploadBtn = document.getElementById('closePreviewUploadBtn');
+    let currentPreviewEditingBookmark = null;
+
+
+    // 유틸리티 함수
+    const showFeedbackMessage = (message) => {
+      const el = document.createElement('div');
+      el.textContent = message;
+      el.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;max-width:90%";
+      document.body.appendChild(el); setTimeout(()=>el.remove(),2000);
     };
     const showAlert = (msg) => { document.getElementById('modal-message').textContent = msg; document.getElementById('alert-modal').classList.remove('hidden'); };
-    document.getElementById('modal-close-btn').addEventListener('click', () => document.getElementById('alert-modal').classList.add('hidden'));
+    const hideAlert = () => { document.getElementById('alert-modal').classList.add('hidden'); };
+    document.getElementById('modal-close-btn').addEventListener('click', hideAlert);
 
-    // 날짜 헬퍼 (ui.js의 정밀한 로직 복구)
+    const openImageModal = (imageUrl, pageUrl) => {
+      modalImage.src = imageUrl;
+      if (pageUrl){ goToPageBtn.style.display='block'; goToPageBtn.onclick=()=>window.open(pageUrl,'_blank'); }
+      else goToPageBtn.style.display='none';
+      imageModal.style.display='flex';
+    };
+    const closeImageModal = () => { imageModal.style.display = 'none'; };
+
+    // 북마크 제목 수정 모달
+    const openEditModal = (bookmark) => {
+        window.currentEditingBookmark = bookmark;
+        const currentTitle = bookmark.title || '';
+        const displayUrl = bookmark.pageUrl.length > 50 ? bookmark.pageUrl.substring(0, 47) + '...' : bookmark.pageUrl;
+        
+        currentUrlDisplay.textContent = `URL: ${displayUrl}`;
+        editTitleInput.value = currentTitle;
+        editTitleModal.style.display = 'flex';
+    };
+
+    const closeEditModal = () => {
+        window.currentEditingBookmark = null;
+        editTitleModal.style.display = 'none';
+    };
+
+    const saveEditedTitle = async () => {
+        if (!window.currentEditingBookmark || !window.ensureLogin()) return;
+
+        const newTitle = editTitleInput.value.trim();
+        const bookmark = window.currentEditingBookmark;
+
+        if (bookmark.type === 'link' || bookmark.type === 'video' || bookmark.type === 'instagram') {
+            await window.updateBookmarkTitle(bookmark.id, newTitle);
+        }
+        
+        closeEditModal();
+        showFeedbackMessage('제목이 저장되었습니다.');
+        // onSnapshot이 Firestore 업데이트를 감지하고 renderImageBookmarks를 호출할 것입니다.
+    };
+
+
+    function showTab(tabId){
+      tabContents.forEach(c=>c.classList.remove('active'));
+      tabButtons.forEach(b=>b.classList.remove('active'));
+      document.getElementById(`${tabId}-section`).classList.add('active');
+      const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`); if(btn) btn.classList.add('active');
+    }
+    showTab('calendar');
+    tabButtons.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+    // (주의) 과거 메모 탭 선택 로직은 제거됨. notes.js가 담당.
+
+    // 시간/날짜 관련 유틸리티
     const TZ='Asia/Seoul';
     function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
     function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
-    function isEpisodeDay(d){ const dow = d.getDay(); return dow >= 1 && dow <= 5; }
-    
+    function countWeekdaysBetweenKST(a,b){ let c=0,start=toKST(new Date(Math.min(a,b))),end=toKST(new Date(Math.max(a,b))),cur=new Date(start); while(cur<=end){ const d=cur.getDay(); if(d>=1&&d<=5)c++; cur.setDate(cur.getDate()+1);} return c;}
+    // ===== Episode calculator: episodes increase on weekdays (Mon~Fri) =====
+    // 기준: 2026-02-02(월) = 2123화 (주말은 회차 진행 없음)
+    function isEpisodeDay(dateObj){
+      const dow = dateObj.getDay(); // 0=Sun ... 6=Sat
+      return dow >= 1 && dow <= 5;  // Mon~Fri
+    }
+
     function countEpisodeDaysExclusiveStartInclusiveEnd(startDateObj, endDateObj){
-      let count = 0; const cur = new Date(startDateObj.getFullYear(), startDateObj.getMonth(), startDateObj.getDate());
+      // counts eligible days in (start, end] assuming start < end
+      let count = 0;
+      const cur = new Date(startDateObj.getFullYear(), startDateObj.getMonth(), startDateObj.getDate());
       const end = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), endDateObj.getDate());
       cur.setDate(cur.getDate() + 1);
-      while(cur <= end){ if(isEpisodeDay(cur)) count++; cur.setDate(cur.getDate() + 1); }
+      while(cur <= end){
+        if(isEpisodeDay(cur)) count++;
+        cur.setDate(cur.getDate() + 1);
+      }
       return count;
     }
+
     function episodeNumberForDate(targetDateObj){
-      const baseDate = new Date(2026, 1, 2); const baseEpisode = 2123;
+      const baseDate = new Date(2026, 1, 2); // 2026-02-02 (Mon)
+      const baseEpisode = 2123;
+
       const t = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate());
+
       if(t.getTime() === baseDate.getTime()) return baseEpisode;
-      if(t > baseDate) return baseEpisode + countEpisodeDaysExclusiveStartInclusiveEnd(baseDate, t);
-      else return baseEpisode - countEpisodeDaysExclusiveStartInclusiveEnd(t, baseDate);
+
+      if(t > baseDate){
+        const n = countEpisodeDaysExclusiveStartInclusiveEnd(baseDate, t);
+        return baseEpisode + n;
+      } else {
+        const n = countEpisodeDaysExclusiveStartInclusiveEnd(t, baseDate);
+        return baseEpisode - n;
+      }
     }
 
-    // 탭 전환
-    function showTab(tabId){
-      document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-      document.querySelectorAll('.notepad-tab').forEach(b=>b.classList.remove('active'));
-      document.getElementById(`${tabId}-section`).classList.add('active');
-      const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`);
-      if(btn) btn.classList.add('active');
-    }
-    document.querySelectorAll('#main-tabs .notepad-tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+
+    // const fixedSchedules=[{title:'쇼츠',daysOfWeek:[1,3,5],colorClass:'recurring-shorts'},{title:'웹툰',daysOfWeek:[2,4,6],colorClass:'recurring-instatoon'}];
+
+    // 모달 관련 DOM
+    const taskModal=document.getElementById('taskModal');
+    const cancelBtn=document.getElementById('cancelBtn');
+    const saveTaskBtn=document.getElementById('saveTaskBtn');
+    const deleteTaskBtn=document.getElementById('deleteTaskBtn');
+    const taskTitleInput=document.getElementById('taskTitle');
+    const taskDescriptionInput=document.getElementById('taskDescription');
+    const taskDateInput=document.getElementById('taskDate');
+    const taskCategorySelect=document.getElementById('taskCategory');
+    const todoOnlyCheckbox=document.getElementById('todoOnly');
+
+    // 달력 아래 리스트
+    const agendaListEl=document.getElementById('agendaList');
+
+    // 이벤트 리스너 부착
+    const attachEventListeners=()=>{
+      const prevMonthBtn=document.getElementById('prevMonthBtn');
+      const nextMonthBtn=document.getElementById('nextMonthBtn');
+      prevMonthBtn?.addEventListener('click',()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
+      nextMonthBtn?.addEventListener('click',()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
+      // 상단/하단의 "+추가" 버튼은 제거됨. (날짜 클릭/설정 버튼으로 추가/편집)
+
+      // "달력에는 표시하지 않고 할 일로만" 토글
+      todoOnlyCheckbox?.addEventListener('change',()=>{
+        const on = !!todoOnlyCheckbox.checked;
+        if(taskDateInput){
+          taskDateInput.disabled = on;
+          if(on) taskDateInput.value = '';
+        }
+      });
+      if(notesArea){
+        notesArea.addEventListener('input',()=>window.cloudSaveNotesDebounced&&window.cloudSaveNotesDebounced());
+        notesArea.addEventListener('blur',()=>window.cloudSaveNotes&&window.cloudSaveNotes());
+      }
+      cancelBtn.addEventListener('click',closeModal);
+      saveTaskBtn.addEventListener('click',saveTask);
+      // window.deleteTask는 Firebase 스크립트에서 정의됨
+      deleteTaskBtn.addEventListener('click',()=>window.deleteTask&&window.deleteTask());
+      taskModal.addEventListener('click',(e)=>{ if(e.target===taskModal) closeModal(); });
+
+      closeImageModalBtn.addEventListener('click', closeImageModal);
+      // 이미지 모달 배경 클릭 시 닫기
+      imageModal.addEventListener('click',(e)=>{ if(e.target===imageModal) closeImageModal(); }); 
+      // 추가: 모달 내용 (이미지 포함) 클릭 시 닫기
+      document.querySelector('#imageModal .modal-content').addEventListener('click', (e) => {
+          // X 버튼, 원본 페이지 이동 버튼을 제외하고 닫기
+          if (!e.target.closest('#closeImageModalBtn') && !e.target.closest('#goToPageBtn')) {
+              closeImageModal();
+          }
+      });
+      
+      // 제목 수정 모달 이벤트 리스너
+      cancelTitleBtn.addEventListener('click', closeEditModal);
+      saveTitleBtn.addEventListener('click', saveEditedTitle);
+      editTitleModal.addEventListener('click', (e) => { if (e.target === editTitleModal) closeEditModal(); });
+      editTitleInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              saveEditedTitle();
+          }
+      });
+      
+      // 정렬 UI는 제거됨 (최신순 고정)
+    };
 
     // 달력 렌더링
-    window.renderCalendar = function() {
+    const renderCalendar=()=>{
       const year=currentDate.getFullYear(), month=currentDate.getMonth();
-      const titleEl = document.getElementById('currentMonthYear');
-      const grid = document.getElementById('calendarGrid');
-      if(!titleEl || !grid) return;
-      titleEl.textContent=`${year}년 ${month+1}월`; grid.innerHTML='';
+      const currentMonthYear=document.getElementById('currentMonthYear');
+      const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
+      currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
       const firstDay=new Date(year,month,1).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
+      // Week starts on Monday (월~일). Convert JS getDay() (Sun=0..Sat=6) to Monday-first index.
       const leadingBlanks=(firstDay+6)%7;
-      for(let i=0;i<leadingBlanks;i++) grid.appendChild(document.createElement('div')).className='calendar-day';
+      for(let i=0;i<leadingBlanks;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
       for(let day=1;day<=daysInMonth;day++){
-        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate);
-        const dayDiv=document.createElement('div'); dayDiv.className='calendar-day relative';
-        if(fullDate===ymdKST(new Date())) dayDiv.classList.add('today');
-        dayDiv.innerHTML = `<span class="day-number">${day}</span><div class="day-divider"></div>`;
-        
-        const checkGroup = document.createElement('div'); checkGroup.className='daily-check-group';
-        ['shorts','webtoon'].forEach(type=>{
-          const btn=document.createElement('div'); btn.className=`daily-check-btn ${type}`; btn.textContent=type==='shorts'?'쇼츠':'웹툰';
-          if(window.taskStatus[`${fullDate}_daily_${type}`]) btn.classList.add('active');
-          btn.onclick=(e)=>{
-            e.stopPropagation(); if(!window.ensureLogin()) return;
-            window.taskStatus[`${fullDate}_daily_${type}`] = !window.taskStatus[`${fullDate}_daily_${type}`];
-            window.cloudSaveStateOnly && window.cloudSaveStateOnly(); window.renderCalendar();
-          };
-          checkGroup.appendChild(btn);
+        const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
+        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=thisDate.getDay();
+        const today=new Date(); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
+        const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
+
+        // 날짜 숫자 아래 구분선
+        const divider = document.createElement('div');
+        divider.className = 'day-divider';
+        dayDiv.appendChild(divider);
+
+        // 1) 매일 쇼츠/웹툰 체크 버튼 그룹 (항상 최상단)
+        const checkGroup = document.createElement('div');
+        checkGroup.className = 'daily-check-group';
+
+        // 쇼츠 버튼
+        const shortsBtn = document.createElement('div');
+        shortsBtn.className = 'daily-check-btn shorts';
+        shortsBtn.textContent = '쇼츠';
+        const shortsKey = `${fullDate}_daily_shorts`;
+        if ((window.taskStatus || {})[shortsKey]) shortsBtn.classList.add('active');
+        shortsBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!window.ensureLogin || !window.ensureLogin()) return;
+            window.taskStatus = window.taskStatus || {};
+            window.taskStatus[shortsKey] = !window.taskStatus[shortsKey];
+            await window.cloudSaveStateOnly();
+            renderCalendar();
         });
+
+        // 웹툰 버튼
+        const webtoonBtn = document.createElement('div');
+        webtoonBtn.className = 'daily-check-btn webtoon';
+        webtoonBtn.textContent = '웹툰';
+        const webtoonKey = `${fullDate}_daily_webtoon`;
+        if ((window.taskStatus || {})[webtoonKey]) webtoonBtn.classList.add('active');
+        webtoonBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!window.ensureLogin || !window.ensureLogin()) return;
+            window.taskStatus = window.taskStatus || {};
+            window.taskStatus[webtoonKey] = !window.taskStatus[webtoonKey];
+            await window.cloudSaveStateOnly();
+            renderCalendar();
+        });
+
+        checkGroup.appendChild(shortsBtn);
+        checkGroup.appendChild(webtoonBtn);
         dayDiv.appendChild(checkGroup);
 
+        // 2) 에피소드 정보 (월~금만 표시) - 쇼츠/웹툰 아래
+        //    주말(토/일)은 회차 진행이 없으므로 표시하지 않음.
         if(isEpisodeDay(thisDate)){
-          const epNum = episodeNumberForDate(thisDate);
-          const epEl=document.createElement('div'); epEl.className='task-item episode-task'; epEl.textContent=`${epNum}화`;
-          if(window.taskStatus[`${fullDate}_바퀴멘터리 ${epNum}화`]) epEl.classList.add('complete');
-          epEl.onclick=(e)=>{
-            e.stopPropagation(); if(!window.ensureLogin()) return;
-            window.taskStatus[`${fullDate}_바퀴멘터리 ${epNum}화`] = !window.taskStatus[`${fullDate}_바퀴멘터리 ${epNum}화`];
-            window.cloudSaveStateOnly && window.cloudSaveStateOnly(); window.renderCalendar();
-          };
-          dayDiv.appendChild(epEl);
+          const episodeNumber = episodeNumberForDate(thisDate);
+          const epItem=document.createElement('div'); 
+          epItem.classList.add('task-item','episode-task'); 
+          epItem.textContent=`${episodeNumber}화`;
+          const key=`${fullDate}_바퀴멘터리 ${episodeNumber}화`; 
+          if((window.taskStatus||{})[key]) epItem.classList.add('complete');
+          epItem.addEventListener('click',async(e)=>{ 
+            e.stopPropagation(); 
+            if(!window.ensureLogin||!window.ensureLogin()) return; 
+            window.taskStatus=window.taskStatus||{}; 
+            window.taskStatus[key]=!window.taskStatus[key]; 
+            await window.cloudSaveStateOnly(); 
+            renderCalendar();
+          });
+          dayDiv.appendChild(epItem);
         }
 
+
+        // 3) 사용자 커스텀 태스크 (개인작업) - 에피소드 아래
         (window.customTasks||[]).filter(t=>t.date===fullDate).forEach(task=>{
-          const el=document.createElement('div'); el.className=`task-item custom-task custom-${task.category}`;
-          el.textContent=task.title; if(task.complete) el.classList.add('complete');
-          el.onclick=(e)=>{ e.stopPropagation(); if(!window.ensureLogin()) return; task.complete=!task.complete; window.cloudSaveAll && window.cloudSaveAll(); window.renderCalendar(); };
-          el.ondblclick=(e)=>{ e.stopPropagation(); openTaskModal(task); };
+          const el=document.createElement('div'); 
+          el.classList.add('task-item','custom-task');
+          if(task.category==='important') el.classList.add('custom-important');
+          if(task.category==='family') el.classList.add('custom-family');
+          if(task.category==='special') el.classList.add('custom-special');
+          el.textContent=task.title;
+          if(task.complete) el.classList.add('complete');
+          el.addEventListener('click',async(e)=>{ if(e.detail===1){ if(!window.ensureLogin||!window.ensureLogin()) return; task.complete=!task.complete; await window.cloudSaveAll(); renderCalendar(); } else if(e.detail===2){ openModal(task); }});
           dayDiv.appendChild(el);
         });
-        dayDiv.onclick=()=>openTaskModal({date:fullDate});
-        grid.appendChild(dayDiv);
+
+        dayDiv.addEventListener('click',(e)=>{ if(e.target.classList.contains('calendar-day')||e.target.classList.contains('day-number')) openModal({date:fullDate});});
+        calendarGrid.appendChild(dayDiv);
       }
+
+      // 달력 아래 리스트도 함께 갱신
       renderAgendaList();
     };
 
-    function renderAgendaList(){
-      const list = document.getElementById('agendaList'); if(!list) return; list.innerHTML='';
-      const sorted = (window.customTasks||[]).sort((a,b) => {
-        if(a.complete !== b.complete) return a.complete ? 1 : -1;
-        return (a.date||'').localeCompare(b.date||'');
-      });
-      sorted.forEach(t=>{
-        const item=document.createElement('div'); item.className=`agenda-item ${t.complete?'complete':''}`;
-        const dotCol = t.category==='important'?'#dc2626':(t.category==='family'?'#2563eb':(t.category==='special'?'#16a34a':'#9ca3af'));
-        item.innerHTML=`<div class="agenda-dot" style="background:${dotCol}"></div><div class="agenda-date">${t.date||''}</div><div class="agenda-text">${t.title}</div><div class="agenda-actions"><button class="agenda-settings-btn">⚙️</button></div>`;
-        item.onclick=()=>{ if(!window.ensureLogin()) return; t.complete=!t.complete; window.cloudSaveAll(); window.renderCalendar(); };
-        item.querySelector('.agenda-settings-btn').onclick=(e)=>{ e.stopPropagation(); openTaskModal(t); };
-        list.appendChild(item);
-      });
-    }
+    // 달력 아래 리스트 (문구/추가버튼/체크박스 제거)
+    const renderAgendaList = ()=>{
+      if(!agendaListEl) return;
+      const tasks = (window.customTasks||[]).slice();
+      const order = { important: 1, family: 2, special: 3 };
+      const dotColor = (cat)=>{
+        if(cat==='important') return '#dc2626';
+        if(cat==='family') return '#2563eb';
+        if(cat==='special') return '#16a34a';
+        return '#9ca3af';
+      };
 
-    function openTaskModal(task){
-      window.currentTask = task;
-      document.getElementById('modalTitle').textContent = task.id ? '작업 수정' : '새 작업';
-      document.getElementById('taskTitle').value = task.title || '';
-      document.getElementById('taskDescription').value = task.description || '';
-      document.getElementById('taskDate').value = task.date || '';
-      document.getElementById('taskCategory').value = task.category || '';
-      document.getElementById('todoOnly').checked = !!task.todoOnly;
-      document.getElementById('deleteTaskBtn').classList.toggle('hidden', !task.id);
-      document.getElementById('taskModal').style.display='flex';
-    }
+      // D-day 계산 (KST 자정 기준)
+      const toKSTMidnight = (d)=>{
+        const k = toKST(d);
+        return new Date(k.getFullYear(), k.getMonth(), k.getDate());
+      };
+      const parseYMD = (s)=>{
+        const [y,m,dd] = String(s).split('-').map(Number);
+        return new Date(y, (m||1)-1, dd||1);
+      };
+      const diffDaysFromToday = (ymd)=>{
+        const today = toKSTMidnight(new Date());
+        const target = toKSTMidnight(parseYMD(ymd));
+        return Math.round((target - today) / (1000*60*60*24));
+      };
+      const formatDday = (ymd)=>{
+        const diff = diffDaysFromToday(ymd);
+        if(diff === 0) return 'D-day';
+        if(diff > 0) return `D-${diff}`;
+        return null; // 지난 일정은 표시하지 않음
+      };
 
-    // 북마크 유틸리티
-    function getYoutubeThumbnail(url) {
-      const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const m = url.match(reg); return (m && m[2].length === 11) ? `https://img.youtube.com/vi/${m[2]}/hqdefault.jpg` : null;
-    }
+      const dated = tasks
+        .filter(t=>!!t.date && ['important','family','special'].includes(t.category) && formatDday(t.date))
+        .sort((a,b)=>{
+          const ca = !!a.complete, cb = !!b.complete;
+          if(ca!==cb) return ca ? 1 : -1; // 완료는 아래로
+          const da = String(a.date); const db = String(b.date);
+          if(da!==db) return da.localeCompare(db);
+          return (order[a.category]||99) - (order[b.category]||99);
+        });
 
-    window.renderImageBookmarks = function() {
-      const grid = document.getElementById('image-grid'); if(!grid) return; grid.innerHTML = '';
-      (window.imageBookmarks || []).sort((a,b)=>(b.timestamp?.toMillis()||0)-(a.timestamp?.toMillis()||0)).forEach(d => {
-        const card = document.createElement('div'); card.className = 'bookmark-card group cursor-pointer';
-        let content = '';
-        if (d.type === 'link') {
-          content = d.previewImageUrl ? `<img src="${d.previewImageUrl}" class="img-fit-cover"/>` : `<div class="icon-overlay">🔗</div>`;
-        } else if (d.type === 'video') {
-          const thumb = getYoutubeThumbnail(d.pageUrl);
-          content = thumb ? `<img src="${thumb}" class="img-fit-cover"/><div class="icon-overlay">▶</div>` : `<div class="video-title-overlay"><span class="video-title-text">${d.title||'Video'}</span></div>`;
-        } else if (d.type === 'instagram') {
-          content = `<div class="video-title-overlay" style="background:rgba(80,0,80,0.7)"><span class="video-title-text">Instagram</span></div>`;
-        } else {
-          content = `<img src="${d.url}" />`;
+      const undated = tasks
+        .filter(t=>!t.date || String(t.date).trim()==='')
+        .sort((a,b)=>{
+          // 미완료 우선, 그 다음 최신순
+          const ca = !!a.complete, cb = !!b.complete;
+          if(ca!==cb) return ca ? 1 : -1;
+          return Number(b.id||0) - Number(a.id||0);
+        });
+
+      const makeRow = (t, {showDate})=>{
+        const row = document.createElement('div');
+        row.className = 'agenda-item';
+
+        const dot = document.createElement('div');
+        dot.className = 'agenda-dot';
+        dot.style.background = dotColor(t.category);
+
+        const date = document.createElement('div');
+        date.className = 'agenda-date';
+        date.textContent = showDate ? (formatDday(t.date) || '') : '';
+
+        const text = document.createElement('div');
+        text.className = 'agenda-text';
+        text.textContent = t.title;
+        if(t.complete){
+          row.classList.add('complete');
+          // 완료 표시(원래처럼): 회색 + 취소선
+          text.style.textDecoration='line-through';
+          text.style.opacity='.9';
+          text.style.color = '#7a7a7a';
         }
-        card.innerHTML = `<div class="content">${content}</div><div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-[10px] px-2 py-1 truncate z-10 opacity-70">${d.sourceDomain || ''}</div><button class="absolute top-1 right-1 bg-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">×</button>`;
-        card.onclick = () => { if(d.type==='firebase_storage'||d.type==='remote') { document.getElementById('modalImage').src=d.url; document.getElementById('imageModal').style.display='flex'; } else { window.open(d.pageUrl, '_blank'); } };
-        card.querySelector('button').onclick = (e) => { e.stopPropagation(); if(window.deleteImage) window.deleteImage(d.id); };
-        grid.appendChild(card);
-      });
+
+        const actions = document.createElement('div');
+        actions.className = 'agenda-actions';
+
+        // 설정(편집) 버튼만 유지
+        const settingsBtn = document.createElement('button');
+        settingsBtn.className = 'agenda-settings-btn';
+        settingsBtn.type = 'button';
+        settingsBtn.setAttribute('title','설정');
+        settingsBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:18px;height:18px;opacity:.9">
+            <path d="M12 20a1 1 0 0 1-1-1v-1.1a7.8 7.8 0 0 1-1.9-.8l-.8.8a1 1 0 0 1-1.4 0l-1.4-1.4a1 1 0 0 1 0-1.4l.8-.8a7.8 7.8 0 0 1-.8-1.9H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1.1a7.8 7.8 0 0 1 .8-1.9l-.8-.8a1 1 0 0 1 0-1.4l1.4-1.4a1 1 0 0 1 1.4 0l.8.8a7.8 7.8 0 0 1 1.9-.8V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.1a7.8 7.8 0 0 1 1.9.8l.8-.8a1 1 0 0 1 1.4 0l1.4 1.4a1 1 0 0 1 0 1.4l-.8.8a7.8 7.8 0 0 1 .8 1.9H20a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1.1a7.8 7.8 0 0 1-.8 1.9l.8.8a1 1 0 0 1 0 1.4l-1.4 1.4a1 1 0 0 1-1.4 0l-.8-.8a7.8 7.8 0 0 1-1.9.8V19a1 1 0 0 1-1 1z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>`;
+        settingsBtn.addEventListener('click',(e)=>{ e.stopPropagation(); openModal(t); });
+        actions.appendChild(settingsBtn);
+
+        row.appendChild(dot);
+        row.appendChild(date);
+        row.appendChild(text);
+        row.appendChild(actions);
+
+        // 항목 클릭: 완료 토글(체크박스 대신)
+        row.addEventListener('click', async ()=>{
+          if(!window.ensureLogin||!window.ensureLogin()) return;
+          t.complete = !t.complete;
+
+          // 즉시 UI 반영: 회색 + 취소선 (원래처럼)
+          row.classList.toggle('complete', !!t.complete);
+          if(t.complete){
+            text.style.textDecoration='line-through';
+            text.style.opacity='.9';
+            text.style.color = '#7a7a7a';
+          } else {
+            text.style.textDecoration='';
+            text.style.opacity='';
+            text.style.color = '';
+          }
+
+          // 완료 항목은 아래로 이동
+          if(row.parentElement){
+            const parent = row.parentElement;
+            if(t.complete) parent.appendChild(row);
+            else parent.prepend(row);
+          }
+
+          await window.cloudSaveAll();
+          renderCalendar();
+        });
+        return row;
+      };
+
+      agendaListEl.innerHTML = '';
+
+      // 1) 날짜 없는 항목을 위로
+      undated.forEach(t=>agendaListEl.appendChild(makeRow(t,{showDate:false})));
+      // 2) 날짜 있는 일정은 아래로
+      dated.forEach(t=>agendaListEl.appendChild(makeRow(t,{showDate:true})));
     };
-  </script>
 
-  <!-- Module Script (Firebase & Notes & Bookmarks Logic) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    // 유튜브 썸네일 URL 추출
+    function getYoutubeThumbnail(url) {
+        let videoId = null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        if (match && match[2].length === 11) {
+            videoId = match[2];
+        }
+        if (videoId) {
+            return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        }
+        return null;
+    }
+    
+    // 인스타그램 임베드 스크립트를 로드하고 콘텐츠를 처리하는 함수
+    function initializeInstagramEmbeds() {
+        if (window.instgrm && window.instgrm.Embeds) {
+            // 스크립트가 이미 로드된 경우, 새 게시물을 처리
+            window.instgrm.Embeds.process();
+            return;
+        }
+
+        // 스크립트 로드
+        const scriptId = 'instagram-embed-script';
+        if (!document.getElementById(scriptId)) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.async = true;
+            script.src = '//www.instagram.com/embed.js';
+            document.head.appendChild(script);
+            
+            // 스크립트 로드 후에도 process를 한 번 더 호출할 수 있도록 window에 핸들러 등록
+            script.onload = () => {
+                if (window.instgrm && window.instgrm.Embeds) {
+                    window.instgrm.Embeds.process();
+                }
+            };
+        }
+    }
+
+    // 북마크 렌더링 (이미지 및 동영상 포함)
+    const renderImageBookmarks=()=>{
+      imageGrid.innerHTML='';
+      
+      let sortedBookmarks = [...(window.imageBookmarks || [])];
+
+      // 최신순 고정
+      sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
+
+      sortedBookmarks.forEach(d=>{
+        const isVideo = d.type === 'video';
+        const isLink = d.type === 'link'; // 일반 페이지 링크
+        const isInstagram = d.type === 'instagram'; // 인스타그램 게시물
+        // [수정] type: 'imgbb' 또는 'firebase_storage' 또는 'remote'일 때가 이미지임
+        const isImage = d.type === 'imgbb' || d.type === 'firebase_storage' || d.type === 'remote';
+        
+        const isEditable = isVideo || isLink || isInstagram; // 제목 수정 가능한 항목
+        const imageUrl = d.url;
+        const pageUrl = d.pageUrl; // 일반 URL, 동영상 URL 또는 인스타그램 게시물 URL
+        const sourceDomain = d.sourceDomain || 'Unknown Source';
+
+        // (사이트별 헤더 제거)
+        
+        let thumbnail = isVideo ? getYoutubeThumbnail(pageUrl) : imageUrl;
+        let iconHtml = '';
+        let urlToOpen = pageUrl;
+
+        if (isLink) {
+            // 일반 페이지 링크 북마크: 제목/URL 미표시. previewImageUrl이 있으면 그 이미지만 표시.
+            const prevImg = d.previewImageUrl || null;
+            if (prevImg) {
+                iconHtml = `<img src="${prevImg}" alt="링크 미리보기" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=미리보기+오류'"/>`;
+            } else {
+                iconHtml = `<div class="icon-overlay">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;opacity:.9">
+                                <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4"/>
+                                <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 20"/>
+                              </svg>
+                            </div>`;
+            }
+        } else if (isInstagram) {
+             // 인스타그램 게시물 북마크 (퍼가기 코드 사용)
+             // 원본 URL 추출 (클릭 시 이동용)
+             const parser = new DOMParser();
+             const doc = parser.parseFromString(d.embedCode || '', 'text/html');
+             const blockquote = doc.querySelector('blockquote.instagram-media');
+             if (blockquote && blockquote.cite) urlToOpen = blockquote.cite;
+             else urlToOpen = pageUrl;
+             
+             const displayTitle = d.title || 'Instagram Post (클릭 시 원본 이동)';
+             
+             // Embed Code를 직접 삽입하여 인스타그램 미리보기가 렌더링되도록 함.
+             // z-index를 사용하여 제목 오버레이가 임베드 위에 오도록 설정.
+             // 인스타그램 임베드는 높이가 가변적이며, Masonry 레이아웃이 이를 처리하도록 기대함.
+             iconHtml = `
+                <div class="w-full h-full relative z-0">
+                    ${d.embedCode || ''}
+                    <div class="absolute top-0 left-0 right-0 p-2 bg-black bg-opacity-70 text-white text-sm font-bold z-10">${displayTitle}</div>
+                </div>
+             `;
+
+        } else if (isVideo && !thumbnail) {
+            // **수정된 부분: 썸네일 없는 비디오를 위한 새로운 제목 오버레이 스타일 적용**
+            const displayTitle = d.title || '동영상 북마크 (제목 편집 가능)';
+            const displayUrl = pageUrl.replace(/^https?:\/\//, '').substring(0, 30) + '...';
+            
+            iconHtml = `<div class="video-title-overlay">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-400 mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg>
+                            <span class="video-title-text">${displayTitle}</span>
+                            <span class="video-url-text">${displayUrl}</span>
+                        </div>`;
+        } else if (isImage) {
+            // [수정] 이미지 북마크인 경우 (썸네일은 이미지 URL 자체)
+            iconHtml = `<img src="${imageUrl}" alt="북마크된 이미지" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=이미지+오류'"/>`;
+        } else if (isVideo) {
+            // [수정] 유튜브 동영상이고 썸네일이 있는 경우
+            const displayTitle = d.title || 'YouTube 영상';
+            iconHtml = `<img src="${thumbnail}" alt="동영상 썸네일" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=동영상+썸네일'"/>
+                        <div class="icon-overlay flex-col">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg>
+                            <span class="text-xs mt-1 font-bold">${displayTitle}</span>
+                        </div>`;
+        } else {
+             // 예외 처리 (알 수 없는 타입)
+             iconHtml = `<div class="link-title-overlay">
+                            <span class="link-title-text">알 수 없는 북마크</span>
+                        </div>`;
+        }
+
+        const card=document.createElement('div');
+        card.className='bookmark-card relative group cursor-pointer';
+        card.innerHTML=`
+          <div class="content">
+            ${iconHtml}
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 truncate z-10 opacity-70">
+              ${sourceDomain}
+          </div>
+          <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="delete">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          ${isEditable ? `
+          <button class="absolute top-2 right-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="edit">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          ` : ''}
+          `;
+        imageGrid.appendChild(card);
+        
+        // 클릭 이벤트 (Card Main Action)
+        card.addEventListener('click',(e)=>{
+            // 삭제나 편집 버튼을 누른 경우는 무시
+            if (e.target.closest('button[data-action]')) return; 
+
+            if (isVideo || isLink || isInstagram) {
+                // 인스타그램의 경우 URLToOpen을 사용 (퍼가기 코드에서 추출된 원본 URL)
+                window.open(urlToOpen, '_blank');
+            } else if (isImage) {
+                // [수정] 이미지일 경우 모달 열기
+                openImageModal(imageUrl, pageUrl);
+            }
+        });
+      });
+      
+      // 버튼 이벤트 리스너 부착
+      imageGrid.querySelectorAll('button[data-action]').forEach(btn=>{
+        btn.onclick=async(e)=>{ 
+          e.stopPropagation(); 
+          const id=e.currentTarget.dataset.id;
+          const action=e.currentTarget.dataset.action;
+          const bookmark = window.imageBookmarks.find(d => d.id === id);
+
+          if (action === 'delete') {
+             try{ 
+                 if(window.deleteImage) await window.deleteImage(id);
+             }catch(err){ 
+                 console.error(err); 
+                 showAlert('북마크 삭제 중 오류가 발생했습니다.'); 
+             }
+          } else if (action === 'edit' && bookmark) {
+             // 링크 북마크는 제목 수정 대신 "미리보기 이미지 붙여넣기" 모달을 사용
+             if (bookmark.type === 'link') {
+                 openPreviewUploadModal(bookmark);
+             } else {
+                 openEditModal(bookmark);
+             }
+          }
+        };
+      });
+      
+      // 인스타그램 임베드 스크립트 초기화 및 렌더링
+      initializeInstagramEmbeds();
+    };
+
+    // 작업 모달
+    const openModal=(task=null)=>{
+      window.currentTask=task;
+      if(task&&task.id){
+        document.getElementById('modalTitle').textContent='작업 수정';
+        taskTitleInput.value=task.title;
+        taskDescriptionInput.value=task.description||'';
+        taskDateInput.value=task.date||'';
+        if(taskCategorySelect) taskCategorySelect.value = task.category || '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = !!task.todoOnly || !task.date;
+        if(taskDateInput) taskDateInput.disabled = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
+        deleteTaskBtn.classList.remove('hidden');
+      }
+      else if(task&&('date' in task)){
+        document.getElementById('modalTitle').textContent='새 작업';
+        taskTitleInput.value='';
+        taskDescriptionInput.value='';
+        taskDateInput.value=task.date||'';
+        if(taskCategorySelect) taskCategorySelect.value = task.category || '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = !!task.todoOnly || !task.date;
+        if(taskDateInput) taskDateInput.disabled = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
+        deleteTaskBtn.classList.add('hidden');
+      }
+      else{
+        document.getElementById('modalTitle').textContent='새 작업';
+        taskTitleInput.value='';
+        taskDescriptionInput.value='';
+        taskDateInput.value='';
+        if(taskCategorySelect) taskCategorySelect.value = '';
+        if(todoOnlyCheckbox) todoOnlyCheckbox.checked = false;
+        if(taskDateInput) taskDateInput.disabled = false;
+        deleteTaskBtn.classList.add('hidden');
+      }
+      taskModal.style.display='flex';
+    };
+    const closeModal=()=>{ taskModal.style.display='none'; };
+
+    const saveTask=async ()=>{
+      if(!window.ensureLogin||!window.ensureLogin()) return;
+      window.customTasks=window.customTasks||[]; window.taskStatus=window.taskStatus||{};
+      const title=taskTitleInput.value.trim(); const description=taskDescriptionInput.value.trim(); const date=taskDateInput.value;
+      const category = taskCategorySelect ? (taskCategorySelect.value || '') : '';
+      const todoOnly = !!(todoOnlyCheckbox && todoOnlyCheckbox.checked);
+      if(!title){ showFeedbackMessage('제목을 입력해주세요.'); return; }
+      const finalDate = todoOnly ? '' : date;
+      const data={ 
+        id: window.currentTask&&window.currentTask.id ? window.currentTask.id : Date.now(),
+        title, 
+        description, 
+        date: finalDate,
+        category,
+        todoOnly,
+        complete: window.currentTask?.complete ?? false 
+      };
+      const idx=window.customTasks.findIndex(t=>t.id===data.id); if(idx>-1) window.customTasks[idx]=data; else window.customTasks.push(data);
+      await window.cloudSaveAll(); closeModal(); renderCalendar();
+    };
+
+    // 링크 미리보기 모달
+    const openPreviewUploadModal = (bookmark) => {
+        currentPreviewEditingBookmark = bookmark;
+        if (previewUploadModal) previewUploadModal.style.display = 'flex';
+    };
+    const closePreviewUploadModal = () => {
+        currentPreviewEditingBookmark = null;
+        if (previewUploadModal) previewUploadModal.style.display = 'none';
+    };
+    closePreviewUploadBtn?.addEventListener('click', closePreviewUploadModal);
+    previewUploadModal?.addEventListener('click', (e)=>{ if(e.target===previewUploadModal) closePreviewUploadModal(); });
+
+    // 붙여넣기 처리(모달이 열려 있을 때만)
+    document.addEventListener('paste', async (e)=>{
+        if(!previewUploadModal || previewUploadModal.style.display !== 'flex') return;
+        if(!currentPreviewEditingBookmark) return;
+        const items = e.clipboardData?.items;
+        if(!items) return;
+        const imgItem = [...items].find(it=>it.type && it.type.startsWith('image/'));
+        if(!imgItem) return;
+        e.preventDefault();
+        const blob = imgItem.getAsFile();
+        if(!blob) return;
+        const fileName = `preview_${currentPreviewEditingBookmark.id}.png`;
+        const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+        try{
+            showFeedbackMessage('미리보기 이미지 업로드 중...');
+            await window.uploadBookmarkPreviewImage(currentPreviewEditingBookmark.id, file);
+            showFeedbackMessage('미리보기 이미지가 저장되었습니다.');
+            closePreviewUploadModal();
+        }catch(err){
+            console.error(err);
+            showAlert('미리보기 이미지 업로드 중 오류가 발생했습니다.');
+        }
+    });
+
+    (function init(){ 
+        attachEventListeners(); 
+        renderCalendar(); 
+    })();
+
+    // main.js(모듈)에서도 호출할 수 있도록 노출
+    window.renderCalendar = renderCalendar;
+
+    // ===== D&D/붙여넣기/클릭-자동붙여넣기 =====
+    function isImageUrl(u){
+      try{ new URL(u); }catch{ return false; }
+      return /\.(jpe?g|png|gif|webp|svg|avif)(\?|$)/i.test(u);
+    }
+    
+    function isVideoUrl(u){
+        if (!u) return false;
+        try { new URL(u); } catch { return false; }
+        // YouTube, Vimeo, 또는 일반적인 동영상 확장자 검사
+        return /youtu\.be|youtube\.com|vimeo\.com|\.(mp4|webm|ogg|mov)(\?|$)|missav\.com/i.test(u);
+    }
+    
+    // 인스타그램 퍼가기 코드 확인 (blockquote 태그를 포함하는지 확인)
+    function isInstagramEmbed(text) {
+        return /<blockquote class="instagram-media".*<\/blockquote>/.test(text);
+    }
+    
+    // **신규: 도메인 추출 유틸리티**
+    function extractDomain(url) {
+        if (!url) return 'Unknown';
+        try {
+            const urlObj = new URL(url.includes('://') ? url : 'https://' + url);
+            let domain = urlObj.hostname;
+            if (domain.startsWith('www.')) domain = domain.substring(4);
+            return domain;
+        } catch {
+            return 'Unknown';
+        }
+    }
+
+
+    // 새로운 유틸리티: 이미지/동영상/인스타그램 URL이 아닌 일반 URL인지 확인
+    function isGenericUrl(u) {
+        if (!u) return false;
+        try {
+            const urlObj = new URL(u);
+            // http 또는 https 프로토콜을 사용하며, 이미지/비디오/인스타그램 URL이 아닌 경우
+            // **수정된 부분: URL에 . (점)이 포함되어야 유효한 도메인으로 간주합니다.**
+            return (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') && urlObj.hostname.includes('.') && !isImageUrl(u) && !isVideoUrl(u) && !/instagram\.com/.test(u);
+        } catch {
+            return false;
+        }
+    }
+
+    // 드래그앤드롭 핸들러
+    dragArea.addEventListener('dragover',(e)=>{ e.preventDefault(); dragArea.classList.add('active'); });
+    dragArea.addEventListener('dragleave',()=>{ dragArea.classList.remove('active'); });
+    dragArea.addEventListener('drop',async(e)=>{
+      e.preventDefault(); dragArea.classList.remove('active');
+      const dt=e.dataTransfer;
+      const html=dt.getData('text/html');
+      const plainText = dt.getData('text/plain');
+
+      let url=null, pageUrl=null;
+      
+      // 1. 드롭된 내용에서 인스타그램 퍼가기 코드 확인
+      if(plainText && isInstagramEmbed(plainText)) {
+          if(window.addInstagramBookmark) { await window.addInstagramBookmark(plainText); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
+      }
+      
+      // 2. 드롭된 내용에서 이미지 URL 추출 시도
+      if(html){
+        const doc=new DOMParser().parseFromString(html,'text/html');
+        const img=doc.querySelector('img');
+        if(img?.src){ url=img.src; pageUrl=dt.getData('text/uri-list')||dt.getData('URL')||null; }
+      }
+      // 3. 드롭된 내용에서 일반 URL 추출 시도
+      if(!url){ const u=dt.getData('text/uri-list')||dt.getData('URL')||plainText; if(u) { url=u; pageUrl=u; } }
+
+      // 4. 북마크 처리 (URL인 경우)
+      if(url){
+          if(isImageUrl(url)){ 
+              // 이미지 URL 북마크
+              if(window.addRemoteImage){ await window.addRemoteImage(url,pageUrl); showFeedbackMessage('이미지 URL 북마크됨'); } 
+              return; 
+          } else if(isVideoUrl(url)) {
+              // 동영상 URL 북마크
+              if(window.addVideoBookmark) { await window.addVideoBookmark(url); showFeedbackMessage('동영상 URL 북마크됨'); }
+              return;
+          } else if(isGenericUrl(url)) {
+              // 일반 페이지 URL 북마크
+              if(window.addGenericBookmark) { await window.addGenericBookmark(url); showFeedbackMessage('페이지 URL 북마크됨'); }
+              return;
+          }
+      }
+
+      // 5. 파일 드롭 처리 (캡쳐 이미지는 붙여넣기 안내)
+      const files=[...(dt.files||[])].filter(f=>f.type.startsWith('image/'));
+      if(files.length){ 
+          // [수정] 파일 드롭 시 window.addImage 호출
+          if(window.addImage){ await window.addImage(files[0], null); showFeedbackMessage('이미지 업로드됨'); return; }
+      }
+
+      showAlert('유효한 콘텐츠를 찾지 못했습니다.');
+    });
+
+    // 클릭: 클립보드 접근 및 자동 붙여넣기 시도
+    dragArea.addEventListener('click', async ()=>{
+      try{
+        let processed = false;
+        
+        // 1. 클립보드 이미지 처리
+        if(navigator.clipboard?.read){
+          const items=await navigator.clipboard.read();
+          for(const it of items){
+            for(const type of it.types){
+              if(type.startsWith('image/')){
+                const blob=await it.getType(type);
+                if(window.addImage){ await window.addImage(new File([blob],'clipboard-image',{type:blob.type}), null); showFeedbackMessage('클립보드 이미지 업로드됨'); processed=true; return; }
+              }
+            }
+          }
+        }
+        
+        // 2. 클립보드 텍스트 (URL/퍼가기 코드) 처리
+        const t = await navigator.clipboard.readText();
+        if(t){
+            if (isInstagramEmbed(t)) {
+                if(window.addInstagramBookmark) { await window.addInstagramBookmark(t); showFeedbackMessage('클립보드 인스타그램 게시물 북마크됨'); processed=true; return; }
+            } else if(isImageUrl(t)){ 
+                if(window.addRemoteImage){ await window.addRemoteImage(t,t); showFeedbackMessage('클립보드 이미지 URL 북마크됨'); processed=true; return; } 
+            } else if(isVideoUrl(t)){
+                if(window.addVideoBookmark) { await window.addVideoBookmark(t); showFeedbackMessage('클립보드 동영상 URL 북마크됨'); processed=true; return; }
+            } else if(isGenericUrl(t)) {
+                if(window.addGenericBookmark) { await window.addGenericBookmark(t); showFeedbackMessage('클립보드 페이지 URL 북마크됨'); processed=true; return; }
+            }
+        }
+        
+        if(!processed) showAlert('클립보드에서 유효한 콘텐츠를 읽지 못했습니다.');
+      }catch(e){ console.error(e); showAlert('클립보드 권한을 허용하세요.'); }
+    });
+
+    // 붙여넣기 핸들러
+    dragArea.addEventListener('paste', async (e)=>{
+      e.preventDefault();
+      const items=[...(e.clipboardData||e.originalEvent?.clipboardData)?.items||[]];
+      let foundText = null;
+
+      for(const item of items){
+        // 1. 이미지 파일 처리
+        if(item.kind==='file' && item.type.startsWith('image/')){
+          const file=item.getAsFile(); 
+          if(file && window.addImage){ await window.addImage(file,null); showFeedbackMessage('이미지 업로드됨'); return; }
+        }
+        // 2. 텍스트 처리
+        if(item.kind==='string'){
+          const txt=await new Promise(r=>item.getAsString(r));
+          if(txt){
+             if (isInstagramEmbed(txt)) {
+                 if(window.addInstagramBookmark) { await window.addInstagramBookmark(txt); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
+             } else if(isImageUrl(txt)){ 
+                if(window.addRemoteImage){ await window.addRemoteImage(txt,txt); showFeedbackMessage('URL 북마크됨'); return; } 
+             } else if(isVideoUrl(txt)){
+                 if(window.addVideoBookmark) { await window.addVideoBookmark(txt); showFeedbackMessage('동영상 URL 북마크됨'); return; }
+             } else if(isGenericUrl(txt)){
+                 if(window.addGenericBookmark) { await window.addGenericBookmark(txt); showFeedbackMessage('페이지 URL 북마크됨'); return; }
+             }
+             foundText = txt;
+          }
+        }
+      }
+      
+      // Fallback: plain text
+      if (!foundText) {
+          const plain=e.clipboardData?.getData('text/plain');
+          if(plain){
+             if (isInstagramEmbed(plain)) {
+                 if(window.addInstagramBookmark) { await window.addInstagramBookmark(plain); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
+             } else if(isImageUrl(plain)){ 
+                if(window.addRemoteImage){ await window.addRemoteImage(plain,plain); showFeedbackMessage('URL 북마크됨'); return; } 
+             } else if(isVideoUrl(plain)){
+                if(window.addVideoBookmark) { await window.addVideoBookmark(plain); showFeedbackMessage('동영상 URL 북마크됨'); return; }
+             } else if(isGenericUrl(plain)){
+                if(window.addGenericBookmark) { await window.addGenericBookmark(plain); showFeedbackMessage('페이지 URL 북마크됨'); return; }
+             }
+          }
+      }
+      
+      showAlert('붙여넣기한 항목에 유효한 이미지, 동영상 URL, 일반 페이지 URL 또는 인스타그램 퍼가기 코드가 없습니다.');
+    });
+
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+    
 
+// ===== Inlined modules: calendar.js / notes.js / bookmarks.js =====
+// calendar.js
+// NOTE: Calendar UI is rendered by ui.js.
+// This module is kept to avoid breaking existing imports in main.js,
+// but it intentionally does not attach listeners or override global render functions.
+function initCalendar() {
+  // no-op (handled in ui.js)
+}
+
+
+function initNotes(){
+  const notesArea = document.getElementById('notesArea');
+  const tabsContainer = document.getElementById('notesTabsContainer');
+  const addTabBtn = document.getElementById('addNotesTabBtn');
+  const toggleEditBtn = document.getElementById('toggleNotesEditBtn');
+
+  if(!tabsContainer || !notesArea) return;
+
+  // Local UI state
+  let editMode = false;
+
+  // Helpers
+  const genId = ()=> 'tab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
+
+  const getState = ()=>({
+    tabs: window.__notesTabList || [{ id:'memo', name:'메모', order:0 }],
+    notes: window.__notesTabs || {},
+    activeId: window.__notesActiveTabId || 'memo'
+  });
+
+  const setActive = async (tabId)=>{
+    window.__notesActiveTabId = tabId;
+    // Persist active tab id in cloud (best-effort)
+    try{
+      window.cloudSetActiveNotesTab && await window.cloudSetActiveNotesTab(tabId);
+    }catch(_){}
+    render();
+    // Update textarea
+    const { notes } = getState();
+    notesArea.value = notes[tabId] || '';
+  };
+
+  const render = ()=>{
+    const { tabs, activeId, notes } = getState();
+    // normalize tabs ordering
+    const sorted = [...tabs].sort((a,b)=>(a.order??0)-(b.order??0));
+    tabsContainer.innerHTML = '';
+
+    sorted.forEach((t)=>{
+      const btn = document.createElement('button');
+      btn.className = 'notes-tab' + (t.id===activeId ? ' active' : '');
+      btn.dataset.tabId = t.id;
+      btn.draggable = editMode;
+      btn.innerHTML = `
+        <span class="tab-label">${escapeHtml(t.name || '')}</span>
+        ${editMode ? `<span class="tab-del" title="삭제">×</span>` : ``}
+      `;
+      tabsContainer.appendChild(btn);
+    });
+
+    // Ensure textarea shows active note
+    const activeExists = sorted.some(t=>t.id===activeId);
+    const useId = activeExists ? activeId : (sorted[0]?.id || 'memo');
+    if(useId !== activeId){
+      window.__notesActiveTabId = useId;
+    }
+    notesArea.value = notes[useId] || '';
+
+    // Toggle button icon
+    if(toggleEditBtn){
+      toggleEditBtn.innerHTML = editMode
+        ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+    }
+  };
+
+  const escapeHtml = (s)=> String(s)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+
+  const promptName = (title, current='')=>{
+    const name = window.prompt(title, current);
+    if(name===null) return null;
+    const trimmed = name.trim();
+    if(!trimmed) return null;
+    return trimmed.slice(0, 20);
+  };
+
+  // Events: select / rename / delete
+  tabsContainer.addEventListener('click', async (e)=>{
+    const tabBtn = e.target.closest('.notes-tab');
+    if(!tabBtn) return;
+    const tabId = tabBtn.dataset.tabId;
+
+    // delete in edit mode
+    if(editMode && e.target.classList.contains('tab-del')){
+      if(!confirm('이 탭과 탭 안의 메모를 삭제할까요?')) return;
+      window.cloudDeleteNotesTab && await window.cloudDeleteNotesTab(tabId);
+      return;
+    }
+
+    // select
+    await setActive(tabId);
+  });
+
+  tabsContainer.addEventListener('dblclick', async (e)=>{
+    const tabBtn = e.target.closest('.notes-tab');
+    if(!tabBtn) return;
+    const tabId = tabBtn.dataset.tabId;
+    const { tabs } = getState();
+    const cur = tabs.find(t=>t.id===tabId);
+    const newName = promptName('탭 이름 변경', cur?.name || '');
+    if(!newName) return;
+    window.cloudRenameNotesTab && await window.cloudRenameNotesTab(tabId, newName);
+  });
+
+  // Drag reorder (edit mode only) - live reflow + smooth-ish
+  let dragFromId = null;
+  let draggingEl = null;
+  let placeholderEl = null;
+
+  function ensurePlaceholder(width){
+    if(placeholderEl) return;
+    placeholderEl = document.createElement('div');
+    placeholderEl.className = 'notes-tab placeholder';
+    placeholderEl.style.width = (width || 80) + 'px';
+    placeholderEl.style.height = '32px';
+    placeholderEl.style.borderRadius = '10px 10px 0 0';
+    placeholderEl.style.border = '1px dashed rgba(255,255,255,.25)';
+    placeholderEl.style.background = 'transparent';
+  }
+
+  function getDragAfterElement(container, x){
+    const els = [...container.querySelectorAll('.notes-tab:not(.dragging):not(.placeholder)')];
+    let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+    for(const child of els){
+      const box = child.getBoundingClientRect();
+      const offset = x - (box.left + box.width/2);
+      if(offset < 0 && offset > closest.offset){
+        closest = { offset, element: child };
+      }
+    }
+    return closest.element;
+  }
+
+  tabsContainer.addEventListener('dragstart', (e)=>{
+    if(!editMode) return;
+    const tabBtn = e.target.closest('.notes-tab');
+    if(!tabBtn) return;
+    dragFromId = tabBtn.dataset.tabId;
+    draggingEl = tabBtn;
+    draggingEl.classList.add('dragging');
+
+    // placeholder for live layout
+    const w = tabBtn.getBoundingClientRect().width;
+    ensurePlaceholder(w);
+    placeholderEl.style.width = w + 'px';
+    tabBtn.after(placeholderEl);
+
+    // Better drag image (avoid huge ghost)
+    if(e.dataTransfer){
+      e.dataTransfer.effectAllowed = 'move';
+      try{
+        const img = tabBtn.cloneNode(true);
+        img.style.position = 'absolute';
+        img.style.top = '-9999px';
+        img.style.left = '-9999px';
+        img.style.opacity = '0.9';
+        document.body.appendChild(img);
+        e.dataTransfer.setDragImage(img, 10, 10);
+        setTimeout(()=>img.remove(), 0);
+      }catch(_){}
+    }
+  });
+
+  tabsContainer.addEventListener('dragover', (e)=>{
+    if(!editMode || !draggingEl) return;
+    e.preventDefault();
+    const afterEl = getDragAfterElement(tabsContainer, e.clientX);
+    if(!afterEl){
+      tabsContainer.appendChild(placeholderEl);
+    }else{
+      tabsContainer.insertBefore(placeholderEl, afterEl);
+    }
+  });
+
+  async function finalizeReorder(){
+    if(!draggingEl || !placeholderEl) return;
+    placeholderEl.replaceWith(draggingEl);
+    draggingEl.classList.remove('dragging');
+
+    // compute order from DOM
+    const ids = [...tabsContainer.querySelectorAll('.notes-tab')].filter(el=>!el.classList.contains('placeholder')).map(el=>el.dataset.tabId).filter(Boolean);
+    const { tabs } = getState();
+    const map = new Map(tabs.map(t=>[t.id, t]));
+    const next = ids.map((id,i)=>({ ...map.get(id), order: i*10 })).filter(Boolean);
+    window.cloudReorderNotesTabs && await window.cloudReorderNotesTabs(next);
+
+    dragFromId = null;
+    draggingEl = null;
+    placeholderEl = null;
+  }
+
+  tabsContainer.addEventListener('drop', async (e)=>{
+    if(!editMode) return;
+    e.preventDefault();
+    await finalizeReorder();
+  });
+
+  tabsContainer.addEventListener('dragend', async ()=>{
+    if(!editMode) return;
+    // If dropped outside, still finalize to clean placeholder
+    if(placeholderEl && draggingEl){
+      await finalizeReorder();
+    }
+  });
+
+  // Add tab
+  if(addTabBtn){
+    addTabBtn.addEventListener('click', async ()=>{
+      const name = promptName('새 탭 이름', '새 탭');
+      if(!name) return;
+      const id = genId();
+      window.cloudAddNotesTab && await window.cloudAddNotesTab({ id, name });
+      await setActive(id);
+    });
+  }
+
+  // Toggle edit mode
+  if(toggleEditBtn){
+    toggleEditBtn.addEventListener('click', ()=>{
+      editMode = !editMode;
+      render();
+    });
+  }
+
+  // Save note content
+  if(notesArea){
+    notesArea.addEventListener('input', ()=>{
+      window.cloudSaveNotesDebounced && window.cloudSaveNotesDebounced();
+    });
+    notesArea.addEventListener('blur', ()=>{
+      window.cloudSaveNotes && window.cloudSaveNotes();
+    });
+  }
+
+  // Expose renderer for realtime updates
+  window.renderNotesUI = render;
+
+  // Initial render
+  render();
+}
+
+
+function initBookmarks(){
+
+  const imageGrid=document.getElementById('image-grid');
+
+  window.renderImageBookmarks=function(){
+
+    if(!imageGrid) return;
+
+    imageGrid.innerHTML='';
+
+    (window.imageBookmarks||[]).forEach(d=>{
+      const card=document.createElement('div');
+      card.className='bookmark-card';
+      card.innerHTML=`
+        <div class="content">
+          <div style="padding:20px;text-align:center;">
+            ${d.sourceDomain||'Bookmark'}
+          </div>
+        </div>
+      `;
+      imageGrid.appendChild(card);
+    });
+  }
+
+  renderImageBookmarks();
+}
+
+
+// ===== Inlined main.js =====
+    // [수정 2] Firebase Storage 모듈 임포트
+    import { 
+      getStorage, 
+      ref, 
+      uploadBytes, 
+      getDownloadURL, 
+      deleteObject 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+    // Firebase Config (***이 부분이 수정되었습니다***)
     const firebaseConfig = {
       apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
       authDomain: "comicschedule-dfec7.firebaseapp.com",
       projectId: "comicschedule-dfec7",
-      storageBucket: "comicschedule-dfec7.firebasestorage.app",
-      messagingSenderId: "1004611276816",
-      appId: "1:1004611276816:web:aca83237bafa971ed1fa95"
+      storageBucket: "comicschedule-dfec7.firebasestorage.app", // <-- 올바른 주소
+      messagingSenderId: "1004611276816", // <-- 사용자님이 주신 새 ID
+      appId: "1:1004611276816:web:aca83237bafa971ed1fa95", // <-- 사용자님이 주신 새 ID
+      measurementId: "G-ZNZZQRJZF9"
     };
 
+    // ***이 부분이 수정되었습니다 (analytics 관련 코드 제거, 원본 코드로 복구)***
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app);
+    const storage = getStorage(app); 
+
+    const signInBtn=document.getElementById('signInBtn');
+    const signOutBtn=document.getElementById('signOutBtn');
+    const userInfoEl=document.getElementById('userInfo');
+    const loadingOverlay=document.getElementById('loading-overlay');
     const provider = new GoogleAuthProvider();
-
-    // 1. 인증 및 상태 동기화
-    onAuthStateChanged(auth, async (user) => {
-      const overlay = document.getElementById('loading-overlay');
-      overlay.classList.remove('hidden');
-      if (user) {
-        document.getElementById('userInfo').textContent = `${user.displayName || user.email}`;
-        document.getElementById('signInBtn').classList.add('hidden'); document.getElementById('signOutBtn').classList.remove('hidden');
-        
-        const userPath = `users/${user.uid}`;
-        onSnapshot(doc(db, `${userPath}/meta/appState`), (ds) => {
-          const data = ds.data() || {};
-          window.taskStatus = data.taskStatus || {};
-          window.__notesTabs = data.notesTabs || {};
-          window.__notesTabList = data.notesTabList || [{id:'memo', name:'메모', order:0}];
-          window.__notesActiveTabId = data.notesActiveTabId || 'memo';
-          window.renderCalendar(); window.renderNotesUI();
-        });
-        onSnapshot(collection(db, `${userPath}/customTasks`), (snap) => {
-          window.customTasks = snap.docs.map(d => ({id:d.id, ...d.data()}));
-          window.renderCalendar();
-        });
-        onSnapshot(collection(db, `${userPath}/images`), (snap) => {
-          window.imageBookmarks = snap.docs.map(d => ({id:d.id, ...d.data()}));
-          window.renderImageBookmarks();
-        });
-      } else {
-        document.getElementById('signInBtn').classList.remove('hidden'); document.getElementById('signOutBtn').classList.add('hidden');
-        window.customTasks = []; window.taskStatus = {}; window.imageBookmarks = [];
-        window.renderCalendar(); window.renderImageBookmarks();
-      }
-      overlay.classList.add('hidden'); window.isAuthReady = true;
-    });
-
-    // 2. Firebase 액션
-    window.ensureLogin = () => { if(!auth.currentUser) { showAlert('로그인이 필요합니다.'); return false; } return true; };
-    window.cloudSaveStateOnly = async () => { if(!window.ensureLogin()) return; await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {taskStatus: window.taskStatus}, {merge:true}); };
-    window.cloudSaveAll = async () => { if(!window.ensureLogin()) return; await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {taskStatus: window.taskStatus}, {merge:true}); };
     
-    // 3. 메모 로직 (notes.js의 드래그 앤 드롭 및 상세 로직 완벽 복구)
-    let editMode = false;
-    let dragFromId = null;
-    let draggingEl = null;
-    let placeholderEl = null;
-
-    window.renderNotesUI = function() {
-      const container = document.getElementById('notesTabsContainer'); if(!container) return;
-      const sorted = [...(window.__notesTabList || [])].sort((a,b)=>(a.order||0)-(b.order||0));
-      container.innerHTML = '';
-      sorted.forEach(t => {
-        const btn = document.createElement('button');
-        btn.className = `notes-tab ${t.id === window.__notesActiveTabId ? 'active' : ''}`;
-        btn.draggable = editMode;
-        btn.innerHTML = `<span>${t.name}</span>${editMode ? `<span class="tab-del">×</span>` : ''}`;
-        
-        btn.onclick = async (e) => {
-          if (editMode && e.target.classList.contains('tab-del')) {
-            if (confirm('삭제하시겠습니까?')) {
-              const nextList = window.__notesTabList.filter(item => item.id !== t.id);
-              await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {notesTabList: nextList}, {merge:true});
-            }
-          } else if (!editMode) {
-            window.__notesActiveTabId = t.id;
-            window.renderNotesUI();
-            await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {notesActiveTabId: t.id}, {merge:true});
-          }
-        };
-
-        btn.ondblclick = async () => {
-          const newName = prompt('탭 이름 변경', t.name);
-          if (newName) {
-            const nextList = window.__notesTabList.map(item => item.id === t.id ? {...item, name: newName} : item);
-            await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {notesTabList: nextList}, {merge:true});
-          }
-        };
-
-        // 드래그 앤 드롭 로직 복구
-        btn.addEventListener('dragstart', (e) => {
-          if (!editMode) return;
-          dragFromId = t.id; draggingEl = btn; btn.classList.add('dragging');
-          placeholderEl = document.createElement('div'); placeholderEl.className = 'notes-tab placeholder';
-          placeholderEl.style.width = btn.offsetWidth + 'px'; btn.after(placeholderEl);
-        });
-
-        container.appendChild(btn);
-      });
-      document.getElementById('notesArea').value = window.__notesTabs[window.__notesActiveTabId] || '';
-    };
-
-    document.getElementById('addNotesTabBtn').onclick = async () => {
-      if(!window.ensureLogin()) return;
-      const name = prompt('새 탭 이름', '새 메모');
-      if(!name) return;
-      const id = 'tab_' + Date.now();
-      const nextList = [...(window.__notesTabList || []), {id, name, order: (window.__notesTabList||[]).length * 10}];
-      await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {notesTabList: nextList, notesActiveTabId: id}, {merge:true});
-    };
-
-    document.getElementById('toggleNotesEditBtn').onclick = () => { editMode = !editMode; window.renderNotesUI(); };
-
-    let saveTimer = null;
-    document.getElementById('notesArea').oninput = () => {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(async () => {
-        if(!window.ensureLogin()) return;
-        const notes = {...window.__notesTabs, [window.__notesActiveTabId]: document.getElementById('notesArea').value};
-        await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {notesTabs: notes}, {merge:true});
-      }, 800);
-    };
-
-    // 4. 북마크 로직 (bookmarks.js + ui.js 복구)
-    window.deleteImage = async (id) => {
-      if(!window.ensureLogin()) return;
-      const item = window.imageBookmarks.find(i=>i.id===id);
-      if(item.storagePath) try { await deleteObject(ref(storage, item.storagePath)); } catch(e){}
-      await deleteDoc(doc(db, `users/${auth.currentUser.uid}/images/${id}`));
-    };
-
-    const isVideo = (u) => /youtu\.be|youtube\.com|vimeo\.com/i.test(u);
-    const isInsta = (u) => /instagram\.com/i.test(u);
-    const isImg = (u) => /\.(jpe?g|png|gif|webp|svg|avif)/i.test(u);
-
-    async function processText(text) {
-      if(!window.ensureLogin()) return;
-      const urlMatch = text.match(/https?:\/\/[^\s]+/);
-      if(!urlMatch) return;
-      const url = urlMatch[0];
-      let type = 'link';
-      if(isImg(url)) type = 'remote';
-      else if(isVideo(url)) type = 'video';
-      else if(isInsta(url)) type = 'instagram';
-      
-      await addDoc(collection(db, `users/${auth.currentUser.uid}/images`), {
-        pageUrl: url, url: type==='remote'?url:null, type, sourceDomain: new URL(url).hostname, timestamp: new Date()
-      });
-      showFeedbackMessage('북마크 완료');
+    // **도메인 추출 함수를 모듈 스코프에서 사용 가능하도록 재정의**
+    function extractDomain(url) {
+        if (!url) return 'Unknown';
+        try {
+            const urlObj = new URL(url.includes('://') ? url : 'https://' + url);
+            let domain = urlObj.hostname;
+            if (domain.startsWith('www.')) domain = domain.substring(4);
+            return domain;
+        } catch {
+            return 'Unknown';
+        }
     }
 
-    // 붙여넣기 및 드래그 처리
-    document.getElementById('drag-area').onclick = async () => {
-      try { const t = await navigator.clipboard.readText(); processText(t); } catch(e) { showAlert('권한 부족'); }
+
+    async function doSignIn(){
+      try{ await signInWithPopup(auth,provider); }
+      catch(e){
+        if(e.code==='auth/popup-blocked'||e.code==='auth/unauthorized-domain'){ await signInWithRedirect(auth,provider); }
+        else{ document.getElementById('modal-message').textContent='로그인 오류: '+(e.message||e.code); document.getElementById('alert-modal').classList.remove('hidden'); }
+      }
+    }
+    getRedirectResult(auth).catch(()=>{});
+
+    signInBtn.onclick=()=>doSignIn();
+    signOutBtn.onclick=()=>signOut(auth);
+
+    window.cloudRefs=async ()=>{
+      const uid=auth.currentUser.uid;
+      const userPath=`users/${uid}`;
+      return {
+        tasksCol: collection(db, `${userPath}/customTasks`),
+        stateDoc: doc(db, `${userPath}/meta/appState`),
+        imagesCol: collection(db, `${userPath}/images`), // 이미지/동영상/링크 북마크 통합 컬렉션
+      };
     };
 
-    document.addEventListener('paste', async (e) => {
-      if(document.activeElement.tagName==='TEXTAREA'||document.activeElement.tagName==='INPUT') return;
-      const items = e.clipboardData.items;
-      for(let item of items) {
-        if(item.type.indexOf('image') !== -1) {
-          if(!window.ensureLogin()) return;
-          const file = item.getAsFile();
-          const path = `users/${auth.currentUser.uid}/uploads/${Date.now()}_${file.name}`;
-          const res = await uploadBytes(ref(storage, path), file);
-          const dUrl = await getDownloadURL(res.ref);
-          await addDoc(collection(db, `users/${auth.currentUser.uid}/images`), { url: dUrl, type:'firebase_storage', storagePath: path, timestamp: new Date() });
-          showFeedbackMessage('이미지 업로드됨'); return;
-        }
+    window.ensureLogin=()=>{
+      if(!window.isAuthReady){ document.getElementById('modal-message').textContent='데이터 로딩 중입니다.'; document.getElementById('alert-modal').classList.remove('hidden'); return false; }
+      if(!auth.currentUser){ document.getElementById('modal-message').textContent='로그인 후 이용해 주세요.'; document.getElementById('alert-modal').classList.remove('hidden'); return false; }
+      return true;
+    };
+
+    let notesTimer=null;
+    window.cloudSaveNotesDebounced=function(){ clearTimeout(notesTimer); notesTimer=setTimeout(()=>window.cloudSaveNotes&&window.cloudSaveNotes(),800); };
+
+    window.cloudSaveAll=async ()=>{
+      if(!ensureLogin()) return;
+      const { tasksCol, stateDoc } = await cloudRefs();
+      window.taskStatus=window.taskStatus||{}; window.customTasks=window.customTasks||[];
+      await setDoc(stateDoc,{taskStatus:window.taskStatus},{merge:true});
+      // FireStore에서 setDoc은 문서 ID가 없으면 생성, 있으면 덮어쓰기/병합하므로 map/reduce 대신 setDoc 사용
+      const ops=window.customTasks.map(t=>setDoc(doc(tasksCol,String(t.id)),t,{merge:true}));
+      await Promise.all(ops);
+    };
+
+    window.cloudSaveStateOnly=async ()=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      window.taskStatus=window.taskStatus||{};
+      await setDoc(stateDoc,{taskStatus:window.taskStatus},{merge:true});
+    };
+
+    window.cloudSaveNotes=async ()=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const notesTabs=prev.notesTabs||{};
+      const activeId = window.__notesActiveTabId || prev.notesActiveTabId || 'memo';
+      const notesAreaEl=document.getElementById('notesArea');
+      if(notesAreaEl){ notesTabs[activeId]=notesAreaEl.value ?? ''; }
+      await setDoc(stateDoc,{notesTabs, notesActiveTabId: activeId},{merge:true});
+    };
+
+    // 메모 탭 CRUD (stateDoc 내부 notesTabList / notesTabs 사용)
+    window.cloudSetActiveNotesTab = async (tabId)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      await setDoc(stateDoc,{ notesActiveTabId: tabId },{ merge:true });
+    };
+
+    window.cloudAddNotesTab = async ({id, name})=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const list = Array.isArray(prev.notesTabList) ? prev.notesTabList : [];
+      const maxOrder = list.reduce((m,t)=>Math.max(m, Number(t.order||0)), 0);
+      const next = [...list, { id, name, order: maxOrder + 10 }];
+      await setDoc(stateDoc,{ notesTabList: next, notesActiveTabId: id },{ merge:true });
+    };
+
+    window.cloudRenameNotesTab = async (tabId, newName)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const list = Array.isArray(prev.notesTabList) ? prev.notesTabList : [];
+      const next = list.map(t=> t.id===tabId ? ({...t, name:newName}) : t);
+      await setDoc(stateDoc,{ notesTabList: next },{ merge:true });
+    };
+
+    window.cloudReorderNotesTabs = async (orderedList)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      // orderedList는 [{id,name,order},...] 형태
+      await setDoc(stateDoc,{ notesTabList: orderedList },{ merge:true });
+    };
+
+    window.cloudDeleteNotesTab = async (tabId)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const list = Array.isArray(prev.notesTabList) ? prev.notesTabList : [];
+      const notesTabs = prev.notesTabs || {};
+      const nextList = list.filter(t=>t.id!==tabId);
+      const nextNotes = {...notesTabs};
+      delete nextNotes[tabId];
+
+      // 최소 1개 탭 유지 (없어지면 기본 '메모' 생성)
+      let nextActive = prev.notesActiveTabId || window.__notesActiveTabId || 'memo';
+      if(nextActive===tabId){
+        nextActive = nextList[0]?.id || 'memo';
       }
-      processText(e.clipboardData.getData('text'));
+      if(nextList.length===0){
+        nextList.push({ id:'memo', name:'메모', order:0 });
+        nextActive = 'memo';
+        // 기본 탭은 빈 메모
+        nextNotes['memo'] = nextNotes['memo'] || '';
+      }
+
+      await setDoc(stateDoc,{ notesTabList: nextList, notesTabs: nextNotes, notesActiveTabId: nextActive },{ merge:true });
+    };
+
+    window.deleteTask=async ()=>{
+      if(!ensureLogin() || !window.currentTask?.id){ if(typeof closeModal==='function') closeModal(); return; }
+      const { tasksCol } = await cloudRefs();
+      await deleteDoc(doc(tasksCol,String(window.currentTask.id)));
+      window.customTasks=(window.customTasks||[]).filter(t=>t.id!==window.currentTask.id);
+      if(typeof renderCalendar==='function') renderCalendar();
+    };
+
+    // ===== 북마크 저장 로직 (sourceDomain 추가) =====
+    
+    // 동영상 북마크 저장 (URL만 저장, type: 'video')
+    window.addVideoBookmark = async (url)=>{
+      if(!ensureLogin()) return;
+      const { imagesCol } = await cloudRefs();
+      // pageUrl 필드에 동영상 URL을 저장. title 필드 추가.
+      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'video', title: null, sourceDomain: extractDomain(url), timestamp:new Date() }); 
+    };
+    
+    // 일반 링크 북마크 저장 (URL만 저장, type: 'link')
+    window.addGenericBookmark = async (url)=>{
+      if(!ensureLogin()) return;
+      const { imagesCol } = await cloudRefs();
+      // pageUrl 필드에 일반 URL을 저장. title 필드 추가.
+      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'link', title: null, sourceDomain: extractDomain(url), timestamp:new Date() }); 
+    };
+    
+    // 인스타그램 북마크 저장 (퍼가기 코드 저장, type: 'instagram')
+    window.addInstagramBookmark = async (embedCode)=>{
+      if(!ensureLogin()) return;
+      const { imagesCol } = await cloudRefs();
+      
+      // 퍼가기 코드에서 원본 URL 추출 시도
+      let pageUrl = '인스타그램 게시물';
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(embedCode, 'text/html');
+      const blockquote = doc.querySelector('blockquote.instagram-media');
+      if(blockquote && blockquote.cite) pageUrl = blockquote.cite;
+      
+      await addDoc(imagesCol,{ pageUrl: pageUrl, embedCode: embedCode, url: null, type:'instagram', title: null, sourceDomain: extractDomain(pageUrl), timestamp:new Date() }); 
+    };
+
+    // 이미지 URL만 저장 (type: 'remote')
+    window.addRemoteImage = async (url, pageUrl)=>{
+      if(!ensureLogin()) return;
+      const { imagesCol } = await cloudRefs();
+      await addDoc(imagesCol,{ url, pageUrl: pageUrl||null, type:'remote', sourceDomain: extractDomain(pageUrl || url), timestamp:new Date() });
+    };
+    
+    // [수정 4] window.addImage 함수 전체 교체 (ImgBB -> Firebase Storage)
+    // (붙여넣기/클립보드/파일드래그 이미지 전용)
+    window.addImage = async (file, pageUrl)=>{ // 'fileOrUrl'을 'file'로 명시
+      if(!ensureLogin()) return;
+
+      // file이 string으로 들어오는 경우 (현재 UI에서는 사용되지 않음)
+      if (typeof file === 'string') {
+          // 원본 URL 추가 로직으로 연결
+          return window.addRemoteImage(file, pageUrl || file);
+      }
+      
+      // file이 File 객체인 경우 (주요 사용 사례)
+      try{
+        const { imagesCol } = await cloudRefs();
+        const user = auth.currentUser;
+        if (!user) throw new Error("로그인이 필요합니다.");
+
+        // 1. 고유한 파일 경로 생성
+        const storagePath = `users/${user.uid}/uploads/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, storagePath);
+
+        // 2. 파일 업로드 (피드백 메시지 추가)
+        showFeedbackMessage('이미지 업로드 중...');
+        const uploadResult = await uploadBytes(storageRef, file);
+        
+        // 3. 다운로드 URL 가져오기
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+        
+        const source = pageUrl ? extractDomain(pageUrl) : 'Uploaded (Firebase)';
+
+        // 4. Firestore에 정보 저장
+        await addDoc(imagesCol,{ 
+          url: downloadURL,       // Firebase Storage URL
+          pageUrl: pageUrl || null,
+          type: 'firebase_storage', // ImgBB 대신 새 타입 지정
+          storagePath: storagePath, // [중요] 삭제를 위한 파일 경로 저장
+          title: null, 
+          sourceDomain: source, 
+          timestamp: new Date() 
+        });
+        showFeedbackMessage('이미지가 업로드되었습니다.'); // 성공 피드백
+
+      }catch(err){
+        console.error("Firebase Storage 업로드 실패:", err);
+        document.getElementById('modal-message').textContent='이미지 추가 실패: '+(err.message||'오류');
+        document.getElementById('alert-modal').classList.remove('hidden');
+      }
+    };
+
+    // 북마크 제목 수정 기능 (신규)
+    window.updateBookmarkTitle = async (id, newTitle) => {
+        if (!ensureLogin()) return;
+        const { imagesCol } = await cloudRefs();
+        const docRef = doc(imagesCol, id);
+        
+        try {
+            await updateDoc(docRef, { title: newTitle || null });
+        } catch (e) {
+            console.error("제목 업데이트 오류:", e);
+            showAlert("제목을 저장하는 중 오류가 발생했습니다.");
+        }
+    };
+
+    // 링크 북마크 미리보기 이미지 업로드 (붙여넣기 전용)
+    // - Firebase Storage에 업로드 후, 해당 북마크 문서에 previewImageUrl 저장
+    // - 기존 preview는 유지(이전 파일 삭제하지 않음)
+    window.uploadBookmarkPreviewImage = async (bookmarkId, file) => {
+        if(!ensureLogin()) return;
+        if(!bookmarkId || !file) throw new Error('bookmarkId/file required');
+
+        const { imagesCol } = await cloudRefs();
+        const user = auth.currentUser;
+        if(!user) throw new Error('로그인이 필요합니다.');
+
+        // 파일명/타입 보정
+        const contentType = file.type || 'image/png';
+        const safeName = (file.name && file.name.trim()) ? file.name : `preview_${bookmarkId}.png`;
+        const storagePath = `users/${user.uid}/uploads/bookmark_preview_${bookmarkId}_${Date.now()}_${safeName}`;
+        const storageRef = ref(storage, storagePath);
+
+        const uploadResult = await uploadBytes(storageRef, file, { contentType });
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        const docRef = doc(imagesCol, bookmarkId);
+        await updateDoc(docRef, { previewImageUrl: downloadURL, previewStoragePath: storagePath });
+    };
+
+
+    // [수정 5] window.deleteImage 함수 전체 교체 (Firebase Storage 삭제 로직 추가)
+    window.deleteImage = async (id)=>{
+      if(!ensureLogin()) return;
+      try{
+        const { imagesCol } = await cloudRefs();
+        const row=(window.imageBookmarks||[]).find(d=>d.id===id); 
+        
+        if(!row) throw new Error('북마크 항목을 찾을 수 없습니다.');
+        
+        // 1. Firebase Storage에 업로드된 파일인 경우
+        if (row.type === 'firebase_storage') {
+          // 1-1. Storage에서 파일 삭제
+          if (row.storagePath) {
+            try {
+              const fileRef = ref(storage, row.storagePath);
+              await deleteObject(fileRef);
+            } catch (e) {
+              console.warn("Storage 파일 삭제 실패 (무시함):", e);
+              // 스토리지에 파일이 없더라도 DB 문서는 삭제되도록 계속 진행
+            }
+          }
+          // 1-2. Firestore 문서 삭제
+          await deleteDoc(doc(imagesCol, id));
+          showFeedbackMessage('북마크가 삭제되었습니다.');
+
+        // 2. ImgBB에 업로드된 파일인 경우 (기존 코드 유지)
+        } else if(row.type==='imgbb'){
+          const delUrl=row.imgbb_delete_url||null;
+          if(delUrl){ 
+            try{ 
+                await fetch(delUrl,{method:'GET'}); 
+            }catch(_){/* imgbb 삭제 오류는 무시 */} 
+          }
+          await deleteDoc(doc(imagesCol,id));
+          showFeedbackMessage('북마크가 삭제되었습니다.');
+        
+        // 3. 단순 링크/URL 북마크인 경우 (DB 문서만 삭제)
+        } else if(row.type==='remote' || row.type === 'video' || row.type === 'link' || row.type === 'instagram'){
+          await deleteDoc(doc(imagesCol,id));
+          showFeedbackMessage('북마크가 삭제되었습니다.');
+        
+        // 4. 기타 (DB 문서만 삭제)
+        } else {
+            await deleteDoc(doc(imagesCol, id));
+            showFeedbackMessage('북마크가 삭제되었습니다.');
+        }
+
+      }catch(e){
+        document.getElementById('modal-message').textContent='북마크 삭제 중 오류: '+(e?.message||'unknown');
+        document.getElementById('alert-modal').classList.remove('hidden');
+      }
+    };
+
+    // ===== 실시간 동기화 =====
+    window.__unsubs=[];
+    async function setupRealtimeSync(){
+      const { tasksCol, stateDoc, imagesCol } = await cloudRefs();
+
+      // ===== 메모 탭 스키마 초기화 (기존 메모/탭을 정리하고 '메모' 탭 1개로 시작) =====
+      try{
+        const st=await getDoc(stateDoc);
+        const prev=st.exists()?(st.data()||{}):{};
+        const ver = Number(prev.notesSchemaVersion || 0);
+        if(ver < 2){
+          // 기존 메모 정리(요청사항: 깔끔하게 초기화)
+          const defaultTabs=[{ id:'memo', name:'메모', order:0 }];
+          await setDoc(stateDoc,{
+            notesSchemaVersion: 2,
+            notesTabList: defaultTabs,
+            notesTabs: { memo: '' },
+            notesActiveTabId: 'memo'
+          },{ merge:true });
+        }
+      }catch(_){}
+
+      window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
+
+      const unsubTasks = onSnapshot(tasksCol,(snap)=>{ window.customTasks=snap.docs.map(d=>({id:d.id,...d.data()})); if(typeof renderCalendar==='function') renderCalendar(); });
+      window.__unsubs.push(unsubTasks);
+
+      const unsubState = onSnapshot(stateDoc,(ds)=>{
+        const data=ds.exists()?(ds.data()||{}):{};
+        window.taskStatus=data.taskStatus||{};
+        window.__notesTabList = Array.isArray(data.notesTabList) && data.notesTabList.length ? data.notesTabList : [{ id:'memo', name:'메모', order:0 }];
+        window.__notesTabs = data.notesTabs || {};
+        window.__notesActiveTabId = data.notesActiveTabId || window.__notesActiveTabId || 'memo';
+        if(typeof window.renderNotesUI==='function') window.renderNotesUI();
+        if(typeof renderCalendar==='function') renderCalendar();
+      });
+      window.__unsubs.push(unsubState);
+
+      const unsubImages = onSnapshot(imagesCol,(snap)=>{ 
+          // imageBookmarks에 이미지/동영상/링크/인스타그램 북마크 모두 포함
+          window.imageBookmarks=snap.docs.map(d=>({id:d.id,...d.data()})); 
+          if(typeof renderImageBookmarks==='function') renderImageBookmarks(); 
+      });
+      window.__unsubs.push(unsubImages);
+    }
+
+    onAuthStateChanged(auth, async (user)=>{
+      loadingOverlay.classList.remove('hidden'); window.isAuthReady=false;
+      if(user){
+        userInfoEl.textContent = `${user.displayName || '로그인됨'} (${user.email || ''})`;
+        signInBtn.classList.add('hidden');
+        signOutBtn.classList.remove('hidden');
+        await setupRealtimeSync();
+      }else{
+        userInfoEl.textContent=''; signOutBtn.classList.add('hidden'); signInBtn.classList.remove('hidden');
+        window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
+        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={}; window.__notesTabList=[{id:'memo',name:'메모',order:0}]; window.__notesActiveTabId='memo';
+        if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); const na=document.getElementById('notesArea'); if(na) na.value='';
+      }
+      loadingOverlay.classList.add('hidden'); window.isAuthReady=true;
     });
 
-    // 5. 기타 버튼 바인딩
-    document.getElementById('signInBtn').onclick = () => signInWithPopup(auth, provider);
-    document.getElementById('signOutBtn').onclick = () => signOut(auth);
-    document.getElementById('saveTaskBtn').onclick = async () => {
-      if(!window.ensureLogin()) return;
-      const id = window.currentTask?.id || Date.now().toString();
-      const task = {
-        id, title: document.getElementById('taskTitle').value,
-        description: document.getElementById('taskDescription').value,
-        date: document.getElementById('taskDate').value,
-        category: document.getElementById('taskCategory').value,
-        todoOnly: document.getElementById('todoOnly').checked,
-        complete: window.currentTask?.complete || false
-      };
-      await setDoc(doc(db, `users/${auth.currentUser.uid}/customTasks/${id}`), task);
-      document.getElementById('taskModal').style.display='none';
-    };
-    document.getElementById('deleteTaskBtn').onclick = async () => {
-      if(!window.currentTask?.id || !window.ensureLogin()) return;
-      await deleteDoc(doc(db, `users/${auth.currentUser.uid}/customTasks/${window.currentTask.id}`));
-      document.getElementById('taskModal').style.display='none';
-    };
-    document.getElementById('prevMonthBtn').onclick = () => { currentDate.setMonth(currentDate.getMonth()-1); window.renderCalendar(); };
-    document.getElementById('nextMonthBtn').onclick = () => { currentDate.setMonth(currentDate.getMonth()+1); window.renderCalendar(); };
-    document.getElementById('closeImageModalBtn').onclick = () => document.getElementById('imageModal').style.display='none';
+initCalendar();
+initNotes();
+initBookmarks();
 
-    window.renderCalendar();
-  </script>
+</script>
+
 </body>
 </html>
