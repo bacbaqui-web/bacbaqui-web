@@ -1428,13 +1428,29 @@ function initNotes(){
   });
 
   const setActive = async (tabId)=>{
+    // 1) 현재 탭 내용을 먼저 로컬/클라우드에 확정 저장 (탭 전환 중 유실 방지)
+    const prevId = window.__notesActiveTabId || 'memo';
+    try{
+      if(notesArea){
+        window.__notesTabs = window.__notesTabs || {};
+        window.__notesTabs[prevId] = notesArea.value ?? '';
+        // 디바운스가 남아있더라도 이전 탭은 즉시 저장(최소 1회 보장)
+        if(window.cloudSaveNotesFor){
+          await window.cloudSaveNotesFor(prevId, window.__notesTabs[prevId]);
+        }else if(window.cloudSaveNotes){
+          await window.cloudSaveNotes();
+        }
+      }
+    }catch(_){}
+
+    // 2) active tab 변경 + 서버에 activeId 기록
     window.__notesActiveTabId = tabId;
-    // Persist active tab id in cloud (best-effort)
     try{
       window.cloudSetActiveNotesTab && await window.cloudSetActiveNotesTab(tabId);
     }catch(_){}
+
+    // 3) UI 갱신
     render();
-    // Update textarea
     const { notes } = getState();
     notesArea.value = notes[tabId] || '';
   };
@@ -1636,17 +1652,29 @@ function initNotes(){
     });
   }
 
-  // Save note content
-  if(notesArea){
-    notesArea.addEventListener('input', ()=>{
-      window.cloudSaveNotesDebounced && window.cloudSaveNotesDebounced();
-    });
-    notesArea.addEventListener('blur', ()=>{
-      window.cloudSaveNotes && window.cloudSaveNotes();
-    });
-  }
+  // Save note content (tab-safe)
+// - 입력 시점의 tabId/value를 캡처하여 저장(탭 전환 중 덮어쓰기/유실 방지)
+// - 로컬 캐시(window.__notesTabs)도 즉시 갱신하여 탭 전환 시 내용 유지
+if(notesArea){
+  const syncLocal = ()=>{
+    const tabId = window.__notesActiveTabId || 'memo';
+    window.__notesTabs = window.__notesTabs || {};
+    window.__notesTabs[tabId] = notesArea.value ?? '';
+    return { tabId, value: window.__notesTabs[tabId] };
+  };
 
-  // Expose renderer for realtime updates
+  notesArea.addEventListener('input', ()=>{
+    const { tabId, value } = syncLocal();
+    window.cloudSaveNotesDebounced && window.cloudSaveNotesDebounced(tabId, value);
+  });
+
+  // 포커스가 빠질 때는 즉시 저장(디바운스 대기 중 유실 방지)
+  notesArea.addEventListener('blur', ()=>{
+    const { tabId, value } = syncLocal();
+    window.cloudSaveNotesFor && window.cloudSaveNotesFor(tabId, value);
+  });
+}
+// Expose renderer for realtime updates
   window.renderNotesUI = render;
 
   // Initial render
@@ -1757,7 +1785,20 @@ function initBookmarks(){
     };
 
     let notesTimer=null;
-    window.cloudSaveNotesDebounced=function(){ clearTimeout(notesTimer); notesTimer=setTimeout(()=>window.cloudSaveNotes&&window.cloudSaveNotes(),800); };
+    let notesPending=null; // {tabId, value}
+    window.cloudSaveNotesDebounced=function(tabId, value){
+      clearTimeout(notesTimer);
+      // 캡처된 값이 들어오면 그 값을 우선 저장(탭 전환 중 덮어쓰기 방지)
+      if(tabId){ notesPending = { tabId, value: value ?? '' }; }
+      notesTimer=setTimeout(()=>{
+        if(window.cloudSaveNotesFor && notesPending){
+          window.cloudSaveNotesFor(notesPending.tabId, notesPending.value);
+          notesPending=null;
+        }else if(window.cloudSaveNotes){
+          window.cloudSaveNotes();
+        }
+      },800);
+    };
 
     window.cloudSaveAll=async ()=>{
       if(!ensureLogin()) return;
@@ -1776,16 +1817,38 @@ function initBookmarks(){
       await setDoc(stateDoc,{taskStatus:window.taskStatus},{merge:true});
     };
 
-    window.cloudSaveNotes=async ()=>{
+    window.cloudSaveNotes=async (tabIdArg, valueArg)=>{
       if(!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
       const st=await getDoc(stateDoc);
       const prev=st.exists()?(st.data()||{}):{};
-      const notesTabs=prev.notesTabs||{};
-      const activeId = window.__notesActiveTabId || prev.notesActiveTabId || 'memo';
-      const notesAreaEl=document.getElementById('notesArea');
-      if(notesAreaEl){ notesTabs[activeId]=notesAreaEl.value ?? ''; }
+
+      // 반드시 새 객체로 복사해서 저장 (참조 공유로 인한 예기치 않은 동기화 방지)
+      const notesTabs = { ...(prev.notesTabs || {}) };
+
+      // 저장 대상 탭 결정: 인자로 들어온 tabId를 우선
+      const activeId = tabIdArg || window.__notesActiveTabId || prev.notesActiveTabId || 'memo';
+
+      // 저장 값 결정: 인자로 들어온 value를 우선, 아니면 textarea 값
+      let nextValue = (valueArg !== undefined) ? valueArg : undefined;
+      if(nextValue === undefined){
+        const notesAreaEl=document.getElementById('notesArea');
+        if(notesAreaEl) nextValue = notesAreaEl.value ?? '';
+        else nextValue = '';
+      }
+
+      notesTabs[activeId] = nextValue;
+
+      // 로컬 캐시도 동일하게 맞춰둠(탭 전환 시 내용 유지)
+      window.__notesTabs = window.__notesTabs || {};
+      window.__notesTabs[activeId] = nextValue;
+
       await setDoc(stateDoc,{notesTabs, notesActiveTabId: activeId},{merge:true});
+    };
+
+    // 명시적으로 특정 탭을 저장하는 래퍼(탭 전환/디바운스에서 사용)
+    window.cloudSaveNotesFor = async (tabId, value)=>{
+      return window.cloudSaveNotes(tabId, value);
     };
 
     // 메모 탭 CRUD (stateDoc 내부 notesTabList / notesTabs 사용)
