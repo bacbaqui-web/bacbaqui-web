@@ -7,14 +7,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
-    /* index.html의 기존 스타일 유지 */
     body{font-family:'Noto Sans KR',sans-serif;background:#000;color:#fff;display:flex;justify-content:flex-start;align-items:center;min-height:100vh;padding:16px;flex-direction:column;gap:0}
     .tab-content{display:none}.tab-content.active{display:flex;flex-direction:column;flex-grow:1}
     .section-card{background:#2a2a2a;border-radius:12px;padding:20px;box-shadow:inset 0 0 10px rgba(0,0,0,.3);text-align:center;width:100%;max-width:800px}
     .notepad-tabs{display:flex;justify-content:center;align-items:center;gap:1rem;width:100%;max-width:800px}
     .notepad-tab{background:#1a1a1a;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;transition:.2s;font-weight:700;color:#737373;font-size:.85rem}
     .notepad-tab.active,.notepad-tab:hover{background:#2a2a2a;color:#fff}
-    
+
     #notesHeaderRow{margin-top:8px;margin-bottom:8px}
     #notesTabsContainer{justify-content:flex-start;align-items:center;gap:8px;padding-left:10px;margin-top:0;}
     .notes-tab{background:#3a3a3a;padding:8px 16px;border-radius:12px;cursor:pointer;transition:background .2s,color .2s,transform .15s ease;font-weight:700;color:#ddd;font-size:.85rem;position:relative;z-index:1;border:1px solid transparent;}
@@ -34,7 +33,7 @@
     .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
     .day-label,.calendar-day{text-align:center;padding:8px 2px;border-radius:8px;background:#2a2a2a;position:relative;overflow:hidden;word-wrap:break-word}
     .day-label{background:#444;font-weight:700;color:#fff;font-size:.8rem;padding:8px 0}
-    .calendar-day{min-height:160px;padding-top:16px;display:flex;flex-direction:column;gap:2px}
+    .calendar-day{min-height:160px;padding-top:16px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;gap:2px}
     .calendar-day.today{border:2px solid #ccc}
     .day-number{position:absolute;top:8px;left:8px;font-size:.85rem;font-weight:700;color:#aaa;z-index:10}
     .day-divider{height:1px;background:#3a3a3a;margin:18px 6px 2px;border-radius:999px;opacity:.95}
@@ -48,34 +47,46 @@
     .task-item.complete{background:#888;text-decoration:line-through;color:#ccc}
     .task-item.custom-task.complete{background:#666 !important;color:#bdbdbd !important;text-decoration:line-through;opacity:.95}
 
-    .daily-check-group {display: flex;width: 100%;gap: 2px;margin-top: 2px;}
-    .daily-check-btn {flex: 1;text-align: center;font-size: 0.75rem;padding: 4px 0;border-radius: 4px;background: #444;color: #ccc;cursor: pointer;transition: background 0.2s;font-weight: 500;}
-    .daily-check-btn.shorts.active {background: #7c3aed; color: white; font-weight: 700;}
-    .daily-check-btn.webtoon.active {background: #f59e0b; color: white; font-weight: 700;}
-
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
-    .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;position:relative}
+    .modal-content{background:#1a1a1a;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative}
     .drag-area{border:2px dashed #4b4b4b;transition:all .3s ease;padding:24px}
     .drag-area.active{border-color:#6b6b6b;background-color:#2a2a2a}
-
-    #image-grid {column-count: 2; column-gap: 1rem; margin-top: 1.5rem; display: block;}
-    @media (min-width: 640px) { #image-grid { column-count: 3; } }
-    @media (min-width: 1024px) { #image-grid { column-count: 4; } }
-    .bookmark-card{background: #333; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; break-inside: avoid; width: 100%; display: block; position: relative; transition: transform .2s;}
-    .bookmark-card:hover{transform:translateY(-5px)}
-    .bookmark-card .content {min-height: 80px; position: relative; background: #1a1a1a;}
-    .bookmark-card img {width: 100%; height: auto; display: block; object-fit: contain;}
-    .icon-overlay {position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; color: white; font-size: 3rem;}
-    .video-title-overlay {position: absolute; inset: 0; background: rgba(80, 0, 0, 0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 10px; text-align: center;}
     
+    .daily-check-group {display: flex;width: 100%;gap: 2px;margin-top: 2px;}
+    .daily-check-btn {flex: 1;text-align: center;font-size: 0.75rem;padding: 4px 0;border-radius: 4px;background: #444;color: #ccc;cursor: pointer;transition: background 0.2s, color 0.2s;font-weight: 500;}
+    .daily-check-btn:hover {opacity: 0.9;}
+    .daily-check-btn.shorts.active {background: #7c3aed; color: white;font-weight: 700;}
+    .daily-check-btn.webtoon.active {background: #f59e0b; color: white;font-weight: 700;}
+
     .agenda-item{display:flex;align-items:center;gap:10px;background:#2a2a2a;border-radius:10px;padding:10px}
     .agenda-dot{width:10px;height:10px;border-radius:999px;flex:0 0 10px}
     .agenda-date{font-size:.8rem;color:#bbb;min-width:92px}
     .agenda-text{flex:1 1 auto;word-break:break-word}
     .agenda-actions{display:flex;gap:6px;flex:0 0 auto}
-    .agenda-settings-btn{width:34px;height:30px;background:#3a3a3a;border-radius:10px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .agenda-settings-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;background:#3a3a3a;border-radius:10px;color:#fff;border:none;cursor:pointer}
     .agenda-item.complete{opacity:.9;background:#242424}
     .agenda-item.complete .agenda-text{color:#7a7a7a !important;text-decoration:line-through}
+
+    #image-grid {column-count: 2; column-gap: 1rem; margin-top: 1.5rem; display: block;}
+    @media (min-width: 640px) { #image-grid { column-count: 3; } }
+    @media (min-width: 1024px) { #image-grid { column-count: 4; } }
+
+    .bookmark-card{background: #333; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; break-inside: avoid; width: 100%; display: block; position: relative; transition: transform .2s;}
+    .bookmark-card:hover{transform:translateY(-5px)}
+    .bookmark-card .content {min-height: 80px; position: relative; background: #1a1a1a;}
+    .bookmark-card img {width: 100%; height: auto; display: block; object-fit: contain;}
+    .bookmark-card .img-fit-cover {object-fit: cover;}
+    .icon-overlay {position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; color: white; font-size: 3rem;}
+    .video-title-overlay {position: absolute; inset: 0; background: rgba(80, 0, 0, 0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 10px; text-align: center;}
+    
+    #imageModal.modal .modal-content {background: transparent; box-shadow: none; max-width: 90vw; max-height: 90vh; display: flex; justify-content: center; align-items: center; cursor: pointer;}
+    #modalImage {max-width: 100%; max-height: 100%; object-fit: contain;}
+
+    @media (max-width:768px){
+      body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
+      .calendar-day{min-height:120px;padding:1.5rem .2rem .2rem}
+      .calendar-grid,.calendar-header{gap:0}
+    }
   </style>
 </head>
 <body class="text-white">
@@ -91,6 +102,7 @@
     <button class="notepad-tab" data-tab="bookmarks">북마크</button>
   </div>
 
+  <!-- 달력 섹션 -->
   <div id="calendar-section" class="section-card tab-content active">
     <div class="flex justify-between items-center mb-4">
       <button id="prevMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">&lt; 이전 달</button>
@@ -98,7 +110,8 @@
       <button id="nextMonthBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">다음 달 &gt;</button>
     </div>
     <div class="calendar-header mb-2">
-      <div class="day-label">월</div><div class="day-label">화</div><div class="day-label">수</div><div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div><div class="day-label">일</div>
+      <div class="day-label">월</div><div class="day-label">화</div><div class="day-label">수</div>
+      <div class="day-label">목</div><div class="day-label">금</div><div class="day-label">토</div><div class="day-label">일</div>
     </div>
     <div id="calendarGrid" class="calendar-grid"></div>
     <div id="agendaPanel" class="mt-6 text-left" style="background:#1f1f1f;border-radius:12px;padding:14px;box-shadow:inset 0 0 10px rgba(0,0,0,.25)">
@@ -106,6 +119,7 @@
     </div>
   </div>
 
+  <!-- 메모 섹션 -->
   <div id="notes-section" class="section-card tab-content">
     <div class="flex items-center justify-between mb-2" id="notesHeaderRow">
       <div id="notesTabsContainer" class="notepad-tabs flex flex-wrap gap-2"></div>
@@ -121,134 +135,163 @@
     <textarea id="notesArea" class="w-full notes-area p-4 bg-black text-white border border-gray-700 focus:outline-none rounded-lg"></textarea>
   </div>
 
+  <!-- 북마크 섹션 -->
   <div id="bookmarks-section" class="section-card tab-content text-left">
-    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer">
+    <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="붙여넣기(Ctrl+V)">
       <div class="text-4xl font-bold select-none">+</div>
     </section>
     <section id="image-grid"></section>
   </div>
 
+  <!-- 모달들 -->
   <div id="taskModal" class="modal">
     <div class="modal-content">
-      <h2 id="modalTitle" class="text-2xl font-bold mb-4">새 작업</h2>
-      <label class="block mb-2">제목:</label>
-      <input type="text" id="taskTitle" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
-      <label class="block mb-2">설명:</label>
-      <textarea id="taskDescription" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24"></textarea>
-      <label class="block mb-2">날짜:</label>
-      <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
-      <label class="block mb-2">분류:</label>
-      <select id="taskCategory" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4">
+      <h2 id="modalTitle" class="text-2xl font-bold mb-4">작업</h2>
+      <input type="text" id="taskTitle" placeholder="제목" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
+      <textarea id="taskDescription" placeholder="설명" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 h-24 text-white"></textarea>
+      <input type="date" id="taskDate" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
+      <select id="taskCategory" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
         <option value="">(기본)</option>
         <option value="important">중요한일 (빨강)</option>
         <option value="family">가족행사 (파랑)</option>
         <option value="special">특별한날 (초록)</option>
       </select>
       <label class="flex items-center gap-2 mb-4 text-sm opacity-90">
-        <input type="checkbox" id="todoOnly" />
-        달력에는 표시하지 않고 <b>할 일</b>로만 추가
+        <input type="checkbox" id="todoOnly" /> 달력에 표시 안 함
       </label>
       <div class="flex justify-end gap-2">
-        <button id="saveTaskBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
-        <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-        <button id="deleteTaskBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hidden">삭제</button>
+        <button id="saveTaskBtn" class="bg-blue-600 px-4 py-2 rounded">저장</button>
+        <button id="cancelBtn" class="bg-gray-500 px-4 py-2 rounded">취소</button>
+        <button id="deleteTaskBtn" class="bg-red-600 px-4 py-2 rounded hidden">삭제</button>
       </div>
     </div>
   </div>
 
-  <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div id="imageModal" class="modal">
+    <div class="modal-content relative">
+      <button id="closeImageModalBtn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 z-50">&times;</button>
+      <img id="modalImage" src="" />
+      <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg z-50">원본 이동</button>
+    </div>
+  </div>
+
+  <div id="editTitleModal" class="modal">
+    <div class="modal-content">
+      <h2 class="text-xl font-bold mb-4">북마크 제목 수정</h2>
+      <label class="block mb-2 text-sm opacity-80" id="currentUrlDisplay"></label>
+      <input type="text" id="editTitleInput" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
+      <div class="flex justify-end gap-2">
+        <button id="saveTitleBtn" class="bg-blue-600 px-4 py-2 rounded">저장</button>
+        <button id="cancelTitleBtn" class="bg-gray-500 px-4 py-2 rounded">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="previewUploadModal" class="modal">
+    <div class="modal-content" style="background:#2a2a2a;max-width:420px;">
+      <h2 class="text-xl font-bold mb-3">미리보기 이미지</h2>
+      <p class="text-sm opacity-80 mb-4">캡쳐한 이미지를 이 창에서 <b>붙여넣기(Ctrl+V)</b> 하세요.</p>
+      <div id="previewPasteArea" class="drag-area rounded-lg p-10 flex items-center justify-center text-center cursor-default">
+        <div class="text-5xl font-bold">+</div>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button id="closePreviewUploadBtn" class="bg-gray-500 px-4 py-2 rounded">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
-      <p id="modal-message" class="text-white text-lg text-center font-medium"></p>
+      <p id="modal-message" class="text-white text-center font-medium"></p>
       <div class="mt-4 flex justify-center">
-        <button id="modal-close-btn" class="px-4 py-2 bg-[#424242] text-white rounded-md hover:bg-[#525252]">확인</button>
+        <button id="modal-close-btn" class="px-4 py-2 bg-gray-600 text-white rounded-md">확인</button>
       </div>
     </div>
   </div>
+
   <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-[1001] flex items-center justify-center hidden">
-    <div class="flex flex-col items-center">
-      <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
-      <p class="text-white mt-4 text-lg">데이터를 불러오는 중...</p>
+    <div class="text-white flex flex-col items-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-white mb-4"></div>
+      <div>로딩 중...</div>
     </div>
   </div>
 
+  <!-- UI & 공통 로직 (ui.js 로직 포함) -->
   <script>
-    // 전역 상태 초기화
-    window.customTasks = []; window.taskStatus = {}; window.__notesTabs = {}; window.imageBookmarks = [];
-    window.currentTask = null; let currentDate = new Date();
-    
-    // UI 유틸리티
+    window.customTasks = [];
+    window.taskStatus = {};
+    window.__notesTabs = {};
+    window.imageBookmarks = [];
+    window.currentTask = null;
+    let currentDate = new Date();
+    window.isAuthReady = false;
+
+    // 유틸리티
     const showFeedbackMessage = (msg) => {
       const el = document.createElement('div'); el.textContent = msg;
-      el.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;";
+      el.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:16px 20px;border-radius:10px;z-index:2000;max-width:90%";
       document.body.appendChild(el); setTimeout(()=>el.remove(),2000);
     };
     const showAlert = (msg) => { document.getElementById('modal-message').textContent = msg; document.getElementById('alert-modal').classList.remove('hidden'); };
-    const hideAlert = () => { document.getElementById('alert-modal').classList.add('hidden'); };
-    document.getElementById('modal-close-btn').addEventListener('click', hideAlert);
+    document.getElementById('modal-close-btn').addEventListener('click', () => document.getElementById('alert-modal').classList.add('hidden'));
+
+    // 날짜 및 에피소드 계산 로직
+    const TZ='Asia/Seoul';
+    function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
+    function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
+    function isEpisodeDay(dateObj){ const dow = dateObj.getDay(); return dow >= 1 && dow <= 5; }
+    
+    function countEpisodeDaysExclusiveStartInclusiveEnd(startDateObj, endDateObj){
+      let count = 0;
+      const cur = new Date(startDateObj.getFullYear(), startDateObj.getMonth(), startDateObj.getDate());
+      const end = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), endDateObj.getDate());
+      cur.setDate(cur.getDate() + 1);
+      while(cur <= end){ if(isEpisodeDay(cur)) count++; cur.setDate(cur.getDate() + 1); }
+      return count;
+    }
+
+    function episodeNumberForDate(targetDateObj){
+      const baseDate = new Date(2026, 1, 2); // 2026-02-02 (Mon)
+      const baseEpisode = 2123;
+      const t = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate());
+      if(t.getTime() === baseDate.getTime()) return baseEpisode;
+      if(t > baseDate){ return baseEpisode + countEpisodeDaysExclusiveStartInclusiveEnd(baseDate, t); } 
+      else { return baseEpisode - countEpisodeDaysExclusiveStartInclusiveEnd(t, baseDate); }
+    }
 
     // 탭 전환
     function showTab(tabId){
       document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
       document.querySelectorAll('.notepad-tab').forEach(b=>b.classList.remove('active'));
       document.getElementById(`${tabId}-section`).classList.add('active');
-      document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`).classList.add('active');
+      const btn=document.querySelector(`#main-tabs .notepad-tab[data-tab="${tabId}"]`);
+      if(btn) btn.classList.add('active');
     }
     document.querySelectorAll('#main-tabs .notepad-tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 
-    // 날짜 유틸리티
-    const TZ='Asia/Seoul';
-    function ymdKST(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(date); }
-    function toKST(date){ return new Date(date.toLocaleString('en-US',{timeZone:TZ})); }
-    function isEpisodeDay(dateObj){ const dow = dateObj.getDay(); return dow >= 1 && dow <= 5; }
-    function episodeNumberForDate(targetDateObj){
-      const baseDate = new Date(2026, 1, 2); const baseEpisode = 2123;
-      const t = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate());
-      if(t.getTime() === baseDate.getTime()) return baseEpisode;
-      // 단순화된 계산 로직 (에피소드 계산기)
-      return baseEpisode + Math.floor((t - baseDate) / (1000*60*60*24)); 
+    // 북마크 유틸리티
+    function getYoutubeThumbnail(url) {
+        let videoId = null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        if (match && match[2].length === 11) videoId = match[2];
+        return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
     }
 
-    // 달력 렌더링
-    window.renderCalendar = function() {
-      const year=currentDate.getFullYear(), month=currentDate.getMonth();
-      document.getElementById('currentMonthYear').textContent=`${year}년 ${month+1}월`;
-      const grid = document.getElementById('calendarGrid'); grid.innerHTML='';
-      const firstDay=new Date(year,month,1).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
-      const leadingBlanks=(firstDay+6)%7;
-      for(let i=0;i<leadingBlanks;i++) grid.appendChild(document.createElement('div')).className='calendar-day';
-      for(let day=1;day<=daysInMonth;day++){
-        const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate);
-        const dayDiv=document.createElement('div'); dayDiv.className='calendar-day relative';
-        if(fullDate === ymdKST(new Date())) dayDiv.classList.add('today');
-        dayDiv.innerHTML = `<span class="day-number">${day}</span><div class="day-divider"></div>`;
-        
-        // 일일 체크 버튼
-        const checkGroup = document.createElement('div'); checkGroup.className = 'daily-check-group';
-        ['shorts', 'webtoon'].forEach(type => {
-          const btn = document.createElement('div'); btn.className = `daily-check-btn ${type}`; btn.textContent = type==='shorts'?'쇼츠':'웹툰';
-          if ((window.taskStatus || {})[`${fullDate}_daily_${type}`]) btn.classList.add('active');
-          btn.onclick = (e) => { e.stopPropagation(); toggleDailyTask(fullDate, type); };
-          checkGroup.appendChild(btn);
-        });
-        dayDiv.appendChild(checkGroup);
-        grid.appendChild(dayDiv);
-      }
-    };
-
-    function toggleDailyTask(date, type) {
-      const key = `${date}_daily_${type}`;
-      window.taskStatus[key] = !window.taskStatus[key];
-      window.cloudSaveStateOnly && window.cloudSaveStateOnly();
-      window.renderCalendar();
-    }
+    function isInstagramEmbed(text) { return /<blockquote class="instagram-media".*<\/blockquote>/.test(text); }
+    function isImageUrl(u){ try{ new URL(u); }catch{ return false; } return /\.(jpe?g|png|gif|webp|svg|avif)(\?|$)/i.test(u); }
+    function isVideoUrl(u){ if (!u) return false; try { new URL(u); } catch { return false; } return /youtu\.be|youtube\.com|vimeo\.com|\.(mp4|webm|ogg|mov)(\?|$)|missav\.com/i.test(u); }
+    function isGenericUrl(u) { if (!u) return false; try { const urlObj = new URL(u); return (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') && urlObj.hostname.includes('.') && !isImageUrl(u) && !isVideoUrl(u) && !/instagram\.com/.test(u); } catch { return false; } }
+    function extractDomain(url) { if (!url) return 'Unknown'; try { const urlObj = new URL(url.includes('://') ? url : 'https://' + url); let domain = urlObj.hostname; if (domain.startsWith('www.')) domain = domain.substring(4); return domain; } catch { return 'Unknown'; } }
   </script>
 
+  <!-- Firebase & 모듈 로직 (main.js, notes.js, bookmarks.js 통합) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, addDoc, updateDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE",
       authDomain: "comicschedule-dfec7.firebaseapp.com",
@@ -261,64 +304,382 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
     const provider = new GoogleAuthProvider();
 
-    // 1. 메모 로직 (notes.js)
-    window.renderNotesUI = function() {
-      const container = document.getElementById('notesTabsContainer');
-      const tabs = window.__notesTabList || [{id:'memo', name:'메모'}];
-      container.innerHTML = '';
-      tabs.forEach(t => {
-        const btn = document.createElement('button');
-        btn.className = `notes-tab ${t.id === window.__notesActiveTabId ? 'active' : ''}`;
-        btn.textContent = t.name;
-        btn.onclick = () => { window.__notesActiveTabId = t.id; window.renderNotesUI(); };
-        container.appendChild(btn);
-      });
-      document.getElementById('notesArea').value = (window.__notesTabs || {})[window.__notesActiveTabId || 'memo'] || '';
+    // 전역 통신 함수들
+    window.ensureLogin = () => { if(!auth.currentUser) { showAlert('로그인 후 이용 가능합니다.'); return false; } return true; };
+
+    // --- 달력 렌더링 로직 (상세 복구) ---
+    window.renderCalendar = () => {
+      const year=currentDate.getFullYear(), month=currentDate.getMonth();
+      const titleEl = document.getElementById('currentMonthYear');
+      const grid = document.getElementById('calendarGrid');
+      if(!titleEl || !grid) return;
+
+      titleEl.textContent=`${year}년 ${month+1}월`;
+      grid.innerHTML='';
+
+      const firstDay=new Date(year,month,1).getDay();
+      const daysInMonth=new Date(year,month+1,0).getDate();
+      const leadingBlanks=(firstDay+6)%7;
+
+      for(let i=0;i<leadingBlanks;i++) grid.appendChild(document.createElement('div')).className='calendar-day';
+
+      for(let day=1;day<=daysInMonth;day++){
+        const thisDate=new Date(year,month,day);
+        const fullDate=ymdKST(thisDate);
+        const dayDiv=document.createElement('div');
+        dayDiv.className='calendar-day relative';
+        if(fullDate===ymdKST(new Date())) dayDiv.classList.add('today');
+
+        dayDiv.innerHTML = `<span class="day-number">${day}</span><div class="day-divider"></div>`;
+
+        // 1. 쇼츠/웹툰 체크 버튼
+        const checkGroup = document.createElement('div');
+        checkGroup.className = 'daily-check-group';
+        ['shorts', 'webtoon'].forEach(type => {
+          const btn = document.createElement('div');
+          btn.className = `daily-check-btn ${type}`;
+          btn.textContent = type==='shorts'?'쇼츠':'웹툰';
+          const key = `${fullDate}_daily_${type}`;
+          if (window.taskStatus[key]) btn.classList.add('active');
+          btn.onclick = async (e) => {
+            e.stopPropagation();
+            if(!window.ensureLogin()) return;
+            window.taskStatus[key] = !window.taskStatus[key];
+            await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {taskStatus: window.taskStatus}, {merge:true});
+          };
+          checkGroup.appendChild(btn);
+        });
+        dayDiv.appendChild(checkGroup);
+
+        // 2. 에피소드 정보
+        if(isEpisodeDay(thisDate)){
+          const epNum = episodeNumberForDate(thisDate);
+          const epEl = document.createElement('div');
+          epEl.className = 'task-item episode-task';
+          epEl.textContent = `${epNum}화`;
+          const key = `${fullDate}_바퀴멘터리 ${epNum}화`;
+          if (window.taskStatus[key]) epEl.classList.add('complete');
+          epEl.onclick = async (e) => {
+            e.stopPropagation();
+            if(!window.ensureLogin()) return;
+            window.taskStatus[key] = !window.taskStatus[key];
+            await setDoc(doc(db, `users/${auth.currentUser.uid}/meta/appState`), {taskStatus: window.taskStatus}, {merge:true});
+          };
+          dayDiv.appendChild(epEl);
+        }
+
+        // 3. 커스텀 태스크
+        (window.customTasks || []).filter(t => t.date === fullDate).forEach(task => {
+          const el = document.createElement('div');
+          el.className = `task-item custom-task custom-${task.category || 'default'}`;
+          if (task.complete) el.classList.add('complete');
+          el.textContent = task.title;
+          el.onclick = async (e) => {
+            e.stopPropagation();
+            if(!window.ensureLogin()) return;
+            task.complete = !task.complete;
+            await setDoc(doc(db, `users/${auth.currentUser.uid}/customTasks/${task.id}`), task, {merge:true});
+          };
+          el.ondblclick = (e) => { e.stopPropagation(); openTaskModal(task); };
+          dayDiv.appendChild(el);
+        });
+
+        dayDiv.onclick = (e) => { if(e.target.classList.contains('calendar-day') || e.target.classList.contains('day-number')) openTaskModal({date:fullDate}); };
+        grid.appendChild(dayDiv);
+      }
+      renderAgendaList();
     };
 
-    // 2. 북마크 로직 (bookmarks.js)
-    window.renderImageBookmarks = function() {
-      const grid = document.getElementById('image-grid'); grid.innerHTML = '';
-      (window.imageBookmarks || []).forEach(d => {
-        const card = document.createElement('div'); card.className = 'bookmark-card';
-        card.innerHTML = `<div class="content"><div style="padding:20px;text-align:center;">${d.sourceDomain || 'Bookmark'}</div></div>`;
+    function renderAgendaList() {
+      const agendaEl = document.getElementById('agendaList');
+      if(!agendaEl) return;
+      agendaEl.innerHTML = '';
+      const order = { important: 1, family: 2, special: 3 };
+      
+      const tasks = (window.customTasks || []).sort((a,b) => {
+        if(a.complete !== b.complete) return a.complete ? 1 : -1;
+        return (order[a.category] || 99) - (order[b.category] || 99);
+      });
+
+      tasks.forEach(t => {
+        const row = document.createElement('div');
+        row.className = `agenda-item ${t.complete ? 'complete' : ''}`;
+        const dotCol = t.category === 'important' ? '#dc2626' : (t.category === 'family' ? '#2563eb' : (t.category === 'special' ? '#16a34a' : '#9ca3af'));
+        row.innerHTML = `
+          <div class="agenda-dot" style="background:${dotCol}"></div>
+          <div class="agenda-date">${t.date || ''}</div>
+          <div class="agenda-text">${t.title}</div>
+          <div class="agenda-actions">
+            <button class="agenda-settings-btn" onclick="event.stopPropagation(); openTaskModal(${JSON.stringify(t).replace(/"/g, '&quot;')})">⚙️</button>
+          </div>
+        `;
+        row.onclick = async () => {
+          if(!window.ensureLogin()) return;
+          t.complete = !t.complete;
+          await setDoc(doc(db, `users/${auth.currentUser.uid}/customTasks/${t.id}`), t, {merge:true});
+        };
+        agendaEl.appendChild(row);
+      });
+    }
+
+    // --- 북마크 렌더링 로직 (상세 복구) ---
+    window.renderImageBookmarks = () => {
+      const grid = document.getElementById('image-grid');
+      if(!grid) return;
+      grid.innerHTML = '';
+
+      const sorted = [...(window.imageBookmarks || [])].sort((a,b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
+
+      sorted.forEach(d => {
+        const isVideo = d.type === 'video';
+        const isLink = d.type === 'link';
+        const isInstagram = d.type === 'instagram';
+        const isImage = d.type === 'firebase_storage' || d.type === 'remote' || d.type === 'imgbb';
+        
+        const card = document.createElement('div');
+        card.className = 'bookmark-card group cursor-pointer';
+        
+        let contentHtml = '';
+        let urlToOpen = d.pageUrl || d.url;
+
+        if (isInstagram && d.embedCode) {
+          contentHtml = `<div class="w-full relative z-0">${d.embedCode}<div class="absolute top-0 left-0 right-0 p-2 bg-black bg-opacity-70 text-xs font-bold z-10">${d.title || 'Instagram'}</div></div>`;
+        } else if (isLink) {
+          if (d.previewImageUrl) {
+            contentHtml = `<img src="${d.previewImageUrl}" class="img-fit-cover" />`;
+          } else {
+            contentHtml = `<div class="icon-overlay"><svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></div>`;
+          }
+        } else if (isVideo) {
+          const thumb = getYoutubeThumbnail(d.pageUrl);
+          if (thumb) {
+            contentHtml = `<img src="${thumb}" class="img-fit-cover" /><div class="icon-overlay flex-col"><svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg><span class="text-xs mt-1 font-bold">${d.title || 'Video'}</span></div>`;
+          } else {
+            contentHtml = `<div class="video-title-overlay"><span class="text-sm font-bold">${d.title || 'Video'}</span><span class="text-xs opacity-70 truncate w-full">${d.pageUrl}</span></div>`;
+          }
+        } else {
+          contentHtml = `<img src="${d.url}" />`;
+        }
+
+        card.innerHTML = `
+          <div class="content">${contentHtml}</div>
+          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-[10px] px-2 py-1 truncate z-10 opacity-70">${d.sourceDomain || 'Source'}</div>
+          <button class="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 btn-delete">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          ${(isVideo || isLink || isInstagram) ? `<button class="absolute top-2 right-8 bg-blue-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 btn-edit">📝</button>` : ''}
+        `;
+
+        card.onclick = (e) => {
+          if (e.target.closest('button')) return;
+          if (isImage) { openImageModal(d.url, d.pageUrl); } else { window.open(urlToOpen, '_blank'); }
+        };
+
+        card.querySelector('.btn-delete').onclick = async (e) => {
+          e.stopPropagation();
+          if(!window.ensureLogin()) return;
+          if (d.type === 'firebase_storage' && d.storagePath) { await deleteObject(ref(storage, d.storagePath)).catch(()=>{}); }
+          await deleteDoc(doc(db, `users/${auth.currentUser.uid}/images/${d.id}`));
+          showFeedbackMessage('삭제되었습니다.');
+        };
+
+        const editBtn = card.querySelector('.btn-edit');
+        if(editBtn) editBtn.onclick = (e) => { e.stopPropagation(); if(isLink) { openPreviewUploadModal(d); } else { openEditTitleModal(d); } };
+
         grid.appendChild(card);
       });
+      // 인스타그램 스크립트 재실행
+      if(window.instgrm) window.instgrm.Embeds.process();
     };
 
-    // 3. 메인 로직 & Firebase 연동
+    // --- 저장 및 업로드 로직 (main.js logic) ---
+    window.addImage = async (file, pageUrl) => {
+      if(!window.ensureLogin()) return;
+      const user = auth.currentUser;
+      const storagePath = `users/${user.uid}/uploads/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      showFeedbackMessage('업로드 중...');
+      const uploadResult = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(uploadResult.ref);
+      await addDoc(collection(db, `users/${user.uid}/images`), {
+        url: downloadURL, pageUrl: pageUrl || null, type: 'firebase_storage', storagePath, sourceDomain: pageUrl ? extractDomain(pageUrl) : 'Upload', timestamp: new Date()
+      });
+      showFeedbackMessage('이미지 저장 완료');
+    };
+
+    window.addGenericBookmark = async (url) => {
+      if(!window.ensureLogin()) return;
+      await addDoc(collection(db, `users/${auth.currentUser.uid}/images`), {
+        pageUrl: url, type:'link', sourceDomain: extractDomain(url), timestamp: new Date()
+      });
+      showFeedbackMessage('링크 저장 완료');
+    };
+
+    window.addVideoBookmark = async (url) => {
+      if(!window.ensureLogin()) return;
+      await addDoc(collection(db, `users/${auth.currentUser.uid}/images`), {
+        pageUrl: url, type:'video', sourceDomain: extractDomain(url), timestamp: new Date()
+      });
+      showFeedbackMessage('동영상 저장 완료');
+    };
+
+    window.addInstagramBookmark = async (embedCode) => {
+      if(!window.ensureLogin()) return;
+      let pageUrl = 'Instagram';
+      const docMatch = embedCode.match(/cite="([^"]+)"/);
+      if(docMatch) pageUrl = docMatch[1];
+      await addDoc(collection(db, `users/${auth.currentUser.uid}/images`), {
+        embedCode, pageUrl, type:'instagram', sourceDomain: extractDomain(pageUrl), timestamp: new Date()
+      });
+      showFeedbackMessage('인스타그램 저장 완료');
+    };
+
+    // --- 초기화 및 동기화 ---
     onAuthStateChanged(auth, async (user) => {
-      const loading = document.getElementById('loading-overlay');
-      loading.classList.remove('hidden');
+      const overlay = document.getElementById('loading-overlay');
+      overlay.classList.remove('hidden');
       if (user) {
-        document.getElementById('userInfo').textContent = `${user.displayName} (${user.email})`;
+        document.getElementById('userInfo').textContent = `${user.displayName || user.email}`;
         document.getElementById('signInBtn').classList.add('hidden');
         document.getElementById('signOutBtn').classList.remove('hidden');
-        
-        // 실시간 동기화 설정
-        const userPath = `users/${user.uid}`;
-        onSnapshot(doc(db, `${userPath}/meta/appState`), (ds) => {
+
+        // 실시간 동기화 (Task, State, Images)
+        onSnapshot(collection(db, `users/${user.uid}/customTasks`), (snap) => {
+          window.customTasks = snap.docs.map(d => ({id:d.id, ...d.data()}));
+          window.renderCalendar();
+        });
+        onSnapshot(doc(db, `users/${user.uid}/meta/appState`), (ds) => {
           const data = ds.data() || {};
           window.taskStatus = data.taskStatus || {};
           window.__notesTabs = data.notesTabs || {};
           window.__notesTabList = data.notesTabList || [{id:'memo', name:'메모'}];
-          window.renderCalendar(); window.renderNotesUI();
+          window.__notesActiveTabId = data.notesActiveTabId || 'memo';
+          window.renderCalendar();
+          // 메모 UI 업데이트 로직 (간략)
+          const tabsCon = document.getElementById('notesTabsContainer');
+          if(tabsCon) {
+            tabsCon.innerHTML = '';
+            window.__notesTabList.forEach(t => {
+              const b = document.createElement('button');
+              b.className = `notes-tab ${t.id === window.__notesActiveTabId ? 'active' : ''}`;
+              b.textContent = t.name;
+              b.onclick = async () => {
+                await setDoc(doc(db, `users/${user.uid}/meta/appState`), {notesActiveTabId: t.id}, {merge:true});
+              };
+              tabsCon.appendChild(b);
+            });
+            document.getElementById('notesArea').value = window.__notesTabs[window.__notesActiveTabId] || '';
+          }
         });
-        onSnapshot(collection(db, `${userPath}/images`), (snap) => {
-          window.imageBookmarks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        onSnapshot(collection(db, `users/${user.uid}/images`), (snap) => {
+          window.imageBookmarks = snap.docs.map(d => ({id:d.id, ...d.data()}));
           window.renderImageBookmarks();
         });
+
+      } else {
+        document.getElementById('userInfo').textContent = '';
+        document.getElementById('signInBtn').classList.remove('hidden');
+        document.getElementById('signOutBtn').classList.add('hidden');
+        window.customTasks = []; window.taskStatus = {}; window.imageBookmarks = [];
+        window.renderCalendar(); window.renderImageBookmarks();
       }
-      loading.classList.add('hidden');
+      overlay.classList.add('hidden');
+      window.isAuthReady = true;
     });
 
+    // 버튼 이벤트 바인딩
     document.getElementById('signInBtn').onclick = () => signInWithPopup(auth, provider);
     document.getElementById('signOutBtn').onclick = () => signOut(auth);
+    document.getElementById('prevMonthBtn').onclick = () => { currentDate.setMonth(currentDate.getMonth()-1); window.renderCalendar(); };
+    document.getElementById('nextMonthBtn').onclick = () => { currentDate.setMonth(currentDate.getMonth()+1); window.renderCalendar(); };
+    document.getElementById('saveTaskBtn').onclick = async () => {
+      if(!window.ensureLogin()) return;
+      const title = document.getElementById('taskTitle').value;
+      const id = window.currentTask?.id || Date.now().toString();
+      const task = {
+        id, title, description: document.getElementById('taskDescription').value,
+        date: document.getElementById('taskDate').value,
+        category: document.getElementById('taskCategory').value,
+        complete: window.currentTask?.complete || false
+      };
+      await setDoc(doc(db, `users/${auth.currentUser.uid}/customTasks/${id}`), task);
+      document.getElementById('taskModal').style.display = 'none';
+    };
 
-    // 초기 실행
-    window.renderCalendar();
+    // 인스타그램 임베드 스크립트 로드
+    (function(){ const s = document.createElement('script'); s.async = true; s.src = '//www.instagram.com/embed.js'; document.head.appendChild(s); })();
+
+    // D&D 및 붙여넣기 이벤트 (drag-area)
+    const da = document.getElementById('drag-area');
+    da.onclick = async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if(isInstagramEmbed(text)) { window.addInstagramBookmark(text); }
+        else if(isVideoUrl(text)) { window.addVideoBookmark(text); }
+        else if(isImageUrl(text)) { window.addImage(text); }
+        else if(isGenericUrl(text)) { window.addGenericBookmark(text); }
+        else { showAlert('클립보드에 유효한 URL이나 임베드 코드가 없습니다.'); }
+      } catch(e) { showAlert('클립보드 접근 권한이 필요합니다.'); }
+    };
+
+    da.addEventListener('dragover', (e) => { e.preventDefault(); da.classList.add('active'); });
+    da.addEventListener('dragleave', () => da.classList.remove('active'));
+    da.addEventListener('drop', async (e) => {
+      e.preventDefault(); da.classList.remove('active');
+      const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+      if(files.length > 0) { await window.addImage(files[0]); return; }
+      const text = e.dataTransfer.getData('text');
+      if(isInstagramEmbed(text)) window.addInstagramBookmark(text);
+      else if(isGenericUrl(text)) window.addGenericBookmark(text);
+    });
+
+    document.addEventListener('paste', async (e) => {
+      if(document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
+      const items = e.clipboardData.items;
+      for(let item of items) {
+        if(item.type.indexOf('image') !== -1) { await window.addImage(item.getAsFile()); return; }
+        if(item.kind === 'string') {
+          item.getAsString(async (s) => {
+            if(isInstagramEmbed(s)) window.addInstagramBookmark(s);
+            else if(isVideoUrl(s)) window.addVideoBookmark(s);
+            else if(isGenericUrl(s)) window.addGenericBookmark(s);
+          });
+        }
+      }
+    });
+
+    // 전역 함수 등록
+    window.openTaskModal = (task) => {
+      window.currentTask = task;
+      document.getElementById('modalTitle').textContent = task.id ? '작업 수정' : '새 작업';
+      document.getElementById('taskTitle').value = task.title || '';
+      document.getElementById('taskDescription').value = task.description || '';
+      document.getElementById('taskDate').value = task.date || '';
+      document.getElementById('taskCategory').value = task.category || '';
+      document.getElementById('deleteTaskBtn').classList.toggle('hidden', !task.id);
+      document.getElementById('taskModal').style.display = 'flex';
+    };
+    
+    window.openImageModal = (url, pageUrl) => {
+      document.getElementById('modalImage').src = url;
+      document.getElementById('goToPageBtn').onclick = () => window.open(pageUrl || url, '_blank');
+      document.getElementById('imageModal').style.display = 'flex';
+    };
+    document.getElementById('closeImageModalBtn').onclick = () => document.getElementById('imageModal').style.display = 'none';
+
+    window.openEditTitleModal = (d) => {
+      document.getElementById('currentUrlDisplay').textContent = d.pageUrl;
+      document.getElementById('editTitleInput').value = d.title || '';
+      document.getElementById('saveTitleBtn').onclick = async () => {
+        await updateDoc(doc(db, `users/${auth.currentUser.uid}/images/${d.id}`), {title: document.getElementById('editTitleInput').value});
+        document.getElementById('editTitleModal').style.display = 'none';
+      };
+      document.getElementById('editTitleModal').style.display = 'flex';
+    };
+    document.getElementById('cancelTitleBtn').onclick = () => document.getElementById('editTitleModal').style.display = 'none';
   </script>
 </body>
 </html>
