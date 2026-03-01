@@ -964,19 +964,6 @@
       const idx=window.customTasks.findIndex(t=>t.id===data.id); if(idx>-1) window.customTasks[idx]=data; else window.customTasks.push(data);
       await window.cloudSaveAll(); closeModal(); renderCalendar();
     };
-if(!imgItem) return;
-        e.preventDefault();
-        const blob = imgItem.getAsFile();
-        if(!blob) return;
-        const file = new File([blob], fileName, { type: blob.type || 'image/png' });
-        try{
-            showFeedbackMessage('미리보기 이미지 업로드 중...');
-            showFeedbackMessage('미리보기 이미지가 저장되었습니다.');
-        }catch(err){
-            console.error(err);
-            showAlert('미리보기 이미지 업로드 중 오류가 발생했습니다.');
-        }
-    });
 
     (function init(){ 
         attachEventListeners(); 
