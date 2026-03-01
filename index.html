@@ -242,7 +242,6 @@
     }
     
     /* 인스타그램 스타일 (이제 직접 임베드 코드를 사용하므로 이 스타일은 사용하지 않음) */
-    .bookmark-card .instagram-overlay { display: none; } 
     
     /* 인스타그램 임베드 짤림 방지: 임베드 콘텐츠가 부모 카드 너비를 넘지 않도록 설정 */
     .bookmark-card .content > div[style*="max-width:540px"] {
@@ -311,13 +310,7 @@
     }
     
     /* 북마크 제목 수정 모달 스타일 */
-    #editTitleModal.modal { z-index: 1001; }
-    #editTitleModal .modal-content {
-        background: #2a2a2a; 
-        max-width: 400px;
-        box-shadow: 0 10px 30px rgba(0,0,0,.5);
-    }
-  </style>
+</style>
 </head>
 <body class="text-white">
   <div id="authBar" class="w-full max-w-2xl mx-auto flex items-center justify-end gap-2 mb-4">
@@ -415,29 +408,8 @@
       <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">원본 페이지로 이동</button>
     </div>
   </div>
-
-  <div id="editTitleModal" class="modal">
-    <div class="modal-content">
-      <h2 class="text-xl font-bold mb-4">북마크 제목 수정</h2>
-      <label class="block mb-2 text-sm opacity-80" id="currentUrlDisplay"></label>
-      <input type="text" id="editTitleInput" class="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 mb-4 text-white">
-      <div class="flex justify-end gap-2">
-        <button id="saveTitleBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">저장</button>
-        <button id="cancelTitleBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-      </div>
-    </div>
   </div>
-
-  <!-- 링크 북마크 미리보기 이미지 업로드(붙여넣기 전용) 모달 -->
-  <div id="previewUploadModal" class="modal">
-    <div class="modal-content" style="background:#2a2a2a;max-width:420px;">
-      <h2 class="text-xl font-bold mb-3">미리보기 이미지</h2>
-      <p class="text-sm opacity-80 mb-4">캡쳐한 이미지를 이 창에서 <b>붙여넣기(Ctrl/Cmd+V)</b> 하세요.</p>
-      <div id="previewPasteArea" class="drag-area rounded-lg p-10 flex items-center justify-center text-center cursor-default" style="border-style:dashed;">
-        <div class="text-5xl font-bold select-none">+</div>
-      </div>
       <div class="flex justify-end gap-2 mt-4">
-        <button id="closePreviewUploadBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">닫기</button>
       </div>
     </div>
   </div>
@@ -460,23 +432,19 @@
   </div>
 
 <script>
-  // ImgBB API Key (이미지 업로드용)
-    // const IMGBB_API_KEY = "f64175972f4e4178332db9ae8559969b"; // [수정 1] 더 이상 필요 없으므로 주석 처리
-    
     // (이 아래 UI 스크립트 내용은 변경 사항 없음)
     
     // 전역 상태
     window.customTasks = window.customTasks || [];
     window.taskStatus = window.taskStatus || {};
     window.__notesTabs = window.__notesTabs || {};
-    window.imageBookmarks = window.imageBookmarks || []; // 북마크는 이미지와 동영상, 일반 링크 모두 포함
+    window.imageBookmarks = window.imageBookmarks || []; // 북마크는 이미지와 , 일반 링크 모두 포함
     window.currentTask = null;
-    window.currentEditingBookmark = null; // 현재 편집 중인 북마크 항목
+// 현재 편집 중인 북마크 항목
     let currentDate = new Date();
     window.isAuthReady = false;
     // 북마크는 최신순 고정(정렬 UI 제거)
-    window.bookmarkSortKey = 'timestamp';
-
+    // 북마크 정렬: 최신순 고정
     // DOM 요소
     const tabButtons = document.querySelectorAll('#main-tabs .notepad-tab');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -488,20 +456,6 @@
     const modalImage = document.getElementById('modalImage');
     const closeImageModalBtn = document.getElementById('closeImageModalBtn');
     const goToPageBtn = document.getElementById('goToPageBtn');
-    // 제목 수정 모달 요소
-    const editTitleModal = document.getElementById('editTitleModal');
-    const editTitleInput = document.getElementById('editTitleInput');
-    const saveTitleBtn = document.getElementById('saveTitleBtn');
-    const cancelTitleBtn = document.getElementById('cancelTitleBtn');
-    const currentUrlDisplay = document.getElementById('currentUrlDisplay');
-    // 정렬 선택 요소(현재는 UI 제거됨)
-    const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
-
-    // 링크 미리보기(붙여넣기) 모달
-    const previewUploadModal = document.getElementById('previewUploadModal');
-    const closePreviewUploadBtn = document.getElementById('closePreviewUploadBtn');
-    let currentPreviewEditingBookmark = null;
-
 
     // 유틸리티 함수
     const showFeedbackMessage = (message) => {
@@ -521,38 +475,6 @@
       imageModal.style.display='flex';
     };
     const closeImageModal = () => { imageModal.style.display = 'none'; };
-
-    // 북마크 제목 수정 모달
-    const openEditModal = (bookmark) => {
-        window.currentEditingBookmark = bookmark;
-        const currentTitle = bookmark.title || '';
-        const displayUrl = bookmark.pageUrl.length > 50 ? bookmark.pageUrl.substring(0, 47) + '...' : bookmark.pageUrl;
-        
-        currentUrlDisplay.textContent = `URL: ${displayUrl}`;
-        editTitleInput.value = currentTitle;
-        editTitleModal.style.display = 'flex';
-    };
-
-    const closeEditModal = () => {
-        window.currentEditingBookmark = null;
-        editTitleModal.style.display = 'none';
-    };
-
-    const saveEditedTitle = async () => {
-        if (!window.currentEditingBookmark || !window.ensureLogin()) return;
-
-        const newTitle = editTitleInput.value.trim();
-        const bookmark = window.currentEditingBookmark;
-
-        if (bookmark.type === 'link' || bookmark.type === 'video' || bookmark.type === 'instagram') {
-            await window.updateBookmarkTitle(bookmark.id, newTitle);
-        }
-        
-        closeEditModal();
-        showFeedbackMessage('제목이 저장되었습니다.');
-        // onSnapshot이 Firestore 업데이트를 감지하고 renderImageBookmarks를 호출할 것입니다.
-    };
-
 
     function showTab(tabId){
       tabContents.forEach(c=>c.classList.remove('active'));
@@ -657,17 +579,6 @@
           // X 버튼, 원본 페이지 이동 버튼을 제외하고 닫기
           if (!e.target.closest('#closeImageModalBtn') && !e.target.closest('#goToPageBtn')) {
               closeImageModal();
-          }
-      });
-      
-      // 제목 수정 모달 이벤트 리스너
-      cancelTitleBtn.addEventListener('click', closeEditModal);
-      saveTitleBtn.addEventListener('click', saveEditedTitle);
-      editTitleModal.addEventListener('click', (e) => { if (e.target === editTitleModal) closeEditModal(); });
-      editTitleInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              saveEditedTitle();
           }
       });
       
@@ -909,200 +820,91 @@
       dated.forEach(t=>agendaListEl.appendChild(makeRow(t,{showDate:true})));
     };
 
-    // 유튜브 썸네일 URL 추출
-    function getYoutubeThumbnail(url) {
-        let videoId = null;
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-        const match = url.match(regExp);
-        if (match && match[2].length === 11) {
-            videoId = match[2];
-        }
-        if (videoId) {
-            return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-        }
-        return null;
-    }
-    
-    // 인스타그램 임베드 스크립트를 로드하고 콘텐츠를 처리하는 함수
-    function initializeInstagramEmbeds() {
-        if (window.instgrm && window.instgrm.Embeds) {
-            // 스크립트가 이미 로드된 경우, 새 게시물을 처리
-            window.instgrm.Embeds.process();
-            return;
-        }
+        
 
-        // 스크립트 로드
-        const scriptId = 'instagram-embed-script';
-        if (!document.getElementById(scriptId)) {
-            const script = document.createElement('script');
-            script.id = scriptId;
-            script.async = true;
-            script.src = '//www.instagram.com/embed.js';
-            document.head.appendChild(script);
-            
-            // 스크립트 로드 후에도 process를 한 번 더 호출할 수 있도록 window에 핸들러 등록
-            script.onload = () => {
-                if (window.instgrm && window.instgrm.Embeds) {
-                    window.instgrm.Embeds.process();
-                }
-            };
-        }
-    }
+// 북마크 렌더링 (이미지 및  포함)
+        // 북마크 렌더링 (이미지 / 링크)
+    const renderImageBookmarks = () => {
+      if (!imageGrid) return;
+      imageGrid.innerHTML = '';
 
-    // 북마크 렌더링 (이미지 및 동영상 포함)
-    const renderImageBookmarks=()=>{
-      imageGrid.innerHTML='';
-      
-      let sortedBookmarks = [...(window.imageBookmarks || [])];
-
+      const items = [...(window.imageBookmarks || [])];
       // 최신순 고정
-      sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
+      items.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
 
-      sortedBookmarks.forEach(d=>{
-        const isVideo = d.type === 'video';
-        const isLink = d.type === 'link'; // 일반 페이지 링크
-        const isInstagram = d.type === 'instagram'; // 인스타그램 게시물
-        // [수정] type: 'imgbb' 또는 'firebase_storage' 또는 'remote'일 때가 이미지임
-        const isImage = d.type === 'imgbb' || d.type === 'firebase_storage' || d.type === 'remote';
-        
-        const isEditable = isVideo || isLink || isInstagram; // 제목 수정 가능한 항목
-        const imageUrl = d.url;
-        const pageUrl = d.pageUrl; // 일반 URL, 동영상 URL 또는 인스타그램 게시물 URL
-        const sourceDomain = d.sourceDomain || 'Unknown Source';
+      items.forEach((d) => {
+        const isImage = d.type === 'firebase_storage' || d.type === 'remote';
+        const isLink = d.type === 'link';
 
-        // (사이트별 헤더 제거)
-        
-        let thumbnail = isVideo ? getYoutubeThumbnail(pageUrl) : imageUrl;
-        let iconHtml = '';
-        let urlToOpen = pageUrl;
+        const card = document.createElement('div');
+        card.className = 'bookmark-card';
 
-        if (isLink) {
-            // 일반 페이지 링크 북마크: 제목/URL 미표시. previewImageUrl이 있으면 그 이미지만 표시.
-            const prevImg = d.previewImageUrl || null;
-            if (prevImg) {
-                iconHtml = `<img src="${prevImg}" alt="링크 미리보기" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=미리보기+오류'"/>`;
-            } else {
-                iconHtml = `<div class="icon-overlay">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;opacity:.9">
-                                <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4"/>
-                                <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 20"/>
-                              </svg>
-                            </div>`;
-            }
-        } else if (isInstagram) {
-             // 인스타그램 게시물 북마크 (퍼가기 코드 사용)
-             // 원본 URL 추출 (클릭 시 이동용)
-             const parser = new DOMParser();
-             const doc = parser.parseFromString(d.embedCode || '', 'text/html');
-             const blockquote = doc.querySelector('blockquote.instagram-media');
-             if (blockquote && blockquote.cite) urlToOpen = blockquote.cite;
-             else urlToOpen = pageUrl;
-             
-             const displayTitle = d.title || 'Instagram Post (클릭 시 원본 이동)';
-             
-             // Embed Code를 직접 삽입하여 인스타그램 미리보기가 렌더링되도록 함.
-             // z-index를 사용하여 제목 오버레이가 임베드 위에 오도록 설정.
-             // 인스타그램 임베드는 높이가 가변적이며, Masonry 레이아웃이 이를 처리하도록 기대함.
-             iconHtml = `
-                <div class="w-full h-full relative z-0">
-                    ${d.embedCode || ''}
-                    <div class="absolute top-0 left-0 right-0 p-2 bg-black bg-opacity-70 text-white text-sm font-bold z-10">${displayTitle}</div>
-                </div>
-             `;
+        const safeDomain = (d.sourceDomain || (d.pageUrl ? extractDomain(d.pageUrl) : 'Bookmark'));
+        const url = d.pageUrl || d.url || '';
 
-        } else if (isVideo && !thumbnail) {
-            // **수정된 부분: 썸네일 없는 비디오를 위한 새로운 제목 오버레이 스타일 적용**
-            const displayTitle = d.title || '동영상 북마크 (제목 편집 가능)';
-            const displayUrl = pageUrl.replace(/^https?:\/\//, '').substring(0, 30) + '...';
-            
-            iconHtml = `<div class="video-title-overlay">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-400 mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg>
-                            <span class="video-title-text">${displayTitle}</span>
-                            <span class="video-url-text">${displayUrl}</span>
-                        </div>`;
-        } else if (isImage) {
-            // [수정] 이미지 북마크인 경우 (썸네일은 이미지 URL 자체)
-            iconHtml = `<img src="${imageUrl}" alt="북마크된 이미지" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=이미지+오류'"/>`;
-        } else if (isVideo) {
-            // [수정] 유튜브 동영상이고 썸네일이 있는 경우
-            const displayTitle = d.title || 'YouTube 영상';
-            iconHtml = `<img src="${thumbnail}" alt="동영상 썸네일" loading="lazy" decoding="async" class="img-fit-cover" onerror="this.onerror=null;this.src='https://placehold.co/100x120/444/fff?text=동영상+썸네일'"/>
-                        <div class="icon-overlay flex-col">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l12 8-12 8z"/></svg>
-                            <span class="text-xs mt-1 font-bold">${displayTitle}</span>
-                        </div>`;
-        } else {
-             // 예외 처리 (알 수 없는 타입)
-             iconHtml = `<div class="link-title-overlay">
-                            <span class="link-title-text">알 수 없는 북마크</span>
-                        </div>`;
+        // 상단 액션
+        const actions = document.createElement('div');
+        actions.style.cssText = "display:flex;justify-content:flex-end;gap:8px;padding:8px 10px;";
+
+        // 링크 열기 버튼(링크 타입일 때만)
+        if (isLink && url) {
+          const openBtn = document.createElement('button');
+          openBtn.textContent = '열기';
+          openBtn.className = 'px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-sm';
+          openBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.open(url, '_blank', 'noopener,noreferrer');
+          });
+          actions.appendChild(openBtn);
         }
 
-        const card=document.createElement('div');
-        card.className='bookmark-card relative group cursor-pointer';
-        card.innerHTML=`
-          <div class="content">
-            ${iconHtml}
-          </div>
-          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 truncate z-10 opacity-70">
-              ${sourceDomain}
-          </div>
-          <button class="absolute top-2 right-2 bg-[#424242] text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="delete">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-          ${isEditable ? `
-          <button class="absolute top-2 right-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" data-id="${d.id}" data-action="edit">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </button>
-          ` : ''}
-          `;
-        imageGrid.appendChild(card);
-        
-        // 클릭 이벤트 (Card Main Action)
-        card.addEventListener('click',(e)=>{
-            // 삭제나 편집 버튼을 누른 경우는 무시
-            if (e.target.closest('button[data-action]')) return; 
-
-            if (isVideo || isLink || isInstagram) {
-                // 인스타그램의 경우 URLToOpen을 사용 (퍼가기 코드에서 추출된 원본 URL)
-                window.open(urlToOpen, '_blank');
-            } else if (isImage) {
-                // [수정] 이미지일 경우 모달 열기
-                openImageModal(imageUrl, pageUrl);
-            }
+        // 삭제 버튼
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '삭제';
+        delBtn.className = 'px-3 py-1 rounded bg-gray-800 hover:bg-gray-700 text-white text-sm';
+        delBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (window.deleteImage) await window.deleteImage(d.id);
         });
-      });
-      
-      // 버튼 이벤트 리스너 부착
-      imageGrid.querySelectorAll('button[data-action]').forEach(btn=>{
-        btn.onclick=async(e)=>{ 
-          e.stopPropagation(); 
-          const id=e.currentTarget.dataset.id;
-          const action=e.currentTarget.dataset.action;
-          const bookmark = window.imageBookmarks.find(d => d.id === id);
+        actions.appendChild(delBtn);
 
-          if (action === 'delete') {
-             try{ 
-                 if(window.deleteImage) await window.deleteImage(id);
-             }catch(err){ 
-                 console.error(err); 
-                 showAlert('북마크 삭제 중 오류가 발생했습니다.'); 
-             }
-          } else if (action === 'edit' && bookmark) {
-             // 링크 북마크는 제목 수정 대신 "미리보기 이미지 붙여넣기" 모달을 사용
-             if (bookmark.type === 'link') {
-                 openPreviewUploadModal(bookmark);
-             } else {
-                 openEditModal(bookmark);
-             }
-          }
-        };
+        // 본문
+        const body = document.createElement('div');
+        body.className = 'content';
+
+        if (isImage && d.url) {
+          const img = document.createElement('img');
+          img.src = d.url;
+          img.alt = safeDomain;
+          img.loading = 'lazy';
+          img.style.cssText = "width:100%;height:220px;object-fit:cover;border-radius:10px;cursor:pointer;";
+          img.addEventListener('click', () => {
+            if (window.openImageModal) window.openImageModal(d.url, d.pageUrl || null);
+          });
+          body.appendChild(img);
+        } else if (isLink && url) {
+          const wrap = document.createElement('div');
+          wrap.style.cssText = "padding:16px;display:flex;flex-direction:column;gap:6px;";
+          const domainEl = document.createElement('div');
+          domainEl.textContent = safeDomain;
+          domainEl.style.cssText = "font-weight:700;color:#fff;";
+          const urlEl = document.createElement('div');
+          urlEl.textContent = url;
+          urlEl.style.cssText = "color:#aaa;word-break:break-all;font-size:12px;";
+          wrap.appendChild(domainEl);
+          wrap.appendChild(urlEl);
+          body.appendChild(wrap);
+        } else {
+          const empty = document.createElement('div');
+          empty.style.cssText = "padding:16px;color:#aaa;";
+          empty.textContent = safeDomain;
+          body.appendChild(empty);
+        }
+
+        card.appendChild(actions);
+        card.appendChild(body);
+        imageGrid.appendChild(card);
       });
-      
-      // 인스타그램 임베드 스크립트 초기화 및 렌더링
-      initializeInstagramEmbeds();
     };
 
     // 작업 모달
@@ -1162,37 +964,14 @@
       const idx=window.customTasks.findIndex(t=>t.id===data.id); if(idx>-1) window.customTasks[idx]=data; else window.customTasks.push(data);
       await window.cloudSaveAll(); closeModal(); renderCalendar();
     };
-
-    // 링크 미리보기 모달
-    const openPreviewUploadModal = (bookmark) => {
-        currentPreviewEditingBookmark = bookmark;
-        if (previewUploadModal) previewUploadModal.style.display = 'flex';
-    };
-    const closePreviewUploadModal = () => {
-        currentPreviewEditingBookmark = null;
-        if (previewUploadModal) previewUploadModal.style.display = 'none';
-    };
-    closePreviewUploadBtn?.addEventListener('click', closePreviewUploadModal);
-    previewUploadModal?.addEventListener('click', (e)=>{ if(e.target===previewUploadModal) closePreviewUploadModal(); });
-
-    // 붙여넣기 처리(모달이 열려 있을 때만)
-    document.addEventListener('paste', async (e)=>{
-        if(!previewUploadModal || previewUploadModal.style.display !== 'flex') return;
-        if(!currentPreviewEditingBookmark) return;
-        const items = e.clipboardData?.items;
-        if(!items) return;
-        const imgItem = [...items].find(it=>it.type && it.type.startsWith('image/'));
-        if(!imgItem) return;
+if(!imgItem) return;
         e.preventDefault();
         const blob = imgItem.getAsFile();
         if(!blob) return;
-        const fileName = `preview_${currentPreviewEditingBookmark.id}.png`;
         const file = new File([blob], fileName, { type: blob.type || 'image/png' });
         try{
             showFeedbackMessage('미리보기 이미지 업로드 중...');
-            await window.uploadBookmarkPreviewImage(currentPreviewEditingBookmark.id, file);
             showFeedbackMessage('미리보기 이미지가 저장되었습니다.');
-            closePreviewUploadModal();
         }catch(err){
             console.error(err);
             showAlert('미리보기 이미지 업로드 중 오류가 발생했습니다.');
@@ -1213,17 +992,7 @@
       return /\.(jpe?g|png|gif|webp|svg|avif)(\?|$)/i.test(u);
     }
     
-    function isVideoUrl(u){
-        if (!u) return false;
-        try { new URL(u); } catch { return false; }
-        // YouTube, Vimeo, 또는 일반적인 동영상 확장자 검사
-        return /youtu\.be|youtube\.com|vimeo\.com|\.(mp4|webm|ogg|mov)(\?|$)|missav\.com/i.test(u);
-    }
-    
     // 인스타그램 퍼가기 코드 확인 (blockquote 태그를 포함하는지 확인)
-    function isInstagramEmbed(text) {
-        return /<blockquote class="instagram-media".*<\/blockquote>/.test(text);
-    }
     
     // **신규: 도메인 추출 유틸리티**
     function extractDomain(url) {
@@ -1239,17 +1008,16 @@
     }
 
 
-    // 새로운 유틸리티: 이미지/동영상/인스타그램 URL이 아닌 일반 URL인지 확인
+    // URL 유효성 검사
     function isGenericUrl(u) {
         if (!u) return false;
         try {
             const urlObj = new URL(u);
-            // http 또는 https 프로토콜을 사용하며, 이미지/비디오/인스타그램 URL이 아닌 경우
-            // **수정된 부분: URL에 . (점)이 포함되어야 유효한 도메인으로 간주합니다.**
-            return (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') && urlObj.hostname.includes('.') && !isImageUrl(u) && !isVideoUrl(u) && !/instagram\.com/.test(u);
+            return (urlObj.protocol === 'http:' || urlObj.protocol === 'https:');
         } catch {
             return false;
         }
+
     }
 
     // 드래그앤드롭 핸들러
@@ -1262,13 +1030,7 @@
       const plainText = dt.getData('text/plain');
 
       let url=null, pageUrl=null;
-      
-      // 1. 드롭된 내용에서 인스타그램 퍼가기 코드 확인
-      if(plainText && isInstagramEmbed(plainText)) {
-          if(window.addInstagramBookmark) { await window.addInstagramBookmark(plainText); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
-      }
-      
-      // 2. 드롭된 내용에서 이미지 URL 추출 시도
+      // 1. 드롭된 내용에서 이미지 URL 추출 시도
       if(html){
         const doc=new DOMParser().parseFromString(html,'text/html');
         const img=doc.querySelector('img');
@@ -1283,10 +1045,6 @@
               // 이미지 URL 북마크
               if(window.addRemoteImage){ await window.addRemoteImage(url,pageUrl); showFeedbackMessage('이미지 URL 북마크됨'); } 
               return; 
-          } else if(isVideoUrl(url)) {
-              // 동영상 URL 북마크
-              if(window.addVideoBookmark) { await window.addVideoBookmark(url); showFeedbackMessage('동영상 URL 북마크됨'); }
-              return;
           } else if(isGenericUrl(url)) {
               // 일반 페이지 URL 북마크
               if(window.addGenericBookmark) { await window.addGenericBookmark(url); showFeedbackMessage('페이지 URL 북마크됨'); }
@@ -1325,12 +1083,8 @@
         // 2. 클립보드 텍스트 (URL/퍼가기 코드) 처리
         const t = await navigator.clipboard.readText();
         if(t){
-            if (isInstagramEmbed(t)) {
-                if(window.addInstagramBookmark) { await window.addInstagramBookmark(t); showFeedbackMessage('클립보드 인스타그램 게시물 북마크됨'); processed=true; return; }
-            } else if(isImageUrl(t)){ 
+            if(isImageUrl(t)){ 
                 if(window.addRemoteImage){ await window.addRemoteImage(t,t); showFeedbackMessage('클립보드 이미지 URL 북마크됨'); processed=true; return; } 
-            } else if(isVideoUrl(t)){
-                if(window.addVideoBookmark) { await window.addVideoBookmark(t); showFeedbackMessage('클립보드 동영상 URL 북마크됨'); processed=true; return; }
             } else if(isGenericUrl(t)) {
                 if(window.addGenericBookmark) { await window.addGenericBookmark(t); showFeedbackMessage('클립보드 페이지 URL 북마크됨'); processed=true; return; }
             }
@@ -1356,12 +1110,8 @@
         if(item.kind==='string'){
           const txt=await new Promise(r=>item.getAsString(r));
           if(txt){
-             if (isInstagramEmbed(txt)) {
-                 if(window.addInstagramBookmark) { await window.addInstagramBookmark(txt); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
-             } else if(isImageUrl(txt)){ 
+             if(isImageUrl(txt)){ 
                 if(window.addRemoteImage){ await window.addRemoteImage(txt,txt); showFeedbackMessage('URL 북마크됨'); return; } 
-             } else if(isVideoUrl(txt)){
-                 if(window.addVideoBookmark) { await window.addVideoBookmark(txt); showFeedbackMessage('동영상 URL 북마크됨'); return; }
              } else if(isGenericUrl(txt)){
                  if(window.addGenericBookmark) { await window.addGenericBookmark(txt); showFeedbackMessage('페이지 URL 북마크됨'); return; }
              }
@@ -1374,22 +1124,19 @@
       if (!foundText) {
           const plain=e.clipboardData?.getData('text/plain');
           if(plain){
-             if (isInstagramEmbed(plain)) {
-                 if(window.addInstagramBookmark) { await window.addInstagramBookmark(plain); showFeedbackMessage('인스타그램 게시물 북마크됨'); return; }
-             } else if(isImageUrl(plain)){ 
+             if(isImageUrl(plain)){ 
                 if(window.addRemoteImage){ await window.addRemoteImage(plain,plain); showFeedbackMessage('URL 북마크됨'); return; } 
-             } else if(isVideoUrl(plain)){
-                if(window.addVideoBookmark) { await window.addVideoBookmark(plain); showFeedbackMessage('동영상 URL 북마크됨'); return; }
              } else if(isGenericUrl(plain)){
                 if(window.addGenericBookmark) { await window.addGenericBookmark(plain); showFeedbackMessage('페이지 URL 북마크됨'); return; }
              }
           }
       }
       
-      showAlert('붙여넣기한 항목에 유효한 이미지, 동영상 URL, 일반 페이지 URL 또는 인스타그램 퍼가기 코드가 없습니다.');
+      showAlert('붙여넣기한 항목에 유효한 이미지 또는 URL이 없습니다.');
     });
 
 </script>
+
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -1922,45 +1669,22 @@ function initBookmarks(){
 
     // ===== 북마크 저장 로직 (sourceDomain 추가) =====
     
-    // 동영상 북마크 저장 (URL만 저장, type: 'video')
-    window.addVideoBookmark = async (url)=>{
-      if(!ensureLogin()) return;
-      const { imagesCol } = await cloudRefs();
-      // pageUrl 필드에 동영상 URL을 저장. title 필드 추가.
-      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'video', title: null, sourceDomain: extractDomain(url), timestamp:new Date() }); 
-    };
+    
     
     // 일반 링크 북마크 저장 (URL만 저장, type: 'link')
     window.addGenericBookmark = async (url)=>{
       if(!ensureLogin()) return;
       const { imagesCol } = await cloudRefs();
       // pageUrl 필드에 일반 URL을 저장. title 필드 추가.
-      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'link', title: null, sourceDomain: extractDomain(url), timestamp:new Date() }); 
-    };
-    
-    // 인스타그램 북마크 저장 (퍼가기 코드 저장, type: 'instagram')
-    window.addInstagramBookmark = async (embedCode)=>{
-      if(!ensureLogin()) return;
-      const { imagesCol } = await cloudRefs();
-      
-      // 퍼가기 코드에서 원본 URL 추출 시도
-      let pageUrl = '인스타그램 게시물';
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(embedCode, 'text/html');
-      const blockquote = doc.querySelector('blockquote.instagram-media');
-      if(blockquote && blockquote.cite) pageUrl = blockquote.cite;
-      
-      await addDoc(imagesCol,{ pageUrl: pageUrl, embedCode: embedCode, url: null, type:'instagram', title: null, sourceDomain: extractDomain(pageUrl), timestamp:new Date() }); 
-    };
-
-    // 이미지 URL만 저장 (type: 'remote')
+      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'link', title: null, sourceDomain: extrac
+// 이미지 URL만 저장 (type: 'remote')
     window.addRemoteImage = async (url, pageUrl)=>{
       if(!ensureLogin()) return;
       const { imagesCol } = await cloudRefs();
       await addDoc(imagesCol,{ url, pageUrl: pageUrl||null, type:'remote', sourceDomain: extractDomain(pageUrl || url), timestamp:new Date() });
     };
     
-    // [수정 4] window.addImage 함수 전체 교체 (ImgBB -> Firebase Storage)
+    // [수정 4] window.addImage 함수 전체 교체 ( -> Firebase Storage)
     // (붙여넣기/클립보드/파일드래그 이미지 전용)
     window.addImage = async (file, pageUrl)=>{ // 'fileOrUrl'을 'file'로 명시
       if(!ensureLogin()) return;
@@ -1994,7 +1718,7 @@ function initBookmarks(){
         await addDoc(imagesCol,{ 
           url: downloadURL,       // Firebase Storage URL
           pageUrl: pageUrl || null,
-          type: 'firebase_storage', // ImgBB 대신 새 타입 지정
+          type: 'firebase_storage', //  대신 새 타입 지정
           storagePath: storagePath, // [중요] 삭제를 위한 파일 경로 저장
           title: null, 
           sourceDomain: source, 
@@ -2010,11 +1734,6 @@ function initBookmarks(){
     };
 
     // 북마크 제목 수정 기능 (신규)
-    window.updateBookmarkTitle = async (id, newTitle) => {
-        if (!ensureLogin()) return;
-        const { imagesCol } = await cloudRefs();
-        const docRef = doc(imagesCol, id);
-        
         try {
             await updateDoc(docRef, { title: newTitle || null });
         } catch (e) {
@@ -2026,10 +1745,6 @@ function initBookmarks(){
     // 링크 북마크 미리보기 이미지 업로드 (붙여넣기 전용)
     // - Firebase Storage에 업로드 후, 해당 북마크 문서에 previewImageUrl 저장
     // - 기존 preview는 유지(이전 파일 삭제하지 않음)
-    window.uploadBookmarkPreviewImage = async (bookmarkId, file) => {
-        if(!ensureLogin()) return;
-        if(!bookmarkId || !file) throw new Error('bookmarkId/file required');
-
         const { imagesCol } = await cloudRefs();
         const user = auth.currentUser;
         if(!user) throw new Error('로그인이 필요합니다.');
@@ -2053,48 +1768,22 @@ function initBookmarks(){
       if(!ensureLogin()) return;
       try{
         const { imagesCol } = await cloudRefs();
-        const row=(window.imageBookmarks||[]).find(d=>d.id===id); 
-        
+        const row=(window.imageBookmarks||[]).find(d=>d.id===id);
         if(!row) throw new Error('북마크 항목을 찾을 수 없습니다.');
-        
-        // 1. Firebase Storage에 업로드된 파일인 경우
-        if (row.type === 'firebase_storage') {
-          // 1-1. Storage에서 파일 삭제
-          if (row.storagePath) {
-            try {
-              const fileRef = ref(storage, row.storagePath);
-              await deleteObject(fileRef);
-            } catch (e) {
-              console.warn("Storage 파일 삭제 실패 (무시함):", e);
-              // 스토리지에 파일이 없더라도 DB 문서는 삭제되도록 계속 진행
-            }
-          }
-          // 1-2. Firestore 문서 삭제
-          await deleteDoc(doc(imagesCol, id));
-          showFeedbackMessage('북마크가 삭제되었습니다.');
 
-        // 2. ImgBB에 업로드된 파일인 경우 (기존 코드 유지)
-        } else if(row.type==='imgbb'){
-          const delUrl=row.imgbb_delete_url||null;
-          if(delUrl){ 
-            try{ 
-                await fetch(delUrl,{method:'GET'}); 
-            }catch(_){/* imgbb 삭제 오류는 무시 */} 
+        // Firebase Storage 업로드 이미지인 경우: 스토리지 파일 삭제 후 문서 삭제
+        if(row.type === 'firebase_storage' && row.storagePath){
+          try{
+            const fileRef = ref(storage, row.storagePath);
+            await deleteObject(fileRef);
+          }catch(e){
+            console.warn('Storage 파일 삭제 실패 (무시함):', e);
           }
-          await deleteDoc(doc(imagesCol,id));
-          showFeedbackMessage('북마크가 삭제되었습니다.');
-        
-        // 3. 단순 링크/URL 북마크인 경우 (DB 문서만 삭제)
-        } else if(row.type==='remote' || row.type === 'video' || row.type === 'link' || row.type === 'instagram'){
-          await deleteDoc(doc(imagesCol,id));
-          showFeedbackMessage('북마크가 삭제되었습니다.');
-        
-        // 4. 기타 (DB 문서만 삭제)
-        } else {
-            await deleteDoc(doc(imagesCol, id));
-            showFeedbackMessage('북마크가 삭제되었습니다.');
         }
 
+        // Firestore 문서 삭제 (링크/원격이미지 포함)
+        await deleteDoc(doc(imagesCol, id));
+        showFeedbackMessage('북마크가 삭제되었습니다.');
       }catch(e){
         document.getElementById('modal-message').textContent='북마크 삭제 중 오류: '+(e?.message||'unknown');
         document.getElementById('alert-modal').classList.remove('hidden');
@@ -2140,7 +1829,7 @@ function initBookmarks(){
       window.__unsubs.push(unsubState);
 
       const unsubImages = onSnapshot(imagesCol,(snap)=>{ 
-          // imageBookmarks에 이미지/동영상/링크/인스타그램 북마크 모두 포함
+          // imageBookmarks에 이미지/링크 북마크 포함
           window.imageBookmarks=snap.docs.map(d=>({id:d.id,...d.data()})); 
           if(typeof renderImageBookmarks==='function') renderImageBookmarks(); 
       });
@@ -2168,6 +1857,7 @@ initNotes();
 initBookmarks();
 
 </script>
+
 
 </body>
 </html>
