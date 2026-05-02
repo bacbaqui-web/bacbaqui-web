@@ -66,10 +66,15 @@
     .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
     .day-label,.calendar-day{text-align:center;padding:8px 2px;border-radius:8px;background:#2a2a2a;position:relative;overflow:hidden;word-wrap:break-word}
     .day-label{background:#444;font-weight:700;color:#fff;font-size:.8rem;padding:8px 0}
-    .calendar-day{min-height:160px;padding-top:16px;padding-left:2px;padding-right:2px;display:flex;flex-direction:column;gap:2px}
-    .calendar-day.today{border:2px solid #ccc}
-    .day-number{position:absolute;top:8px;left:8px;font-size:.85rem;font-weight:700;color:#aaa;z-index:10}
-    .day-divider{height:1px;background:#3a3a3a;margin:18px 6px 2px;border-radius:999px;opacity:.95}
+    .calendar-day{min-height:160px;padding:8px 6px 4px;display:flex;flex-direction:column;gap:2px;border:1px solid #444;box-sizing:border-box;cursor:pointer}
+    .calendar-day:hover{border-color:#666;background:#303030}
+    .calendar-day.today{border:2px solid #f5f5f5;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+    .day-top{display:flex;align-items:center;gap:4px;width:100%;min-height:28px}
+    .day-number{font-size:.85rem;font-weight:700;color:#aaa;z-index:10;line-height:1;min-width:18px;text-align:left;cursor:pointer}
+    .day-divider{height:1px;background:#3a3a3a;margin:2px 0 2px;border-radius:999px;opacity:.95}
+    .calendar-month-counts{display:inline-flex;align-items:center;gap:6px;margin-left:10px;vertical-align:middle;font-size:.78rem;color:#d1d5db}
+    .calendar-count-badge{display:inline-flex;align-items:center;gap:3px;background:#3a3a3a;border-radius:999px;padding:3px 8px;font-weight:700;line-height:1}
+    .calendar-count-badge.shorts{color:#c4b5fd}.calendar-count-badge.webtoon{color:#fcd34d}
     .task-item{font-size:.85rem;padding:5px 6px;border-radius:8px;margin-top:4px;word-wrap:break-word;cursor:pointer;text-align:left}
     .task-item.custom-task{background:#4c78a8}
     .task-item.custom-task.custom-important{background:#dc2626;color:#fff}
@@ -90,16 +95,18 @@
     /* 일일 체크 버튼 그룹 (쇼츠/웹툰) 스타일 */
     .daily-check-group {
         display: flex;
-        width: 100%;
+        width: auto;
+        flex: 1;
         gap: 2px;
-        margin-top: 2px;
+        margin-top: 0;
+        min-width: 0;
     }
     .daily-check-btn {
         flex: 1;
         text-align: center;
-        font-size: 0.75rem;
-        padding: 4px 0;
-        border-radius: 4px;
+        font-size: 0.68rem;
+        padding: 3px 0;
+        border-radius: 5px;
         background: #444; /* 기본 회색 */
         color: #ccc;
         cursor: pointer;
@@ -268,7 +275,7 @@
     @media (max-width:768px){
       body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
       .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
-      .calendar-day{min-height:120px;padding:1.5rem .2rem .2rem;gap:1px}.day-number{font-size:.75rem;top:.5rem;left:.5rem}
+      .calendar-day{min-height:120px;padding:.35rem .2rem .2rem;gap:1px}.day-number{font-size:.75rem;min-width:14px}.day-top{gap:2px;min-height:24px}.daily-check-btn{font-size:.62rem;padding:3px 0}.calendar-month-counts{display:flex;margin-left:0;margin-top:4px;justify-content:center;font-size:.72rem}
       .task-item{font-size:.85rem;padding:2px 4px;margin-top:2px}
       .calendar-grid,.calendar-header{gap:0}.add-task-btn{width:100%;font-size:.9rem}
       .modal-content{padding:16px;width:95%}
@@ -681,8 +688,15 @@
       const year=currentDate.getFullYear(), month=currentDate.getMonth();
       const currentMonthYear=document.getElementById('currentMonthYear');
       const calendarGrid=document.getElementById('calendarGrid'); if(!currentMonthYear||!calendarGrid) return;
-      currentMonthYear.textContent=`${year}년 ${month+1}월`; calendarGrid.innerHTML='';
+      calendarGrid.innerHTML='';
       const firstDay=new Date(year,month,1).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
+      let shortsCount = 0, webtoonCount = 0;
+      for(let d=1; d<=daysInMonth; d++){
+        const ymd = ymdKST(new Date(year, month, d));
+        if((window.taskStatus || {})[`${ymd}_daily_shorts`]) shortsCount++;
+        if((window.taskStatus || {})[`${ymd}_daily_webtoon`]) webtoonCount++;
+      }
+      currentMonthYear.innerHTML=`${year}년 ${month+1}월 <span class="calendar-month-counts"><span class="calendar-count-badge shorts">숏 ${shortsCount}</span><span class="calendar-count-badge webtoon">툰 ${webtoonCount}</span></span>`;
       // Week starts on Monday (월~일). Convert JS getDay() (Sun=0..Sat=6) to Monday-first index.
       const leadingBlanks=(firstDay+6)%7;
       for(let i=0;i<leadingBlanks;i++){ const empty=document.createElement('div'); empty.className='calendar-day'; calendarGrid.appendChild(empty); }
@@ -690,21 +704,18 @@
         const dayDiv=document.createElement('div'); dayDiv.classList.add('calendar-day','relative');
         const thisDate=new Date(year,month,day); const fullDate=ymdKST(thisDate); const dayOfWeek=thisDate.getDay();
         const today=new Date(); if(ymdKST(thisDate)===ymdKST(today)) dayDiv.classList.add('today');
-        const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayDiv.appendChild(dayNumberSpan);
+        const dayTop=document.createElement('div');
+        dayTop.className='day-top';
+        const dayNumberSpan=document.createElement('span'); dayNumberSpan.classList.add('day-number'); dayNumberSpan.textContent=day; dayTop.appendChild(dayNumberSpan);
 
-        // 날짜 숫자 아래 구분선
-        const divider = document.createElement('div');
-        divider.className = 'day-divider';
-        dayDiv.appendChild(divider);
-
-        // 1) 매일 쇼츠/웹툰 체크 버튼 그룹 (항상 최상단)
+        // 1) 매일 쇼츠/웹툰 체크 버튼 그룹 (날짜 옆에 작게 표시)
         const checkGroup = document.createElement('div');
         checkGroup.className = 'daily-check-group';
 
         // 쇼츠 버튼
         const shortsBtn = document.createElement('div');
         shortsBtn.className = 'daily-check-btn shorts';
-        shortsBtn.textContent = '쇼츠';
+        shortsBtn.textContent = '숏';
         const shortsKey = `${fullDate}_daily_shorts`;
         if ((window.taskStatus || {})[shortsKey]) shortsBtn.classList.add('active');
         shortsBtn.addEventListener('click', async (e) => {
@@ -719,7 +730,7 @@
         // 웹툰 버튼
         const webtoonBtn = document.createElement('div');
         webtoonBtn.className = 'daily-check-btn webtoon';
-        webtoonBtn.textContent = '웹툰';
+        webtoonBtn.textContent = '툰';
         const webtoonKey = `${fullDate}_daily_webtoon`;
         if ((window.taskStatus || {})[webtoonKey]) webtoonBtn.classList.add('active');
         webtoonBtn.addEventListener('click', async (e) => {
@@ -733,9 +744,15 @@
 
         checkGroup.appendChild(shortsBtn);
         checkGroup.appendChild(webtoonBtn);
-        dayDiv.appendChild(checkGroup);
+        dayTop.appendChild(checkGroup);
+        dayDiv.appendChild(dayTop);
 
-        // 2) 에피소드 정보 (월~금만 표시) - 쇼츠/웹툰 아래
+        // 날짜/체크 버튼 아래 구분선
+        const divider = document.createElement('div');
+        divider.className = 'day-divider';
+        dayDiv.appendChild(divider);
+
+        // 2) 에피소드 정보 (월~금만 표시) - 날짜/체크 버튼 아래
         //    주말(토/일)은 회차 진행이 없으므로 표시하지 않음.
         if(isEpisodeDay(thisDate)){
           const episodeNumber = episodeNumberForDate(thisDate);
