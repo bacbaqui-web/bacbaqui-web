@@ -378,6 +378,17 @@
   </div>
 
   <div id="bookmarks-section" class="section-card tab-content text-left">
+    <div class="flex items-center justify-between mb-2" id="bookmarkHeaderRow">
+      <div id="bookmarkTabsContainer" class="notepad-tabs flex flex-wrap gap-2"></div>
+      <div class="flex items-center gap-2">
+        <button id="addBookmarkTabBtn" class="icon-btn" title="새 북마크 탭">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        </button>
+        <button id="toggleBookmarkEditBtn" class="icon-btn" title="북마크 탭 편집">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+      </div>
+    </div>
     <section id="drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" title="붙여넣기(Ctrl/Cmd+V)">
       <div class="text-4xl font-bold select-none">+</div>
     </section>
@@ -420,7 +431,12 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
       <img id="modalImage" src="" alt="확대 이미지" />
-      <button id="goToPageBtn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50">원본 페이지로 이동</button>
+      <div id="imageModalControls">
+        <select id="moveBookmarkTabSelect" title="탭 이동"></select>
+        <button id="moveBookmarkTabBtn" class="image-modal-action">탭 이동</button>
+        <button id="openImageNewTabBtn" class="image-modal-action">새탭에서 열기</button>
+        <button id="goToPageBtn" class="image-modal-action">원본 페이지</button>
+      </div>
     </div>
   </div>
 
@@ -479,6 +495,8 @@
     window.taskStatus = window.taskStatus || {};
     window.__notesTabs = window.__notesTabs || {};
     window.imageBookmarks = window.imageBookmarks || []; // 북마크는 이미지와 동영상, 일반 링크 모두 포함
+    window.__bookmarkTabList = window.__bookmarkTabList || [{id:"default", name:"기본", order:0}];
+    window.__bookmarkActiveTabId = window.__bookmarkActiveTabId || "default";
     window.currentTask = null;
     window.currentEditingBookmark = null; // 현재 편집 중인 북마크 항목
     let currentDate = new Date();
@@ -497,6 +515,10 @@
     const modalImage = document.getElementById('modalImage');
     const closeImageModalBtn = document.getElementById('closeImageModalBtn');
     const goToPageBtn = document.getElementById('goToPageBtn');
+    const openImageNewTabBtn = document.getElementById('openImageNewTabBtn');
+    const moveBookmarkTabSelect = document.getElementById('moveBookmarkTabSelect');
+    const moveBookmarkTabBtn = document.getElementById('moveBookmarkTabBtn');
+    let currentModalBookmark = null;
     // 제목 수정 모달 요소
     const editTitleModal = document.getElementById('editTitleModal');
     const editTitleInput = document.getElementById('editTitleInput');
@@ -523,13 +545,20 @@
     const hideAlert = () => { document.getElementById('alert-modal').classList.add('hidden'); };
     document.getElementById('modal-close-btn').addEventListener('click', hideAlert);
 
-    const openImageModal = (imageUrl, pageUrl) => {
+    const openImageModal = (imageUrl, pageUrl, bookmark=null) => {
+      currentModalBookmark = bookmark;
       modalImage.src = imageUrl;
-      if (pageUrl){ goToPageBtn.style.display='block'; goToPageBtn.onclick=()=>window.open(pageUrl,'_blank'); }
+      if (openImageNewTabBtn){ openImageNewTabBtn.onclick=()=>window.open(imageUrl,'_blank'); }
+      if (moveBookmarkTabSelect){
+        const tabs = [...(window.__bookmarkTabList||[{id:'default',name:'기본',order:0}])].sort((a,b)=>(a.order??0)-(b.order??0));
+        moveBookmarkTabSelect.innerHTML = tabs.map(t=>`<option value="${t.id}">${t.name||'탭'}</option>`).join('');
+        moveBookmarkTabSelect.value = bookmark?.bookmarkTabId || 'default';
+      }
+      if (pageUrl){ goToPageBtn.style.display='inline-block'; goToPageBtn.onclick=()=>window.open(pageUrl,'_blank'); }
       else goToPageBtn.style.display='none';
       imageModal.style.display='flex';
     };
-    const closeImageModal = () => { imageModal.style.display = 'none'; };
+    const closeImageModal = () => { imageModal.style.display = 'none'; currentModalBookmark=null; };
 
     // 북마크 제목 수정 모달
     const openEditModal = (bookmark) => {
@@ -664,11 +693,23 @@
       // 추가: 모달 내용 (이미지 포함) 클릭 시 닫기
       document.querySelector('#imageModal .modal-content').addEventListener('click', (e) => {
           // X 버튼, 원본 페이지 이동 버튼을 제외하고 닫기
-          if (!e.target.closest('#closeImageModalBtn') && !e.target.closest('#goToPageBtn')) {
+          if (!e.target.closest('#closeImageModalBtn') && !e.target.closest('#goToPageBtn') && !e.target.closest('#imageModalControls')) {
               closeImageModal();
           }
       });
       
+      moveBookmarkTabBtn?.addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        if(!currentModalBookmark || !moveBookmarkTabSelect) return;
+        const nextTabId = moveBookmarkTabSelect.value || 'default';
+        if(window.moveBookmarkToTab){
+          await window.moveBookmarkToTab(currentModalBookmark.id, nextTabId);
+          currentModalBookmark.bookmarkTabId = nextTabId;
+          showFeedbackMessage('탭을 이동했습니다.');
+          closeImageModal();
+        }
+      });
+
       // 제목 수정 모달 이벤트 리스너
       cancelTitleBtn.addEventListener('click', closeEditModal);
       saveTitleBtn.addEventListener('click', saveEditedTitle);
@@ -972,7 +1013,8 @@
     const renderImageBookmarks=()=>{
       imageGrid.innerHTML='';
       
-      let sortedBookmarks = [...(window.imageBookmarks || [])];
+      const activeBookmarkTabId = window.__bookmarkActiveTabId || 'default';
+      let sortedBookmarks = [...(window.imageBookmarks || [])].filter(d => (d.bookmarkTabId || 'default') === activeBookmarkTabId);
 
       // 최신순 고정
       sortedBookmarks.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
@@ -1089,7 +1131,7 @@
                 window.open(urlToOpen, '_blank');
             } else if (isImage) {
                 // [수정] 이미지일 경우 모달 열기
-                openImageModal(imageUrl, pageUrl);
+                openImageModal(imageUrl, pageUrl, d);
             }
         });
       });
@@ -1670,30 +1712,119 @@ if(notesArea){
 
 
 function initBookmarks(){
-
   const imageGrid=document.getElementById('image-grid');
-
-  window.renderImageBookmarks=function(){
-
-    if(!imageGrid) return;
-
-    imageGrid.innerHTML='';
-
-    (window.imageBookmarks||[]).forEach(d=>{
-      const card=document.createElement('div');
-      card.className='bookmark-card';
-      card.innerHTML=`
-        <div class="content">
-          <div style="padding:20px;text-align:center;">
-            ${d.sourceDomain||'Bookmark'}
-          </div>
-        </div>
-      `;
-      imageGrid.appendChild(card);
+  const tabsContainer=document.getElementById('bookmarkTabsContainer');
+  const addTabBtn=document.getElementById('addBookmarkTabBtn');
+  const toggleEditBtn=document.getElementById('toggleBookmarkEditBtn');
+  let editMode=false;
+  const genId=()=> 'btab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
+  const escapeHtml=(str)=>String(str??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  const getTabs=()=>{
+    const tabs=Array.isArray(window.__bookmarkTabList)&&window.__bookmarkTabList.length ? window.__bookmarkTabList : [{id:'default',name:'기본',order:0}];
+    return [...tabs].sort((a,b)=>(a.order??0)-(b.order??0));
+  };
+  const renderTabs=()=>{
+    if(!tabsContainer) return;
+    const tabs=getTabs();
+    if(!tabs.some(t=>t.id===window.__bookmarkActiveTabId)) window.__bookmarkActiveTabId=tabs[0]?.id||'default';
+    tabsContainer.innerHTML='';
+    tabs.forEach(t=>{
+      const btn=document.createElement('button');
+      btn.className='bookmark-tab'+(t.id===window.__bookmarkActiveTabId?' active':'');
+      btn.dataset.tabId=t.id;
+      btn.draggable=editMode;
+      btn.innerHTML=`<span class="tab-label">${escapeHtml(t.name||'탭')}</span>${editMode?`<span class="tab-del" title="삭제">×</span>`:''}`;
+      tabsContainer.appendChild(btn);
     });
-  }
+    if(toggleEditBtn){
+      toggleEditBtn.innerHTML= editMode
+      ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+    }
+  };
+  const renderAll=()=>{ renderTabs(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); };
+  window.renderBookmarkTabsUI=renderAll;
 
-  renderImageBookmarks();
+  tabsContainer?.addEventListener('click', async (e)=>{
+    const tabBtn=e.target.closest('.bookmark-tab');
+    if(!tabBtn) return;
+    const tabId=tabBtn.dataset.tabId;
+    if(editMode && e.target.classList.contains('tab-del')){
+      if(!confirm('이 탭과 탭 안의 북마크를 삭제할까요?')) return;
+      window.cloudDeleteBookmarkTab && await window.cloudDeleteBookmarkTab(tabId);
+      return;
+    }
+    window.__bookmarkActiveTabId=tabId;
+    window.cloudSetActiveBookmarkTab && await window.cloudSetActiveBookmarkTab(tabId);
+    renderAll();
+  });
+  tabsContainer?.addEventListener('dblclick', async (e)=>{
+    const tabBtn=e.target.closest('.bookmark-tab'); if(!tabBtn) return;
+    const tabId=tabBtn.dataset.tabId;
+    const cur=getTabs().find(t=>t.id===tabId);
+    const name=prompt('탭 이름 변경', cur?.name||'');
+    if(name===null) return;
+    const trimmed=name.trim().slice(0,20);
+    if(trimmed) window.cloudRenameBookmarkTab && await window.cloudRenameBookmarkTab(tabId, trimmed);
+  });
+  addTabBtn?.addEventListener('click', async ()=>{
+    const name=prompt('새 북마크 탭 이름','새 탭');
+    if(name===null) return;
+    const trimmed=name.trim().slice(0,20);
+    if(!trimmed) return;
+    const id=genId();
+    window.cloudAddBookmarkTab && await window.cloudAddBookmarkTab({id,name:trimmed});
+  });
+  toggleEditBtn?.addEventListener('click',()=>{ editMode=!editMode; renderTabs(); });
+
+  let draggingEl=null, placeholderEl=null;
+  function ensurePlaceholder(width){
+    if(placeholderEl) return;
+    placeholderEl=document.createElement('div');
+    placeholderEl.className='bookmark-tab placeholder';
+    placeholderEl.style.width=(width||80)+'px';
+    placeholderEl.style.height='32px';
+    placeholderEl.style.border='1px dashed rgba(255,255,255,.25)';
+    placeholderEl.style.background='transparent';
+  }
+  function getDragAfterElement(container,x){
+    const els=[...container.querySelectorAll('.bookmark-tab:not(.dragging):not(.placeholder)')];
+    let closest={offset:Number.NEGATIVE_INFINITY,element:null};
+    for(const child of els){
+      const box=child.getBoundingClientRect();
+      const offset=x-(box.left+box.width/2);
+      if(offset<0 && offset>closest.offset) closest={offset,element:child};
+    }
+    return closest.element;
+  }
+  tabsContainer?.addEventListener('dragstart',(e)=>{
+    if(!editMode) return;
+    const tabBtn=e.target.closest('.bookmark-tab'); if(!tabBtn) return;
+    draggingEl=tabBtn; draggingEl.classList.add('dragging');
+    ensurePlaceholder(tabBtn.getBoundingClientRect().width);
+    placeholderEl.style.width=tabBtn.getBoundingClientRect().width+'px';
+    tabBtn.after(placeholderEl);
+    if(e.dataTransfer) e.dataTransfer.effectAllowed='move';
+  });
+  tabsContainer?.addEventListener('dragover',(e)=>{
+    if(!editMode || !draggingEl) return;
+    e.preventDefault();
+    const afterEl=getDragAfterElement(tabsContainer,e.clientX);
+    if(!afterEl) tabsContainer.appendChild(placeholderEl); else tabsContainer.insertBefore(placeholderEl,afterEl);
+  });
+  async function finalizeReorder(){
+    if(!draggingEl || !placeholderEl) return;
+    placeholderEl.replaceWith(draggingEl); draggingEl.classList.remove('dragging');
+    const ids=[...tabsContainer.querySelectorAll('.bookmark-tab')].filter(el=>!el.classList.contains('placeholder')).map(el=>el.dataset.tabId).filter(Boolean);
+    const map=new Map(getTabs().map(t=>[t.id,t]));
+    const next=ids.map((id,i)=>({...map.get(id),order:i*10})).filter(Boolean);
+    window.cloudReorderBookmarkTabs && await window.cloudReorderBookmarkTabs(next);
+    draggingEl=null; placeholderEl=null;
+  }
+  tabsContainer?.addEventListener('drop',async(e)=>{ if(!editMode) return; e.preventDefault(); await finalizeReorder(); });
+  tabsContainer?.addEventListener('dragend',async()=>{ if(editMode && placeholderEl && draggingEl) await finalizeReorder(); });
+
+  renderAll();
 }
 
 
@@ -1899,6 +2030,58 @@ function initBookmarks(){
       await setDoc(stateDoc,{ notesTabList: nextList, notesTabs: nextNotes, notesActiveTabId: nextActive },{ merge:true });
     };
 
+    // 북마크 탭 CRUD (stateDoc 내부 bookmarkTabList / bookmarkActiveTabId 사용)
+    window.cloudSetActiveBookmarkTab = async (tabId)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      await setDoc(stateDoc,{ bookmarkActiveTabId: tabId },{ merge:true });
+    };
+    window.cloudAddBookmarkTab = async ({id, name})=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const list=Array.isArray(prev.bookmarkTabList)&&prev.bookmarkTabList.length ? prev.bookmarkTabList : [{id:'default',name:'기본',order:0}];
+      const maxOrder=list.reduce((m,t)=>Math.max(m,Number(t.order||0)),0);
+      const next=[...list,{id,name,order:maxOrder+10}];
+      window.__bookmarkActiveTabId=id;
+      await setDoc(stateDoc,{ bookmarkTabList: next, bookmarkActiveTabId: id },{ merge:true });
+    };
+    window.cloudRenameBookmarkTab = async (tabId, newName)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      const list=Array.isArray(prev.bookmarkTabList)&&prev.bookmarkTabList.length ? prev.bookmarkTabList : [{id:'default',name:'기본',order:0}];
+      const next=list.map(t=>t.id===tabId?({...t,name:newName}):t);
+      await setDoc(stateDoc,{ bookmarkTabList: next },{ merge:true });
+    };
+    window.cloudReorderBookmarkTabs = async (orderedList)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      await setDoc(stateDoc,{ bookmarkTabList: orderedList },{ merge:true });
+    };
+    window.cloudDeleteBookmarkTab = async (tabId)=>{
+      if(!ensureLogin()) return;
+      const { stateDoc, imagesCol } = await cloudRefs();
+      const st=await getDoc(stateDoc);
+      const prev=st.exists()?(st.data()||{}):{};
+      let list=Array.isArray(prev.bookmarkTabList)&&prev.bookmarkTabList.length ? prev.bookmarkTabList : [{id:'default',name:'기본',order:0}];
+      let nextList=list.filter(t=>t.id!==tabId);
+      let nextActive=prev.bookmarkActiveTabId || window.__bookmarkActiveTabId || 'default';
+      if(nextList.length===0) nextList=[{id:'default',name:'기본',order:0}];
+      if(nextActive===tabId) nextActive=nextList[0].id;
+      const deletions=(window.imageBookmarks||[]).filter(b=>(b.bookmarkTabId||'default')===tabId).map(b=>deleteDoc(doc(imagesCol,b.id)));
+      await Promise.all(deletions);
+      await setDoc(stateDoc,{ bookmarkTabList: nextList, bookmarkActiveTabId: nextActive },{ merge:true });
+      showFeedbackMessage('북마크 탭을 삭제했습니다.');
+    };
+    window.moveBookmarkToTab = async (bookmarkId, tabId)=>{
+      if(!ensureLogin()) return;
+      const { imagesCol } = await cloudRefs();
+      await updateDoc(doc(imagesCol, bookmarkId), { bookmarkTabId: tabId || 'default' });
+    };
+
     window.deleteTask=async ()=>{
       if(!ensureLogin() || !window.currentTask?.id){ if(typeof closeModal==='function') closeModal(); return; }
       const { tasksCol } = await cloudRefs();
@@ -1914,7 +2097,7 @@ function initBookmarks(){
       if(!ensureLogin()) return;
       const { imagesCol } = await cloudRefs();
       // pageUrl 필드에 동영상 URL을 저장. title 필드 추가.
-      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'video', title: null, sourceDomain: extractDomain(url), timestamp:new Date() }); 
+      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'video', title: null, sourceDomain: extractDomain(url), bookmarkTabId: window.__bookmarkActiveTabId || 'default', timestamp:new Date() }); 
     };
     
     // 일반 링크 북마크 저장 (URL만 저장, type: 'link')
@@ -1922,7 +2105,7 @@ function initBookmarks(){
       if(!ensureLogin()) return;
       const { imagesCol } = await cloudRefs();
       // pageUrl 필드에 일반 URL을 저장. title 필드 추가.
-      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'link', title: null, sourceDomain: extractDomain(url), timestamp:new Date() }); 
+      await addDoc(imagesCol,{ pageUrl: url, url: null, type:'link', title: null, sourceDomain: extractDomain(url), bookmarkTabId: window.__bookmarkActiveTabId || 'default', timestamp:new Date() }); 
     };
     
     // 인스타그램 북마크 저장 (퍼가기 코드 저장, type: 'instagram')
@@ -1937,14 +2120,14 @@ function initBookmarks(){
       const blockquote = doc.querySelector('blockquote.instagram-media');
       if(blockquote && blockquote.cite) pageUrl = blockquote.cite;
       
-      await addDoc(imagesCol,{ pageUrl: pageUrl, embedCode: embedCode, url: null, type:'instagram', title: null, sourceDomain: extractDomain(pageUrl), timestamp:new Date() }); 
+      await addDoc(imagesCol,{ pageUrl: pageUrl, embedCode: embedCode, url: null, type:'instagram', title: null, sourceDomain: extractDomain(pageUrl), bookmarkTabId: window.__bookmarkActiveTabId || 'default', timestamp:new Date() }); 
     };
 
     // 이미지 URL만 저장 (type: 'remote')
     window.addRemoteImage = async (url, pageUrl)=>{
       if(!ensureLogin()) return;
       const { imagesCol } = await cloudRefs();
-      await addDoc(imagesCol,{ url, pageUrl: pageUrl||null, type:'remote', sourceDomain: extractDomain(pageUrl || url), timestamp:new Date() });
+      await addDoc(imagesCol,{ url, pageUrl: pageUrl||null, type:'remote', sourceDomain: extractDomain(pageUrl || url), bookmarkTabId: window.__bookmarkActiveTabId || 'default', timestamp:new Date() });
     };
     
     // [수정 4] window.addImage 함수 전체 교체 (ImgBB -> Firebase Storage)
@@ -1985,6 +2168,7 @@ function initBookmarks(){
           storagePath: storagePath, // [중요] 삭제를 위한 파일 경로 저장
           title: null, 
           sourceDomain: source, 
+          bookmarkTabId: window.__bookmarkActiveTabId || 'default',
           timestamp: new Date() 
         });
         showFeedbackMessage('이미지가 업로드되었습니다.'); // 성공 피드백
@@ -2105,7 +2289,9 @@ function initBookmarks(){
             notesSchemaVersion: 2,
             notesTabList: defaultTabs,
             notesTabs: { memo: '' },
-            notesActiveTabId: 'memo'
+            notesActiveTabId: 'memo',
+            bookmarkTabList: prev.bookmarkTabList || [{id:'default',name:'기본',order:0}],
+            bookmarkActiveTabId: prev.bookmarkActiveTabId || 'default'
           },{ merge:true });
         }
       }catch(_){}
@@ -2121,7 +2307,10 @@ function initBookmarks(){
         window.__notesTabList = Array.isArray(data.notesTabList) && data.notesTabList.length ? data.notesTabList : [{ id:'memo', name:'메모', order:0 }];
         window.__notesTabs = data.notesTabs || {};
         window.__notesActiveTabId = data.notesActiveTabId || window.__notesActiveTabId || 'memo';
+        window.__bookmarkTabList = Array.isArray(data.bookmarkTabList) && data.bookmarkTabList.length ? data.bookmarkTabList : [{id:'default',name:'기본',order:0}];
+        window.__bookmarkActiveTabId = data.bookmarkActiveTabId || window.__bookmarkActiveTabId || 'default';
         if(typeof window.renderNotesUI==='function') window.renderNotesUI();
+        if(typeof window.renderBookmarkTabsUI==='function') window.renderBookmarkTabsUI();
         if(typeof renderCalendar==='function') renderCalendar();
       });
       window.__unsubs.push(unsubState);
@@ -2129,7 +2318,8 @@ function initBookmarks(){
       const unsubImages = onSnapshot(imagesCol,(snap)=>{ 
           // imageBookmarks에 이미지/동영상/링크/인스타그램 북마크 모두 포함
           window.imageBookmarks=snap.docs.map(d=>({id:d.id,...d.data()})); 
-          if(typeof renderImageBookmarks==='function') renderImageBookmarks(); 
+          if(typeof renderImageBookmarks==='function') renderImageBookmarks();
+          if(typeof window.renderBookmarkTabsUI==='function') window.renderBookmarkTabsUI(); 
       });
       window.__unsubs.push(unsubImages);
     }
@@ -2144,7 +2334,7 @@ function initBookmarks(){
       }else{
         userInfoEl.textContent=''; signOutBtn.classList.add('hidden'); signInBtn.classList.remove('hidden');
         window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
-        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={}; window.__notesTabList=[{id:'memo',name:'메모',order:0}]; window.__notesActiveTabId='memo';
+        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={}; window.__notesTabList=[{id:'memo',name:'메모',order:0}]; window.__notesActiveTabId='memo'; window.__bookmarkTabList=[{id:'default',name:'기본',order:0}]; window.__bookmarkActiveTabId='default';
         if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); const na=document.getElementById('notesArea'); if(na) na.value='';
       }
       loadingOverlay.classList.add('hidden'); window.isAuthReady=true;
