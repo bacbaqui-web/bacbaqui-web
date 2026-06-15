@@ -117,6 +117,8 @@
 .workmusic-tab.dragging{opacity:.3}
 .workmusic-tab.placeholder{opacity:1}
 .workmusic-tab .tab-del{margin-left:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#555;color:#fff;font-size:12px;line-height:1}
+.workmusic-tab .playlist-mark{display:inline-flex;align-items:center;justify-content:center;margin-right:6px;opacity:.85;vertical-align:-2px}
+.workmusic-tab .playlist-mark svg{width:14px;height:14px;display:block}
 
 /* 이미지 모달 상단 아이콘 컨트롤 */
 #imageModalControls{
@@ -424,6 +426,8 @@
 .workmusic-modal-icon-btn:hover{background:#4a4a4a;border-color:#777;transform:scale(1.04)}
 .workmusic-modal-icon-btn svg{width:21px;height:21px;display:block}
 .workmusic-modal-icon-btn.danger{color:#f5f5f5}
+.workmusic-tab-modal{background:#2a2a2a;max-width:360px;padding:18px;border:1px solid #3f3f3f}
+.workmusic-tab-modal-icons{display:flex;justify-content:center;gap:12px;margin-top:14px}
 @media (max-width:768px){.workmusic-list{column-count:2}.workmusic-actions{opacity:1}#workMusicVolumeRange{width:90px}}
 
     @media (max-width:768px){
@@ -708,6 +712,24 @@
   </div>
 
 
+  <div id="workMusicTabSettingsModal" class="modal">
+    <div class="modal-content workmusic-tab-modal">
+      <input type="text" id="workMusicTabNameInput" class="workmusic-title-input" placeholder="탭 이름 수정">
+      <div class="workmusic-tab-modal-icons">
+        <button id="workMusicTabRefreshBtn" class="workmusic-modal-icon-btn" title="재생목록 새로고침" aria-label="재생목록 새로고침">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12A9 9 0 0 1 18.5 5.7"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/>
+          </svg>
+        </button>
+        <button id="workMusicTabSaveBtn" class="workmusic-modal-icon-btn" title="탭 이름 저장" aria-label="탭 이름 저장">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
       <p id="modal-message" class="text-white text-lg text-center font-medium"></p>
@@ -798,6 +820,10 @@
     const workMusicOpenYoutubeBtn = document.getElementById('workMusicOpenYoutubeBtn');
     const workMusicDeleteBtn = document.getElementById('workMusicDeleteBtn');
     const workMusicCloseSettingsBtn = document.getElementById('workMusicCloseSettingsBtn');
+    const workMusicTabSettingsModal = document.getElementById('workMusicTabSettingsModal');
+    const workMusicTabNameInput = document.getElementById('workMusicTabNameInput');
+    const workMusicTabRefreshBtn = document.getElementById('workMusicTabRefreshBtn');
+    const workMusicTabSaveBtn = document.getElementById('workMusicTabSaveBtn');
     let workMusicIframe = null;
     let workMusicPlayer = null;
     let workMusicSyncTimer = null;
@@ -1459,6 +1485,7 @@
 
     const workMusicPlaySvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`;
     const workMusicPauseSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>`;
+    const workMusicPlaylistMarkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h12"/><path d="M3 12h10"/><path d="M3 18h8"/><path d="M17 10v8"/><path d="M13 14h8"/></svg>`;
     const workMusicSettingsSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h8"/><path d="M16 7h4"/><circle cx="14" cy="7" r="2"/><path d="M4 17h4"/><path d="M12 17h8"/><circle cx="10" cy="17" r="2"/></svg>`;
     const workMusicVolumeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>`;
     const workMusicMutedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>`;
@@ -1494,6 +1521,12 @@
     function getActiveWorkMusicSongs(){
       const activeTabId = getActiveWorkMusicTabId();
       return (window.workMusicSongs || []).filter(s => (s.workMusicTabId || 'default') === activeTabId);
+    }
+    function getWorkMusicTabPlaylistId(tabId){
+      const tab = getWorkMusicTabs().find(t=>t.id===tabId);
+      if(tab?.sourcePlaylistId) return tab.sourcePlaylistId;
+      const found = (window.workMusicSongs || []).find(s => (s.workMusicTabId || 'default') === tabId && s.sourcePlaylistId);
+      return found?.sourcePlaylistId || '';
     }
     function normalizeWorkMusicCurrentIndex(songs=getActiveWorkMusicSongs()){
       if(!songs.length){ window.workMusicCurrentIndex = 0; return 0; }
@@ -2350,7 +2383,7 @@
       const id = 'wtab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
       const order = tabs.length ? Math.max(...tabs.map(t=>Number(t.order||0))) + 10 : 0;
       const tabName = (data.title || '새 재생목록').trim().slice(0, 20) || '새 재생목록';
-      window.__workMusicTabList = [...tabs, {id, name: tabName, order}];
+      window.__workMusicTabList = [...tabs, {id, name: tabName, order, sourcePlaylistId: data.playlistId, sourceType:'youtube-playlist'}];
       window.__workMusicActiveTabId = id;
       const existingIds = new Set((window.workMusicSongs || []).map(s=>`${s.workMusicTabId || 'default'}:${s.videoId}`));
       const now = Date.now();
@@ -2424,7 +2457,9 @@
         btn.className = 'workmusic-tab' + (t.id === window.__workMusicActiveTabId ? ' active' : '');
         btn.dataset.tabId = t.id;
         btn.draggable = !!window.__workMusicEditMode;
-        btn.innerHTML = `<span class="tab-label">${escapeHtml(t.name || '탭')}</span>${window.__workMusicEditMode ? `<span class="tab-del" title="삭제">×</span>` : ''}`;
+        const playlistId = getWorkMusicTabPlaylistId(t.id);
+        const mark = playlistId ? `<span class="playlist-mark" title="재생목록 탭">${workMusicPlaylistMarkSvg}</span>` : '';
+        btn.innerHTML = `${mark}<span class="tab-label">${escapeHtml(t.name || '탭')}</span>${window.__workMusicEditMode ? `<span class="tab-del" title="삭제">×</span>` : ''}`;
         workMusicTabsContainer.appendChild(btn);
       });
       if(toggleWorkMusicEditBtn){
@@ -2450,6 +2485,77 @@
       renderWorkMusicIframe(0, false);
     }
 
+    function openWorkMusicTabSettings(tabId){
+      const tab = getWorkMusicTabs().find(t=>t.id===tabId);
+      if(!tab) return;
+      window.currentWorkMusicTabSettingId = tabId;
+      if(workMusicTabNameInput) workMusicTabNameInput.value = tab.name || '';
+      if(workMusicTabRefreshBtn){
+        const hasPlaylist = !!getWorkMusicTabPlaylistId(tabId);
+        workMusicTabRefreshBtn.style.display = hasPlaylist ? 'inline-flex' : 'none';
+      }
+      if(workMusicTabSettingsModal) workMusicTabSettingsModal.style.display = 'flex';
+      setTimeout(()=>{ workMusicTabNameInput?.focus(); workMusicTabNameInput?.select(); }, 50);
+    }
+
+    function closeWorkMusicTabSettings(){
+      window.currentWorkMusicTabSettingId = null;
+      if(workMusicTabSettingsModal) workMusicTabSettingsModal.style.display = 'none';
+    }
+
+    async function saveWorkMusicTabName(){
+      if(!window.ensureLogin || !window.ensureLogin()) return;
+      const tabId = window.currentWorkMusicTabSettingId;
+      if(!tabId) return;
+      const name = (workMusicTabNameInput?.value || '').trim().slice(0,20);
+      if(!name) return;
+      window.__workMusicTabList = getWorkMusicTabs().map(t=>t.id===tabId ? {...t, name} : t);
+      renderWorkMusicTabsUI();
+      await window.cloudRenameWorkMusicTab?.(tabId, name);
+    }
+
+    async function refreshWorkMusicPlaylistTab(tabId){
+      if(!window.ensureLogin || !window.ensureLogin()) return;
+      const playlistId = getWorkMusicTabPlaylistId(tabId);
+      if(!playlistId){ showFeedbackMessage('재생목록으로 만든 탭만 새로고침할 수 있습니다.'); return; }
+      const tab = getWorkMusicTabs().find(t=>t.id===tabId);
+      showFeedbackMessage('재생목록을 새로고침 중입니다...');
+      const data = await fetchYoutubePlaylistData(playlistId);
+      if(!data.items.length){ showAlert('재생목록을 다시 읽지 못했습니다.'); return; }
+      const oldSongs = (window.workMusicSongs || []).filter(s => (s.workMusicTabId || 'default') === tabId);
+      const oldMap = new Map(oldSongs.map(s=>[s.videoId, s]));
+      const now = Date.now();
+      const nextSongsForTab = data.items.map((item, idx)=>{
+        const old = oldMap.get(item.videoId);
+        const keepManualTitle = old && old.autoTitle === false && old.title && old.title !== `YouTube ${old.videoId}`;
+        return {
+          ...(old || {}),
+          id: old?.id || (now + idx),
+          url: `https://www.youtube.com/watch?v=${item.videoId}`,
+          videoId: item.videoId,
+          title: keepManualTitle ? old.title : (item.title || old?.title || `YouTube ${item.videoId}`),
+          autoTitle: keepManualTitle ? false : false,
+          durationText: item.durationText || formatWorkMusicDuration(item.durationSeconds) || old?.durationText || '',
+          durationSeconds: item.durationSeconds || old?.durationSeconds || 0,
+          addedAt: old?.addedAt || (now + idx),
+          workMusicTabId: tabId,
+          sourcePlaylistId: data.playlistId || playlistId
+        };
+      });
+      window.workMusicSongs = [
+        ...(window.workMusicSongs || []).filter(s => (s.workMusicTabId || 'default') !== tabId),
+        ...nextSongsForTab
+      ];
+      window.__workMusicTabList = getWorkMusicTabs().map(t=>t.id===tabId ? {...t, sourcePlaylistId: data.playlistId || playlistId, sourceType:'youtube-playlist'} : t);
+      if(window.__workMusicActiveTabId !== tabId) window.__workMusicActiveTabId = tabId;
+      window.workMusicCurrentIndex = 0;
+      window.workMusicIsPlaying = false;
+      renderWorkMusicAll();
+      renderWorkMusicIframe(0, false);
+      await window.cloudSaveWorkMusic?.();
+      showFeedbackMessage(`${tab?.name || data.title || '재생목록'} 새로고침 완료: ${nextSongsForTab.length}개`);
+    }
+
     function initWorkMusic(){
       ensureWorkMusicDefaultTabs();
       renderWorkMusicAll();
@@ -2470,12 +2576,7 @@
       workMusicTabsContainer?.addEventListener('dblclick', async (e)=>{
         const tabBtn = e.target.closest('.workmusic-tab');
         if(!tabBtn) return;
-        const tabId = tabBtn.dataset.tabId;
-        const cur = getWorkMusicTabs().find(t=>t.id===tabId);
-        const name = prompt('탭 이름 변경', cur?.name || '');
-        if(name === null) return;
-        const trimmed = name.trim().slice(0,20);
-        if(trimmed) await window.cloudRenameWorkMusicTab?.(tabId, trimmed);
+        openWorkMusicTabSettings(tabBtn.dataset.tabId);
       });
       addWorkMusicTabBtn?.addEventListener('click', async ()=>{
         if(!window.ensureLogin || !window.ensureLogin()) return;
@@ -2500,6 +2601,10 @@
         }
       });
       importWorkMusicPlaylistBtn?.addEventListener('click', importWorkMusicPlaylistPrompt);
+      workMusicTabSaveBtn?.addEventListener('click', async ()=>{ await saveWorkMusicTabName(); closeWorkMusicTabSettings(); });
+      workMusicTabRefreshBtn?.addEventListener('click', async ()=>{ const tabId = window.currentWorkMusicTabSettingId; await saveWorkMusicTabName(); closeWorkMusicTabSettings(); if(tabId) await refreshWorkMusicPlaylistTab(tabId); });
+      workMusicTabSettingsModal?.addEventListener('click', async (e)=>{ if(e.target === workMusicTabSettingsModal){ await saveWorkMusicTabName(); closeWorkMusicTabSettings(); } });
+      workMusicTabNameInput?.addEventListener('keydown', async (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); await saveWorkMusicTabName(); closeWorkMusicTabSettings(); } if(e.key === 'Escape'){ e.preventDefault(); closeWorkMusicTabSettings(); } });
       toggleWorkMusicEditBtn?.addEventListener('click', ()=>{
         window.__workMusicEditMode = !window.__workMusicEditMode;
         renderWorkMusicTabsUI();
@@ -3608,7 +3713,8 @@ function initBookmarks(){
       const prev = st.exists() ? (st.data() || {}) : {};
       const list = Array.isArray(prev.workMusicTabList) && prev.workMusicTabList.length ? prev.workMusicTabList : [{id:'default',name:'기본',order:0}];
       const order = Number.isFinite(Number(tab.order)) ? Number(tab.order) : (list.length ? Math.max(...list.map(t=>Number(t.order||0))) + 10 : 0);
-      const next = list.some(t=>t.id===tab.id) ? list.map(t=>t.id===tab.id ? {...t, name:tab.name, order} : t) : [...list, {id:tab.id, name:tab.name, order}];
+      const extra = { ...(tab.sourcePlaylistId ? {sourcePlaylistId:tab.sourcePlaylistId, sourceType:tab.sourceType || 'youtube-playlist'} : {}) };
+      const next = list.some(t=>t.id===tab.id) ? list.map(t=>t.id===tab.id ? {...t, name:tab.name, order, ...extra} : t) : [...list, {id:tab.id, name:tab.name, order, ...extra}];
       await setDoc(stateDoc,{ workMusicTabList: next, workMusicActiveTabId: tab.id, workMusicCurrentIndex: 0 },{ merge:true });
     };
     window.cloudRenameWorkMusicTab = async (tabId, name)=>{
