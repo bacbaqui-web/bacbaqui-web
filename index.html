@@ -445,34 +445,42 @@
 .workmusic-tab-modal-icons{display:flex;justify-content:center;gap:12px;margin-top:14px}
 @media (max-width:768px){.workmusic-list{column-count:2}.workmusic-actions{opacity:1}#workMusicVolumeRange{width:90px}}
 
-/* 하단 노동요 리모컨: 다른 탭에서도 재생 정보/조작 */
-body{padding-bottom:92px}
+/* 하단 노동요 리모컨: 낮은 1줄형 배치 */
+body{padding-bottom:76px}
 .workmusic-remote{
-  position:fixed;left:50%;bottom:14px;transform:translateX(-50%);
-  width:min(920px,calc(100vw - 24px));min-height:64px;
-  background:rgba(28,28,28,.94);border:1px solid #4a4a4a;border-radius:18px;
+  position:fixed;left:50%;bottom:12px;transform:translateX(-50%);
+  width:min(920px,calc(100vw - 24px));min-height:54px;
+  background:rgba(28,28,28,.94);border:1px solid #4a4a4a;border-radius:17px;
   box-shadow:0 10px 30px rgba(0,0,0,.45);backdrop-filter:blur(10px);
-  z-index:900;display:none;align-items:center;gap:12px;padding:10px 12px;color:#fff;
+  z-index:900;display:none;align-items:center;gap:10px;padding:7px 10px;color:#fff;
 }
 .workmusic-remote.show{display:flex}
-.workmusic-remote-info{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto;cursor:pointer}
-.workmusic-remote-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;background:#111;flex:0 0 44px}
+.workmusic-remote-info{display:flex;align-items:center;gap:9px;min-width:0;flex:1 1 auto;cursor:pointer;overflow:hidden}
+.workmusic-remote-thumb{width:40px;height:40px;border-radius:9px;object-fit:cover;background:#111;flex:0 0 40px}
 .workmusic-remote-text{min-width:0;flex:1 1 auto;text-align:left}
-.workmusic-remote-title{font-size:.92rem;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
-.workmusic-remote-artist{font-size:.74rem;font-weight:600;line-height:1.2;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#bdbdbd}
-.workmusic-remote-controls{display:flex;align-items:center;gap:7px;flex:0 0 auto}
-.workmusic-remote-btn{width:38px;height:38px;border-radius:999px;background:#333;border:1px solid #505050;color:#f5f5f5;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s,transform .15s,border-color .2s}
+.workmusic-remote-title{font-size:.88rem;font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.workmusic-remote-artist{font-size:.7rem;font-weight:600;line-height:1.15;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#bdbdbd}
+.workmusic-remote-controls{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:auto}
+.workmusic-remote-btn{width:34px;height:34px;border-radius:999px;background:#333;border:1px solid #505050;color:#f5f5f5;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s,transform .15s,border-color .2s}
 .workmusic-remote-btn:hover{background:#414141;border-color:#666;transform:scale(1.04)}
-.workmusic-remote-btn svg{width:20px;height:20px;display:block}
-.workmusic-remote-volume{display:flex;align-items:center;gap:7px;background:#303030;border:1px solid #4a4a4a;border-radius:999px;padding:6px 9px;flex:0 0 auto}
+.workmusic-remote-btn svg{width:18px;height:18px;display:block}
+.workmusic-remote-volume{display:flex;align-items:center;gap:6px;background:#303030;border:1px solid #4a4a4a;border-radius:999px;padding:4px 8px;flex:0 0 auto}
 .workmusic-remote-volume input{width:96px;accent-color:#fff;cursor:pointer}
-.workmusic-remote-percent{min-width:34px;text-align:right;font-size:.75rem;font-weight:800;color:#e5e5e5;font-variant-numeric:tabular-nums}
+.workmusic-remote-percent{min-width:32px;text-align:right;font-size:.72rem;font-weight:800;color:#e5e5e5;font-variant-numeric:tabular-nums}
+.workmusic-remote .workmusic-volume-btn{width:30px;height:30px;flex:0 0 30px}
+.workmusic-remote .workmusic-volume-btn svg{width:17px;height:17px}
 @media (max-width:640px){
-  body{padding-bottom:110px}
-  .workmusic-remote{bottom:10px;align-items:stretch;flex-wrap:wrap;padding:10px}
-  .workmusic-remote-info{width:100%;flex-basis:100%}
-  .workmusic-remote-controls{flex:1;justify-content:center}
-  .workmusic-remote-volume input{width:82px}
+  body{padding-bottom:78px}
+  .workmusic-remote{width:calc(100vw - 16px);bottom:8px;padding:7px 8px;gap:7px;border-radius:15px}
+  .workmusic-remote-thumb{width:36px;height:36px;flex-basis:36px}
+  .workmusic-remote-title{font-size:.78rem}
+  .workmusic-remote-artist{font-size:.65rem}
+  .workmusic-remote-controls{gap:4px}
+  .workmusic-remote-btn{width:30px;height:30px}
+  .workmusic-remote-btn svg{width:16px;height:16px}
+  .workmusic-remote-volume{gap:4px;padding:3px 6px}
+  .workmusic-remote-volume input{width:64px}
+  .workmusic-remote-percent{min-width:28px;font-size:.68rem}
 }
 
 
