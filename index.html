@@ -1410,22 +1410,48 @@
 
     function looksAutoTitle(song){
       const t = String(song?.title || '').trim();
-      return !t || t === `YouTube ${song?.videoId}` || /^YouTube [A-Za-z0-9_-]{11}$/.test(t);
+      return !!song?.autoTitle || !t || t === `YouTube ${song?.videoId}` || t === '제목 불러오기 실패' || /^YouTube [A-Za-z0-9_-]{11}$/.test(t);
+    }
+
+    function cleanYoutubeTitle(title){
+      let t = String(title || '').trim();
+      t = t.replace(/\s*-\s*YouTube\s*$/i, '').trim();
+      t = t.replace(/^YouTube\s*[-:]\s*/i, '').trim();
+      return t;
+    }
+
+    function parseTitleFromHtml(html){
+      const text = String(html || '');
+      const og = text.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+              || text.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i)
+              || text.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if(!og) return '';
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = og[1];
+      return cleanYoutubeTitle(textarea.value);
     }
 
     async function fetchYoutubeTitle(url){
       const cleanUrl = normalizeYoutubeUrl(url);
       const endpoints = [
-        `https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}`,
-        `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(cleanUrl)}`
+        { type:'json', url:`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(cleanUrl)}` },
+        { type:'json', url:`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}` },
+        { type:'json', url:`https://api.allorigins.win/get?url=${encodeURIComponent(cleanUrl)}` },
+        { type:'text', url:`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}` }
       ];
       for(const endpoint of endpoints){
         try{
-          const res = await fetch(endpoint, {cache:'no-store'});
+          const res = await fetch(endpoint.url, {cache:'no-store'});
           if(!res.ok) continue;
-          const data = await res.json();
-          const title = String(data.title || '').trim();
-          if(title) return title;
+          if(endpoint.type === 'json'){
+            const data = await res.json();
+            const title = cleanYoutubeTitle(data.title || parseTitleFromHtml(data.contents || ''));
+            if(title) return title;
+          }else{
+            const html = await res.text();
+            const title = parseTitleFromHtml(html);
+            if(title) return title;
+          }
         }catch(_){/* 다음 endpoint 시도 */}
       }
       return '';
@@ -1433,12 +1459,12 @@
 
     async function fillMissingWorkMusicTitles(){
       const songs = window.workMusicSongs || [];
-      const targets = songs.filter(looksAutoTitle).slice(0, 6);
+      const targets = songs.filter(looksAutoTitle);
       if(!targets.length) return;
       let changed = false;
       for(const song of targets){
         const title = await fetchYoutubeTitle(song.url || `https://www.youtube.com/watch?v=${song.videoId}`);
-        if(title){ song.title = title; changed = true; }
+        if(title){ song.title = title; song.autoTitle = false; changed = true; }
       }
       if(changed){
         await window.cloudSaveWorkMusic?.();
@@ -1614,6 +1640,7 @@
       const songs = window.workMusicSongs || [];
       if(!songs[idx]) return;
       songs[idx].title = (workMusicTitleInput?.value || '').trim() || `YouTube ${songs[idx].videoId}`;
+      songs[idx].autoTitle = false;
       await window.cloudSaveWorkMusic?.();
       closeWorkMusicSettings();
       renderWorkMusic();
@@ -1651,7 +1678,7 @@
       const url = normalizeYoutubeUrl(raw);
       if(window.workMusicSongs.some(s=>s.videoId===videoId)){ showFeedbackMessage('이미 추가된 영상입니다.'); return false; }
       const fetchedTitle = await fetchYoutubeTitle(url);
-      window.workMusicSongs.push({ id: Date.now(), url, videoId, title:fetchedTitle || `YouTube ${videoId}`, addedAt: Date.now() });
+      window.workMusicSongs.push({ id: Date.now(), url, videoId, title:fetchedTitle || `제목 불러오기 실패`, autoTitle: !fetchedTitle, addedAt: Date.now() });
       await window.cloudSaveWorkMusic?.();
       renderWorkMusic();
       return true;
