@@ -354,25 +354,30 @@
 
 /* 노동요 플레이어 */
 .workmusic-panel{display:flex;flex-direction:column;gap:14px}
-.workmusic-input-row{display:flex;gap:8px;align-items:center}
-.workmusic-input-row input{flex:1;min-width:0}
+#workmusic-drag-area{min-height:110px}
 .workmusic-player-wrap{background:#111;border-radius:12px;overflow:hidden;border:1px solid #444}
-#workMusicPlayer{width:100%;aspect-ratio:16/9;background:#000}
+#workMusicPlayerBox{width:100%;aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center;color:#777;font-size:.9rem}
+#workMusicPlayerBox iframe{width:100%;height:100%;display:block;border:0}
 .workmusic-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
 .workmusic-btn{background:#3a3a3a;border-radius:10px;padding:9px 12px;color:#fff;font-weight:700;cursor:pointer;border:none;transition:.2s}
 .workmusic-btn:hover{background:#4a4a4a}
 .workmusic-btn.primary{background:#6d28d9}.workmusic-btn.primary:hover{background:#7c3aed}
-.workmusic-list{display:flex;flex-direction:column;gap:8px;text-align:left}
-.workmusic-item{display:flex;align-items:center;gap:10px;background:#1f1f1f;border:1px solid #3a3a3a;border-radius:10px;padding:10px}
+.workmusic-list{column-count:2;column-gap:1rem;margin-top:.5rem;display:block;text-align:left}
+@media (min-width:640px){.workmusic-list{column-count:3}}
+@media (min-width:1024px){.workmusic-list{column-count:4}}
+.workmusic-item{position:relative;background:#333;border:1px solid #3a3a3a;border-radius:8px;overflow:hidden;margin-bottom:1rem;break-inside:avoid;width:100%;display:block;cursor:pointer;transition:transform .2s ease-in-out,border-color .2s,background .2s}
+.workmusic-item:hover{transform:translateY(-5px)}
 .workmusic-item.active{border-color:#a78bfa;background:#2f2448}
-.workmusic-thumb{width:86px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:#000;flex:0 0 auto}
-.workmusic-meta{flex:1;min-width:0}
-.workmusic-title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.workmusic-url{font-size:.75rem;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.workmusic-actions{display:flex;gap:6px;flex:0 0 auto}
-.workmusic-small-btn{background:#333;border-radius:8px;padding:6px 8px;color:#fff;border:none;cursor:pointer;font-size:.8rem}
+.workmusic-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;background:#000;display:block}
+.workmusic-play-overlay{position:absolute;inset:0 0 34px 0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.28);font-size:2.4rem;opacity:.92;pointer-events:none}
+.workmusic-titlebar{padding:8px 9px 9px;background:rgba(0,0,0,.58)}
+.workmusic-title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.86rem}
+.workmusic-url{font-size:.72rem;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workmusic-actions{position:absolute;top:8px;right:8px;display:flex;gap:5px;opacity:0;transition:opacity .2s;z-index:5}
+.workmusic-item:hover .workmusic-actions{opacity:1}
+.workmusic-small-btn{background:#333;border-radius:999px;padding:5px 7px;color:#fff;border:none;cursor:pointer;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 .workmusic-small-btn:hover{background:#444}
-@media (max-width:768px){.workmusic-input-row{flex-direction:column;align-items:stretch}.workmusic-item{align-items:flex-start}.workmusic-thumb{width:72px}.workmusic-actions{flex-direction:column}}
+@media (max-width:768px){.workmusic-list{column-count:2}.workmusic-actions{opacity:1}.workmusic-small-btn{font-size:.72rem;padding:4px 6px}}
 
     @media (max-width:768px){
       body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
@@ -504,14 +509,13 @@
     <div class="workmusic-panel">
       <div>
         <h2 class="text-xl font-bold mb-1">노동요</h2>
-        <p class="text-sm opacity-70">유튜브 링크를 추가하면 순서대로 또는 랜덤으로 이어 재생됩니다.</p>
+        <p class="text-sm opacity-70">북마크처럼 아래 + 영역을 누르거나, 이 영역에 유튜브 링크를 붙여넣으면 카드로 추가됩니다.</p>
       </div>
-      <div class="workmusic-input-row">
-        <input type="url" id="workMusicUrlInput" placeholder="유튜브 링크 붙여넣기" class="p-3 rounded-lg bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500">
-        <button id="addWorkMusicBtn" class="workmusic-btn primary">추가</button>
-      </div>
+      <section id="workmusic-drag-area" class="drag-area rounded-lg p-6 flex items-center justify-center text-center text-[#999] font-medium cursor-pointer" tabindex="0" title="유튜브 링크 붙여넣기(Ctrl/Cmd+V)">
+        <div class="text-4xl font-bold select-none">+</div>
+      </section>
       <div class="workmusic-player-wrap">
-        <div id="workMusicPlayer"></div>
+        <div id="workMusicPlayerBox"></div>
       </div>
       <div class="workmusic-controls">
         <button id="workMusicPrevBtn" class="workmusic-btn">이전</button>
@@ -673,8 +677,7 @@
     const currentUrlDisplay = document.getElementById('currentUrlDisplay');
     // 정렬 선택 요소(현재는 UI 제거됨)
     const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
-    const workMusicUrlInput = document.getElementById('workMusicUrlInput');
-    const addWorkMusicBtn = document.getElementById('addWorkMusicBtn');
+    const workMusicDragArea = document.getElementById('workmusic-drag-area');
     const workMusicPrevBtn = document.getElementById('workMusicPrevBtn');
     const workMusicPlayBtn = document.getElementById('workMusicPlayBtn');
     const workMusicNextBtn = document.getElementById('workMusicNextBtn');
@@ -1335,21 +1338,20 @@
     // ===== 노동요(YouTube) =====
     function extractYoutubeVideoId(url){
       if(!url) return null;
+      const text = String(url).trim();
       try{
-        const u = new URL(String(url).trim());
+        const u = new URL(text.includes('://') ? text : 'https://' + text);
         const host = u.hostname.replace(/^www\./,'');
-        if(host === 'youtu.be') return u.pathname.split('/').filter(Boolean)[0] || null;
-        if(host.endsWith('youtube.com')){
+        if(host === 'youtu.be') return (u.pathname.split('/').filter(Boolean)[0] || '').slice(0,11);
+        if(host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')){
           if(u.searchParams.get('v')) return u.searchParams.get('v');
           const parts = u.pathname.split('/').filter(Boolean);
           const keys = ['embed','shorts','live'];
           if(keys.includes(parts[0]) && parts[1]) return parts[1];
         }
-      }catch(_){
-        const m = String(url).match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
-        return m ? m[1] : null;
-      }
-      return null;
+      }catch(_){/* 아래 정규식 fallback */}
+      const m = text.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
+      return m ? m[1] : null;
     }
 
     function normalizeYoutubeUrl(url){
@@ -1360,27 +1362,37 @@
     function getWorkMusicNextIndex(step=1){
       const songs = window.workMusicSongs || [];
       if(!songs.length) return -1;
+      const cur = Math.max(0, Number(window.workMusicCurrentIndex || 0));
       if(window.workMusicMode === 'random' && songs.length > 1){
-        let next = window.workMusicCurrentIndex;
-        while(next === window.workMusicCurrentIndex) next = Math.floor(Math.random()*songs.length);
+        let next = cur;
+        while(next === cur) next = Math.floor(Math.random()*songs.length);
         return next;
       }
-      return (Number(window.workMusicCurrentIndex || 0) + step + songs.length) % songs.length;
+      return (cur + step + songs.length) % songs.length;
     }
 
     function ensureWorkMusicPlayer(){
       if(workMusicPlayer || !window.YT || !window.YT.Player) return;
-      workMusicPlayer = new window.YT.Player('workMusicPlayer', {
-        width:'100%', height:'100%', videoId: workMusicPendingVideoId || undefined,
-        playerVars:{ autoplay:0, playsinline:1, rel:0 },
+      const origin = (location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : undefined;
+      workMusicPlayer = new window.YT.Player('workMusicPlayerBox', {
+        width:'100%',
+        height:'100%',
+        videoId: workMusicPendingVideoId || undefined,
+        playerVars:{ autoplay:0, playsinline:1, rel:0, modestbranding:1, ...(origin ? {origin} : {}) },
         events:{
           onReady:()=>{
             workMusicApiReady = true;
-            if(workMusicPendingVideoId){ workMusicPlayer.loadVideoById(workMusicPendingVideoId); workMusicPendingVideoId=null; }
+            if(workMusicPendingVideoId){
+              const id = workMusicPendingVideoId;
+              workMusicPendingVideoId = null;
+              workMusicPlayer.loadVideoById(id);
+              try{ workMusicPlayer.playVideo(); }catch(_){ }
+            }
           },
           onStateChange:(event)=>{
             if(event.data === window.YT.PlayerState.ENDED) playWorkMusicAt(getWorkMusicNextIndex(1));
-          }
+          },
+          onError:()=>showAlert('이 영상은 임베드 재생이 막혀 있거나 링크가 잘못됐습니다. 다른 유튜브 링크를 넣어보세요.')
         }
       });
     }
@@ -1399,20 +1411,40 @@
       document.head.appendChild(tag);
     }
 
+    function renderWorkMusicFallbackIframe(videoId){
+      const box = document.getElementById('workMusicPlayerBox');
+      if(!box || !videoId) return;
+      box.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    }
+
     function playWorkMusicAt(index){
       const songs = window.workMusicSongs || [];
-      if(!songs.length){ renderWorkMusic(); return; }
+      if(!songs.length){ renderWorkMusic(); showFeedbackMessage('먼저 유튜브 링크를 추가해주세요.'); return; }
       if(index < 0 || index >= songs.length) index = 0;
       window.workMusicCurrentIndex = index;
       const song = songs[index];
       renderWorkMusic();
       if(!song?.videoId){ showAlert('유튜브 링크를 확인해주세요.'); return; }
+      workMusicPendingVideoId = song.videoId;
       if(workMusicPlayer && workMusicPlayer.loadVideoById){
+        workMusicPendingVideoId = null;
         workMusicPlayer.loadVideoById(song.videoId);
+        try{ workMusicPlayer.playVideo(); }catch(_){ }
       }else{
-        workMusicPendingVideoId = song.videoId;
         loadYoutubeIframeApi();
+        setTimeout(()=>{
+          if(workMusicPlayer && workMusicPendingVideoId){
+            const id = workMusicPendingVideoId;
+            workMusicPendingVideoId = null;
+            workMusicPlayer.loadVideoById(id);
+            try{ workMusicPlayer.playVideo(); }catch(_){ }
+          }else if(!workMusicPlayer && workMusicPendingVideoId){
+            // 로컬 HTML/file:// 환경에서 IFrame API가 늦게 뜨거나 막힐 때 재생 자체는 되도록 fallback iframe 사용
+            renderWorkMusicFallbackIframe(workMusicPendingVideoId);
+          }
+        }, 1200);
       }
+      window.cloudSaveWorkMusic?.();
     }
 
     function renderWorkMusic(){
@@ -1428,17 +1460,18 @@
         const row=document.createElement('div');
         row.className='workmusic-item' + (idx === (window.workMusicCurrentIndex || 0) ? ' active' : '');
         row.innerHTML=`
-          <img class="workmusic-thumb" src="https://img.youtube.com/vi/${song.videoId}/mqdefault.jpg" alt="썸네일" onerror="this.style.display='none'">
-          <div class="workmusic-meta">
-            <div class="workmusic-title">${song.title || `노동요 ${idx+1}`}</div>
-            <div class="workmusic-url">${song.url || ''}</div>
-          </div>
+          <img class="workmusic-thumb" src="https://img.youtube.com/vi/${song.videoId}/mqdefault.jpg" alt="썸네일" onerror="this.onerror=null;this.src='https://placehold.co/320x180/333/fff?text=YouTube'">
+          <div class="workmusic-play-overlay">▶</div>
           <div class="workmusic-actions">
-            <button class="workmusic-small-btn" data-action="play" data-index="${idx}">재생</button>
-            <button class="workmusic-small-btn" data-action="up" data-index="${idx}">▲</button>
-            <button class="workmusic-small-btn" data-action="down" data-index="${idx}">▼</button>
-            <button class="workmusic-small-btn" data-action="delete" data-index="${idx}">삭제</button>
+            <button class="workmusic-small-btn" data-action="up" data-index="${idx}" title="위로">▲</button>
+            <button class="workmusic-small-btn" data-action="down" data-index="${idx}" title="아래로">▼</button>
+            <button class="workmusic-small-btn" data-action="delete" data-index="${idx}" title="삭제">✕</button>
+          </div>
+          <div class="workmusic-titlebar">
+            <div class="workmusic-title">${song.title || `YouTube ${song.videoId}`}</div>
+            <div class="workmusic-url">${song.url || ''}</div>
           </div>`;
+        row.addEventListener('click',()=>playWorkMusicAt(idx));
         workMusicList.appendChild(row);
       });
       workMusicList.querySelectorAll('button[data-action]').forEach(btn=>{
@@ -1447,7 +1480,6 @@
           const action=e.currentTarget.dataset.action;
           const idx=Number(e.currentTarget.dataset.index);
           const songs=window.workMusicSongs || [];
-          if(action==='play') playWorkMusicAt(idx);
           if(action==='delete'){
             songs.splice(idx,1);
             if(window.workMusicCurrentIndex >= songs.length) window.workMusicCurrentIndex = Math.max(0, songs.length-1);
@@ -1470,26 +1502,48 @@
       });
     }
 
-    async function addWorkMusicFromInput(){
-      if(!window.ensureLogin || !window.ensureLogin()) return;
-      const raw = (workMusicUrlInput?.value || '').trim();
+    async function addWorkMusicFromText(raw){
+      if(!window.ensureLogin || !window.ensureLogin()) return false;
       const videoId = extractYoutubeVideoId(raw);
-      if(!videoId){ showAlert('유튜브 링크만 추가할 수 있습니다.'); return; }
+      if(!videoId){ showAlert('유튜브 링크만 추가할 수 있습니다.'); return false; }
       window.workMusicSongs = window.workMusicSongs || [];
       const url = normalizeYoutubeUrl(raw);
-      if(window.workMusicSongs.some(s=>s.videoId===videoId)){ showFeedbackMessage('이미 추가된 영상입니다.'); return; }
+      if(window.workMusicSongs.some(s=>s.videoId===videoId)){ showFeedbackMessage('이미 추가된 영상입니다.'); return false; }
       window.workMusicSongs.push({ id: Date.now(), url, videoId, title:`YouTube ${videoId}`, addedAt: Date.now() });
-      if(workMusicUrlInput) workMusicUrlInput.value='';
       await window.cloudSaveWorkMusic?.();
       renderWorkMusic();
       showFeedbackMessage('노동요가 추가되었습니다.');
+      return true;
+    }
+
+    async function addWorkMusicFromClipboard(){
+      try{
+        const t = await navigator.clipboard.readText();
+        if(!t){ showAlert('클립보드에 유튜브 링크가 없습니다.'); return; }
+        await addWorkMusicFromText(t);
+      }catch(err){
+        console.error(err);
+        showAlert('클립보드 권한을 허용하거나, + 영역을 선택한 뒤 Ctrl/Cmd+V로 붙여넣어주세요.');
+      }
     }
 
     function initWorkMusic(){
       loadYoutubeIframeApi();
       renderWorkMusic();
-      addWorkMusicBtn?.addEventListener('click', addWorkMusicFromInput);
-      workMusicUrlInput?.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); addWorkMusicFromInput(); } });
+      workMusicDragArea?.addEventListener('click', addWorkMusicFromClipboard);
+      workMusicDragArea?.addEventListener('paste', async (e)=>{
+        e.preventDefault();
+        const text = e.clipboardData?.getData('text/plain') || '';
+        await addWorkMusicFromText(text);
+      });
+      workMusicDragArea?.addEventListener('dragover', (e)=>{ e.preventDefault(); workMusicDragArea.classList.add('active'); });
+      workMusicDragArea?.addEventListener('dragleave', ()=>workMusicDragArea.classList.remove('active'));
+      workMusicDragArea?.addEventListener('drop', async (e)=>{
+        e.preventDefault();
+        workMusicDragArea.classList.remove('active');
+        const text = e.dataTransfer?.getData('text/plain') || e.dataTransfer?.getData('text/uri-list') || '';
+        await addWorkMusicFromText(text);
+      });
       workMusicPlayBtn?.addEventListener('click', ()=>playWorkMusicAt(window.workMusicCurrentIndex || 0));
       workMusicPrevBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(-1)));
       workMusicNextBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(1)));
@@ -1702,6 +1756,18 @@
         
         if(!processed) showAlert('클립보드에서 유효한 콘텐츠를 읽지 못했습니다.');
       }catch(e){ console.error(e); showAlert('클립보드 권한을 허용하세요.'); }
+    });
+
+    // 노동요 탭에서 문서 어디에 붙여넣어도 유튜브 링크 추가
+    document.addEventListener('paste', async (e)=>{
+      const section = document.getElementById('workmusic-section');
+      if(!section || !section.classList.contains('active')) return;
+      if(previewUploadModal && previewUploadModal.style.display === 'flex') return;
+      const text = e.clipboardData?.getData('text/plain') || '';
+      if(extractYoutubeVideoId(text)){
+        e.preventDefault();
+        await addWorkMusicFromText(text);
+      }
     });
 
     // 붙여넣기 핸들러
