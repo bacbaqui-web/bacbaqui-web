@@ -1336,6 +1336,12 @@
 
 
     // ===== 노동요(YouTube) =====
+    // YouTube IFrame API는 file:// 로 열었을 때 검은 박스만 뜨는 경우가 있어,
+    // API를 쓰지 않고 일반 embed iframe + playlist 파라미터 방식으로 재생합니다.
+    function escapeHtml(str){
+      return String(str ?? '').replace(/[&<>"]/g, (m)=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m]));
+    }
+
     function extractYoutubeVideoId(url){
       if(!url) return null;
       const text = String(url).trim();
@@ -1344,10 +1350,10 @@
         const host = u.hostname.replace(/^www\./,'');
         if(host === 'youtu.be') return (u.pathname.split('/').filter(Boolean)[0] || '').slice(0,11);
         if(host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')){
-          if(u.searchParams.get('v')) return u.searchParams.get('v');
+          if(u.searchParams.get('v')) return u.searchParams.get('v').slice(0,11);
           const parts = u.pathname.split('/').filter(Boolean);
           const keys = ['embed','shorts','live'];
-          if(keys.includes(parts[0]) && parts[1]) return parts[1];
+          if(keys.includes(parts[0]) && parts[1]) return parts[1].slice(0,11);
         }
       }catch(_){/* 아래 정규식 fallback */}
       const m = text.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
@@ -1371,50 +1377,42 @@
       return (cur + step + songs.length) % songs.length;
     }
 
-    function ensureWorkMusicPlayer(){
-      if(workMusicPlayer || !window.YT || !window.YT.Player) return;
-      const origin = (location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : undefined;
-      workMusicPlayer = new window.YT.Player('workMusicPlayerBox', {
-        width:'100%',
-        height:'100%',
-        videoId: workMusicPendingVideoId || undefined,
-        playerVars:{ autoplay:0, playsinline:1, rel:0, modestbranding:1, ...(origin ? {origin} : {}) },
-        events:{
-          onReady:()=>{
-            workMusicApiReady = true;
-            if(workMusicPendingVideoId){
-              const id = workMusicPendingVideoId;
-              workMusicPendingVideoId = null;
-              workMusicPlayer.loadVideoById(id);
-              try{ workMusicPlayer.playVideo(); }catch(_){ }
-            }
-          },
-          onStateChange:(event)=>{
-            if(event.data === window.YT.PlayerState.ENDED) playWorkMusicAt(getWorkMusicNextIndex(1));
-          },
-          onError:()=>showAlert('이 영상은 임베드 재생이 막혀 있거나 링크가 잘못됐습니다. 다른 유튜브 링크를 넣어보세요.')
-        }
-      });
+    function shuffledWorkMusicIndexes(startIndex){
+      const songs = window.workMusicSongs || [];
+      const indexes = songs.map((_, i)=>i).filter(i=>i!==startIndex);
+      for(let i=indexes.length-1; i>0; i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [indexes[i], indexes[j]] = [indexes[j], indexes[i]];
+      }
+      return [startIndex, ...indexes];
     }
 
-    window.onYouTubeIframeAPIReady = function(){
-      workMusicApiReady = true;
-      ensureWorkMusicPlayer();
-    };
-
-    function loadYoutubeIframeApi(){
-      if(window.YT && window.YT.Player){ ensureWorkMusicPlayer(); return; }
-      if(document.getElementById('youtube-iframe-api')) return;
-      const tag=document.createElement('script');
-      tag.id='youtube-iframe-api';
-      tag.src='https://www.youtube.com/iframe_api';
-      document.head.appendChild(tag);
+    function getWorkMusicPlayOrder(startIndex){
+      const songs = window.workMusicSongs || [];
+      if(!songs.length) return [];
+      if(window.workMusicMode === 'random') return shuffledWorkMusicIndexes(startIndex);
+      return songs.map((_, offset)=>(startIndex + offset) % songs.length);
     }
 
-    function renderWorkMusicFallbackIframe(videoId){
+    function renderWorkMusicIframe(index, autoplay=true){
       const box = document.getElementById('workMusicPlayerBox');
-      if(!box || !videoId) return;
-      box.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+      const songs = window.workMusicSongs || [];
+      if(!box) return;
+      if(!songs.length){
+        box.innerHTML = '<div style="color:#777;padding:24px;text-align:center">유튜브 링크를 추가하면 여기에 재생됩니다.</div>';
+        return;
+      }
+      if(index < 0 || index >= songs.length) index = 0;
+      const song = songs[index];
+      if(!song?.videoId){
+        box.innerHTML = '<div style="color:#777;padding:24px;text-align:center">유튜브 링크를 확인해주세요.</div>';
+        return;
+      }
+      const order = getWorkMusicPlayOrder(index);
+      const rest = order.slice(1).map(i=>songs[i]?.videoId).filter(Boolean);
+      const playlistParam = rest.length ? `&playlist=${encodeURIComponent(rest.join(','))}` : '';
+      const src = `https://www.youtube.com/embed/${encodeURIComponent(song.videoId)}?autoplay=${autoplay ? 1 : 0}&playsinline=1&rel=0&modestbranding=1${playlistParam}`;
+      box.innerHTML = `<iframe src="${src}" title="노동요 YouTube player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
     }
 
     function playWorkMusicAt(index){
@@ -1422,28 +1420,8 @@
       if(!songs.length){ renderWorkMusic(); showFeedbackMessage('먼저 유튜브 링크를 추가해주세요.'); return; }
       if(index < 0 || index >= songs.length) index = 0;
       window.workMusicCurrentIndex = index;
-      const song = songs[index];
       renderWorkMusic();
-      if(!song?.videoId){ showAlert('유튜브 링크를 확인해주세요.'); return; }
-      workMusicPendingVideoId = song.videoId;
-      if(workMusicPlayer && workMusicPlayer.loadVideoById){
-        workMusicPendingVideoId = null;
-        workMusicPlayer.loadVideoById(song.videoId);
-        try{ workMusicPlayer.playVideo(); }catch(_){ }
-      }else{
-        loadYoutubeIframeApi();
-        setTimeout(()=>{
-          if(workMusicPlayer && workMusicPendingVideoId){
-            const id = workMusicPendingVideoId;
-            workMusicPendingVideoId = null;
-            workMusicPlayer.loadVideoById(id);
-            try{ workMusicPlayer.playVideo(); }catch(_){ }
-          }else if(!workMusicPlayer && workMusicPendingVideoId){
-            // 로컬 HTML/file:// 환경에서 IFrame API가 늦게 뜨거나 막힐 때 재생 자체는 되도록 fallback iframe 사용
-            renderWorkMusicFallbackIframe(workMusicPendingVideoId);
-          }
-        }, 1200);
-      }
+      renderWorkMusicIframe(index, true);
       window.cloudSaveWorkMusic?.();
     }
 
@@ -1452,24 +1430,26 @@
       if(workMusicModeSelect) workMusicModeSelect.value = window.workMusicMode || 'sequential';
       const current = songs[window.workMusicCurrentIndex || 0];
       if(workMusicNowPlaying){
-        workMusicNowPlaying.textContent = current ? `재생 대기: ${current.title || current.url}` : '추가된 노동요가 없습니다.';
+        workMusicNowPlaying.textContent = current ? `현재 선택: ${current.title || current.url}` : '추가된 노동요가 없습니다.';
       }
+      if(!songs.length) renderWorkMusicIframe(0, false);
       if(!workMusicList) return;
       workMusicList.innerHTML = '';
       songs.forEach((song, idx)=>{
         const row=document.createElement('div');
         row.className='workmusic-item' + (idx === (window.workMusicCurrentIndex || 0) ? ' active' : '');
         row.innerHTML=`
-          <img class="workmusic-thumb" src="https://img.youtube.com/vi/${song.videoId}/mqdefault.jpg" alt="썸네일" onerror="this.onerror=null;this.src='https://placehold.co/320x180/333/fff?text=YouTube'">
+          <img class="workmusic-thumb" src="https://img.youtube.com/vi/${escapeHtml(song.videoId)}/mqdefault.jpg" alt="썸네일" onerror="this.onerror=null;this.src='https://placehold.co/320x180/333/fff?text=YouTube'">
           <div class="workmusic-play-overlay">▶</div>
           <div class="workmusic-actions">
+            <button class="workmusic-small-btn" data-action="open" data-index="${idx}" title="유튜브에서 열기">↗</button>
             <button class="workmusic-small-btn" data-action="up" data-index="${idx}" title="위로">▲</button>
             <button class="workmusic-small-btn" data-action="down" data-index="${idx}" title="아래로">▼</button>
             <button class="workmusic-small-btn" data-action="delete" data-index="${idx}" title="삭제">✕</button>
           </div>
           <div class="workmusic-titlebar">
-            <div class="workmusic-title">${song.title || `YouTube ${song.videoId}`}</div>
-            <div class="workmusic-url">${song.url || ''}</div>
+            <div class="workmusic-title">${escapeHtml(song.title || `YouTube ${song.videoId}`)}</div>
+            <div class="workmusic-url">${escapeHtml(song.url || '')}</div>
           </div>`;
         row.addEventListener('click',()=>playWorkMusicAt(idx));
         workMusicList.appendChild(row);
@@ -1480,17 +1460,24 @@
           const action=e.currentTarget.dataset.action;
           const idx=Number(e.currentTarget.dataset.index);
           const songs=window.workMusicSongs || [];
+          if(action==='open'){
+            const url = songs[idx]?.url || (songs[idx]?.videoId ? `https://www.youtube.com/watch?v=${songs[idx].videoId}` : '');
+            if(url) window.open(url, '_blank');
+            return;
+          }
           if(action==='delete'){
             songs.splice(idx,1);
             if(window.workMusicCurrentIndex >= songs.length) window.workMusicCurrentIndex = Math.max(0, songs.length-1);
             await window.cloudSaveWorkMusic?.();
             renderWorkMusic();
+            return;
           }
           if(action==='up' && idx>0){
             [songs[idx-1],songs[idx]]=[songs[idx],songs[idx-1]];
             window.workMusicCurrentIndex = idx-1;
             await window.cloudSaveWorkMusic?.();
             renderWorkMusic();
+            return;
           }
           if(action==='down' && idx<songs.length-1){
             [songs[idx+1],songs[idx]]=[songs[idx],songs[idx+1]];
@@ -1528,7 +1515,6 @@
     }
 
     function initWorkMusic(){
-      loadYoutubeIframeApi();
       renderWorkMusic();
       workMusicDragArea?.addEventListener('click', addWorkMusicFromClipboard);
       workMusicDragArea?.addEventListener('paste', async (e)=>{
