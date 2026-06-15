@@ -1823,7 +1823,8 @@
       renderWorkMusicTabsUI();
       renderWorkMusic();
     }
-    window.renderWorkMusicTabsUI = renderWorkMusicAll;
+    window.renderWorkMusicTabsUI = renderWorkMusicTabsUI;
+    window.renderWorkMusicAll = renderWorkMusicAll;
 
     async function switchWorkMusicTab(tabId){
       window.__workMusicActiveTabId = tabId || 'default';
@@ -3165,29 +3166,23 @@ function initBookmarks(){
     async function setupRealtimeSync(){
       const { tasksCol, stateDoc, imagesCol } = await cloudRefs();
 
-      // ===== 메모 탭 스키마 초기화 (기존 메모/탭을 정리하고 '메모' 탭 1개로 시작) =====
+      // ===== 안전 초기화 =====
+      // 중요: 기존 메모/메모 탭은 절대 초기화하지 않음.
+      // 노동요 탭만 없을 때 기본탭을 보강한다.
       try{
         const st=await getDoc(stateDoc);
         const prev=st.exists()?(st.data()||{}):{};
-        const ver = Number(prev.notesSchemaVersion || 0);
-        if(ver < 2){
-          // 기존 메모 정리(요청사항: 깔끔하게 초기화)
-          const defaultTabs=[{ id:'memo', name:'메모', order:0 }];
-          await setDoc(stateDoc,{
-            notesSchemaVersion: 2,
-            notesTabList: defaultTabs,
-            notesTabs: { memo: '' },
-            notesActiveTabId: 'memo',
-            bookmarkTabList: prev.bookmarkTabList || [{id:'default',name:'기본',order:0}],
-            bookmarkActiveTabId: prev.bookmarkActiveTabId || 'default',
-            workMusicSongs: prev.workMusicSongs || [],
-            workMusicTabList: prev.workMusicTabList || [{id:'default',name:'기본',order:0}],
-            workMusicActiveTabId: prev.workMusicActiveTabId || 'default',
-            workMusicMode: prev.workMusicMode || 'sequential',
-            workMusicCurrentIndex: prev.workMusicCurrentIndex || 0
-          },{ merge:true });
+        const patch={};
+        if(!Array.isArray(prev.workMusicTabList) || prev.workMusicTabList.length===0){
+          patch.workMusicTabList=[{id:'default',name:'기본',order:0}];
         }
-      }catch(_){}
+        if(!prev.workMusicActiveTabId){
+          patch.workMusicActiveTabId='default';
+        }
+        if(Object.keys(patch).length){
+          await setDoc(stateDoc, patch, { merge:true });
+        }
+      }catch(e){ console.warn('workMusic default tab init skipped', e); }
 
       window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
 
@@ -3197,9 +3192,14 @@ function initBookmarks(){
       const unsubState = onSnapshot(stateDoc,(ds)=>{
         const data=ds.exists()?(ds.data()||{}):{};
         window.taskStatus=data.taskStatus||{};
-        window.__notesTabList = Array.isArray(data.notesTabList) && data.notesTabList.length ? data.notesTabList : [{ id:'memo', name:'메모', order:0 }];
-        window.__notesTabs = data.notesTabs || {};
-        window.__notesActiveTabId = data.notesActiveTabId || window.__notesActiveTabId || 'memo';
+        // 기존 메모 데이터 보호: Firestore에 값이 없다고 해서 로컬 메모 탭을 덮어쓰지 않음
+        window.__notesTabList = Array.isArray(data.notesTabList) && data.notesTabList.length
+          ? data.notesTabList
+          : (Array.isArray(window.__notesTabList) && window.__notesTabList.length ? window.__notesTabList : [{ id:'memo', name:'메모', order:0 }]);
+        window.__notesTabs = data.notesTabs && Object.keys(data.notesTabs).length
+          ? data.notesTabs
+          : (window.__notesTabs || {});
+        window.__notesActiveTabId = data.notesActiveTabId || window.__notesActiveTabId || (window.__notesTabList[0]?.id) || 'memo';
         window.__bookmarkTabList = Array.isArray(data.bookmarkTabList) && data.bookmarkTabList.length ? data.bookmarkTabList : [{id:'default',name:'기본',order:0}];
         window.__bookmarkActiveTabId = data.bookmarkActiveTabId || window.__bookmarkActiveTabId || 'default';
         window.workMusicSongs = Array.isArray(data.workMusicSongs) ? data.workMusicSongs : [];
