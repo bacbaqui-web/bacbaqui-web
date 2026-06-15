@@ -405,6 +405,9 @@
 .workmusic-list{column-count:2;column-gap:1rem;margin-top:.5rem;display:block;text-align:left}
 @media (min-width:640px){.workmusic-list{column-count:3}}
 @media (min-width:1024px){.workmusic-list{column-count:4}}
+.workmusic-list.music-compact-list{column-count:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:.5rem}
+.workmusic-list.music-compact-list .workmusic-item{margin-bottom:0}
+@media (max-width:640px){.workmusic-list.music-compact-list{grid-template-columns:1fr}}
 .workmusic-item{position:relative;background:#2f2f2f;border:1px solid #3f3f3f;border-radius:8px;overflow:hidden;margin-bottom:1rem;break-inside:avoid;width:100%;display:block;cursor:pointer;transition:transform .2s ease-in-out,border-color .2s,background .2s}
 .workmusic-item:hover{transform:translateY(-5px);background:#363636}
 .workmusic-item.active{border-color:#d4d4d4;background:#3a3a3a}
@@ -414,13 +417,13 @@
 .workmusic-title-overlay{position:absolute;left:0;right:0;bottom:0;z-index:4;background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,.35),rgba(0,0,0,0));color:#fff;font-size:.78rem;font-weight:700;line-height:1.25;padding:28px 62px 8px 10px;text-shadow:0 1px 3px rgba(0,0,0,.8);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .workmusic-duration-badge{position:absolute;right:8px;bottom:8px;z-index:6;background:rgba(0,0,0,.82);color:#fff;border-radius:4px;padding:2px 5px;font-size:.72rem;font-weight:800;line-height:1;letter-spacing:.01em}
 /* 유튜브뮤직에서 불러온 곡은 작은 앨범형 카드로 표시 */
-.workmusic-item.music-track{display:flex;align-items:center;min-height:68px;padding:8px 44px 8px 8px;background:#303030;border-color:#444}
+.workmusic-item.music-track{display:flex;align-items:center;min-height:74px;padding:8px 44px 8px 8px;background:#303030;border-color:#444}
 .workmusic-item.music-track:hover{background:#383838}
-.workmusic-item.music-track .workmusic-thumb{width:54px;height:54px;aspect-ratio:auto;border-radius:6px;object-fit:cover;flex:0 0 54px}
+.workmusic-item.music-track .workmusic-thumb{width:58px;height:58px;aspect-ratio:auto;border-radius:6px;object-fit:cover;flex:0 0 58px}
 .workmusic-item.music-track .workmusic-music-info{min-width:0;flex:1 1 auto;padding-left:10px;padding-right:4px}
 .workmusic-item.music-track .workmusic-music-title{color:#fff;font-size:.84rem;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .workmusic-item.music-track .workmusic-music-artist{color:#bdbdbd;font-size:.72rem;font-weight:600;line-height:1.25;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.workmusic-item.music-track .workmusic-play-overlay{left:8px;top:8px;right:auto;bottom:auto;width:54px;height:54px;border-radius:6px;background:rgba(0,0,0,.22)}
+.workmusic-item.music-track .workmusic-play-overlay{left:8px;top:8px;right:auto;bottom:auto;width:58px;height:58px;border-radius:6px;background:rgba(0,0,0,.22)}
 .workmusic-item.music-track .workmusic-play-overlay svg{width:24px;height:24px}
 .workmusic-item.music-track .workmusic-duration-badge{right:44px;bottom:7px;font-size:.64rem;padding:2px 4px;background:rgba(0,0,0,.72)}
 .workmusic-item.music-track .workmusic-actions{top:50%;right:8px;transform:translateY(-50%);opacity:1}
@@ -2032,11 +2035,21 @@
       if(!songs.length) renderWorkMusicIframe(0, false);
       if(!workMusicList) return;
       workMusicList.innerHTML = '';
+      const activeTabForList = getWorkMusicTabs().find(t=>t.id===getActiveWorkMusicTabId());
+      function isWorkMusicAudioCard(song){
+        const typeText = String(song?.sourceType || activeTabForList?.sourceType || '').toLowerCase();
+        const rawArtist = String(song?.artist || song?.channelTitle || song?.ownerChannelTitle || '');
+        const rawTitle = String(song?.title || '');
+        // 예전 버전에서 가져온 유튜브뮤직 곡은 sourceType이 저장되지 않았을 수 있어서
+        // "OOO - Topic" 채널명도 음악 카드로 판정합니다.
+        return typeText.includes('music') || /-\s*topic$/i.test(rawArtist) || /provided to youtube by/i.test(rawTitle);
+      }
+      const allAudioCards = songs.length > 0 && songs.every(isWorkMusicAudioCard);
+      workMusicList.classList.toggle('music-compact-list', allAudioCards);
       songs.forEach((song, idx)=>{
         const row=document.createElement('div');
         const isActive = idx === (window.workMusicCurrentIndex || 0);
-        const activeTab = getWorkMusicTabs().find(t=>t.id===getActiveWorkMusicTabId());
-        const isMusicTrack = String(song.sourceType || activeTab?.sourceType || '').includes('music');
+        const isMusicTrack = isWorkMusicAudioCard(song);
         row.className='workmusic-item' + (isMusicTrack ? ' music-track' : '') + (isActive ? ' active' : '');
         const title = song.title || `YouTube ${song.videoId}`;
         const artist = getSongArtist(song);
