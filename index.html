@@ -1433,8 +1433,27 @@
     const workMusicPauseSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>`;
     const workMusicSettingsSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h8"/><path d="M16 7h4"/><circle cx="14" cy="7" r="2"/><path d="M4 17h4"/><path d="M12 17h8"/><circle cx="10" cy="17" r="2"/></svg>`;
 
+    function ensureWorkMusicDefaultTabs(){
+      const fallback = [{id:'default', name:'기본', order:0}];
+      if(!Array.isArray(window.__workMusicTabList) || window.__workMusicTabList.length === 0){
+        window.__workMusicTabList = fallback;
+      }
+      if(!window.__workMusicTabList.some(t=>t.id === (window.__workMusicActiveTabId || 'default'))){
+        window.__workMusicActiveTabId = window.__workMusicTabList[0]?.id || 'default';
+      }
+      return window.__workMusicTabList;
+    }
+
+    async function persistWorkMusicDefaultTabsIfNeeded(){
+      ensureWorkMusicDefaultTabs();
+      if(!window.ensureLogin || !window.ensureLogin()) return;
+      try{
+        await window.cloudEnsureWorkMusicDefaultTab?.();
+      }catch(err){ console.warn('work music default tab init failed', err); }
+    }
+
     function getWorkMusicTabs(){
-      const tabs = Array.isArray(window.__workMusicTabList) && window.__workMusicTabList.length ? window.__workMusicTabList : [{id:'default', name:'기본', order:0}];
+      const tabs = ensureWorkMusicDefaultTabs();
       return [...tabs].sort((a,b)=>(a.order??0)-(b.order??0));
     }
     function getActiveWorkMusicTabId(){
@@ -1816,7 +1835,9 @@
     }
 
     function initWorkMusic(){
+      ensureWorkMusicDefaultTabs();
       renderWorkMusicAll();
+      setTimeout(persistWorkMusicDefaultTabsIfNeeded, 300);
       setTimeout(fillMissingWorkMusicTitles, 600);
       workMusicTabsContainer?.addEventListener('click', async (e)=>{
         const tabBtn = e.target.closest('.workmusic-tab');
@@ -1840,13 +1861,26 @@
         if(trimmed) await window.cloudRenameWorkMusicTab?.(tabId, trimmed);
       });
       addWorkMusicTabBtn?.addEventListener('click', async ()=>{
+        if(!window.ensureLogin || !window.ensureLogin()) return;
+        ensureWorkMusicDefaultTabs();
         const name = prompt('새 노동요 탭 이름', '새 탭');
         if(name === null) return;
         const trimmed = name.trim().slice(0,20);
         if(!trimmed) return;
         const id = 'wtab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
-        await window.cloudAddWorkMusicTab?.({id, name: trimmed});
-        await switchWorkMusicTab(id);
+        const tabs = getWorkMusicTabs();
+        const order = tabs.length ? Math.max(...tabs.map(t=>Number(t.order||0))) + 10 : 0;
+        window.__workMusicTabList = [...tabs, {id, name: trimmed, order}];
+        window.__workMusicActiveTabId = id;
+        window.workMusicCurrentIndex = 0;
+        window.workMusicIsPlaying = false;
+        renderWorkMusicAll();
+        try{
+          await window.cloudAddWorkMusicTab?.({id, name: trimmed, order});
+        }catch(err){
+          console.error(err);
+          showAlert('노동요 탭을 저장하는 중 오류가 발생했습니다.');
+        }
       });
       toggleWorkMusicEditBtn?.addEventListener('click', ()=>{
         window.__workMusicEditMode = !window.__workMusicEditMode;
@@ -2867,6 +2901,20 @@ function initBookmarks(){
 
 
 
+    window.cloudEnsureWorkMusicDefaultTab = async ()=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      const st = await getDoc(stateDoc);
+      const prev = st.exists() ? (st.data() || {}) : {};
+      const hasTabs = Array.isArray(prev.workMusicTabList) && prev.workMusicTabList.length;
+      if(!hasTabs){
+        await setDoc(stateDoc,{
+          workMusicTabList: [{id:'default', name:'기본', order:0}],
+          workMusicActiveTabId: 'default'
+        },{ merge:true });
+      }
+    };
+
     window.cloudSetActiveWorkMusicTab = async (tabId)=>{
       if(!ensureLogin()) return;
       const { stateDoc } = await cloudRefs();
@@ -2878,8 +2926,8 @@ function initBookmarks(){
       const st = await getDoc(stateDoc);
       const prev = st.exists() ? (st.data() || {}) : {};
       const list = Array.isArray(prev.workMusicTabList) && prev.workMusicTabList.length ? prev.workMusicTabList : [{id:'default',name:'기본',order:0}];
-      const order = list.length ? Math.max(...list.map(t=>Number(t.order||0))) + 10 : 0;
-      const next = [...list, {id:tab.id, name:tab.name, order}];
+      const order = Number.isFinite(Number(tab.order)) ? Number(tab.order) : (list.length ? Math.max(...list.map(t=>Number(t.order||0))) + 10 : 0);
+      const next = list.some(t=>t.id===tab.id) ? list.map(t=>t.id===tab.id ? {...t, name:tab.name, order} : t) : [...list, {id:tab.id, name:tab.name, order}];
       await setDoc(stateDoc,{ workMusicTabList: next, workMusicActiveTabId: tab.id, workMusicCurrentIndex: 0 },{ merge:true });
     };
     window.cloudRenameWorkMusicTab = async (tabId, name)=>{
