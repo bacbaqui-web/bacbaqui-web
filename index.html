@@ -395,8 +395,11 @@
 #workMusicModeBtn{color:#777}
 #workMusicModeBtn.random{color:#fff}
 .workmusic-volume{display:flex;align-items:center;gap:8px;background:#2f2f2f;border:1px solid #444;border-radius:999px;padding:7px 12px}
-.workmusic-volume svg{width:20px;height:20px;color:#ddd;flex:0 0 auto}
+.workmusic-volume-btn{width:24px;height:24px;border:0;background:transparent;color:#ddd;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;border-radius:999px;flex:0 0 auto}
+.workmusic-volume-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.workmusic-volume-btn svg{width:20px;height:20px;display:block}
 #workMusicVolumeRange{width:120px;accent-color:#fff;cursor:pointer}
+.workmusic-volume-percent{min-width:38px;text-align:right;font-size:.78rem;font-weight:800;color:#e5e5e5;line-height:1;font-variant-numeric:tabular-nums}
 .workmusic-list{column-count:2;column-gap:1rem;margin-top:.5rem;display:block;text-align:left}
 @media (min-width:640px){.workmusic-list{column-count:3}}
 @media (min-width:1024px){.workmusic-list{column-count:4}}
@@ -591,10 +594,13 @@
         <button id="workMusicModeBtn" class="workmusic-icon-btn" title="랜덤 재생 전환" aria-label="랜덤 재생 전환">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
         </button>
-        <label class="workmusic-volume" title="볼륨">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
-          <input id="workMusicVolumeRange" type="range" min="0" max="100" value="80"/>
-        </label>
+        <div class="workmusic-volume" title="볼륨">
+          <button id="workMusicMuteBtn" class="workmusic-volume-btn" type="button" title="음소거" aria-label="음소거">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+          </button>
+          <input id="workMusicVolumeRange" type="range" min="0" max="100" step="5" value="80"/>
+          <span id="workMusicVolumePercent" class="workmusic-volume-percent">80%</span>
+        </div>
       </div>
       <div id="workMusicList" class="workmusic-list"></div>
     </div>
@@ -739,6 +745,8 @@
     window.workMusicMode = window.workMusicMode || 'sequential';
     window.workMusicCurrentIndex = window.workMusicCurrentIndex || 0;
     window.workMusicVolume = window.workMusicVolume ?? 80;
+    window.workMusicLastVolume = window.workMusicLastVolume ?? (Number(window.workMusicVolume) > 0 ? Number(window.workMusicVolume) : 80);
+    window.workMusicIsMuted = window.workMusicIsMuted || Number(window.workMusicVolume) === 0;
     window.workMusicIsPlaying = window.workMusicIsPlaying || false;
     window.currentWorkMusicSettingIndex = null;
     let currentDate = new Date();
@@ -778,7 +786,9 @@
     const workMusicPlayBtn = document.getElementById('workMusicPlayBtn');
     const workMusicNextBtn = document.getElementById('workMusicNextBtn');
     const workMusicModeBtn = document.getElementById('workMusicModeBtn');
+    const workMusicMuteBtn = document.getElementById('workMusicMuteBtn');
     const workMusicVolumeRange = document.getElementById('workMusicVolumeRange');
+    const workMusicVolumePercent = document.getElementById('workMusicVolumePercent');
     const workMusicList = document.getElementById('workMusicList');
     const workMusicSettingsModal = document.getElementById('workMusicSettingsModal');
     const workMusicTitleInput = document.getElementById('workMusicTitleInput');
@@ -1448,6 +1458,8 @@
     const workMusicPlaySvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`;
     const workMusicPauseSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>`;
     const workMusicSettingsSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h8"/><path d="M16 7h4"/><circle cx="14" cy="7" r="2"/><path d="M4 17h4"/><path d="M12 17h8"/><circle cx="10" cy="17" r="2"/></svg>`;
+    const workMusicVolumeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>`;
+    const workMusicMutedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>`;
 
     function ensureWorkMusicDefaultTabs(){
       const fallback = [{id:'default', name:'기본', order:0}];
@@ -1704,11 +1716,48 @@
       }catch(err){ console.warn('YouTube command failed', err); }
     }
 
+    function renderWorkMusicVolumeUI(){
+      const raw = Math.max(0, Math.min(100, Number(window.workMusicVolume ?? 80)));
+      const muted = !!window.workMusicIsMuted || raw === 0;
+      const display = muted ? 0 : raw;
+      if(workMusicVolumeRange) workMusicVolumeRange.value = String(display);
+      if(workMusicVolumePercent) workMusicVolumePercent.textContent = `${display}%`;
+      if(workMusicMuteBtn){
+        workMusicMuteBtn.innerHTML = muted ? workMusicMutedSvg : workMusicVolumeSvg;
+        workMusicMuteBtn.title = muted ? '음소거 해제' : '음소거';
+        workMusicMuteBtn.setAttribute('aria-label', muted ? '음소거 해제' : '음소거');
+      }
+    }
+
     function applyWorkMusicVolume(){
-      const v = Math.max(0, Math.min(100, Number(window.workMusicVolume ?? 80)));
-      if(workMusicVolumeRange) workMusicVolumeRange.value = String(v);
-      sendWorkMusicCommand('setVolume', [v]);
-      if(v === 0) sendWorkMusicCommand('mute'); else sendWorkMusicCommand('unMute');
+      const raw = Math.max(0, Math.min(100, Number(window.workMusicVolume ?? 80)));
+      const muted = !!window.workMusicIsMuted || raw === 0;
+      const playerVolume = muted ? 0 : raw;
+      renderWorkMusicVolumeUI();
+      sendWorkMusicCommand('setVolume', [playerVolume]);
+      if(muted) sendWorkMusicCommand('mute'); else sendWorkMusicCommand('unMute');
+    }
+
+    async function setWorkMusicVolume(value, {save=true}={}){
+      const v = Math.max(0, Math.min(100, Math.round(Number(value || 0) / 5) * 5));
+      window.workMusicVolume = v;
+      window.workMusicIsMuted = v === 0;
+      if(v > 0) window.workMusicLastVolume = v;
+      applyWorkMusicVolume();
+      if(save) await window.cloudSaveWorkMusic?.();
+    }
+
+    async function toggleWorkMusicMute(){
+      if(window.workMusicIsMuted || Number(window.workMusicVolume || 0) === 0){
+        const restore = Math.max(5, Math.min(100, Number(window.workMusicLastVolume || 80)));
+        window.workMusicVolume = restore;
+        window.workMusicIsMuted = false;
+      }else{
+        window.workMusicLastVolume = Math.max(5, Number(window.workMusicVolume || 80));
+        window.workMusicIsMuted = true;
+      }
+      applyWorkMusicVolume();
+      await window.cloudSaveWorkMusic?.();
     }
 
 
@@ -1872,7 +1921,7 @@
         workMusicModeBtn.title = window.workMusicMode === 'random' ? '랜덤 재생 켜짐' : '순서대로 재생 중';
       }
       renderWorkMusicPlayButton();
-      if(workMusicVolumeRange) workMusicVolumeRange.value = String(window.workMusicVolume ?? 80);
+      renderWorkMusicVolumeUI();
       if(!songs.length) renderWorkMusicIframe(0, false);
       if(!workMusicList) return;
       workMusicList.innerHTML = '';
@@ -2338,10 +2387,16 @@
         renderWorkMusic();
         if(getActiveWorkMusicSongs().length) renderWorkMusicIframe(window.workMusicCurrentIndex || 0, window.workMusicIsPlaying);
       });
+      workMusicMuteBtn?.addEventListener('click', toggleWorkMusicMute);
       workMusicVolumeRange?.addEventListener('input', async (e)=>{
-        window.workMusicVolume = Number(e.target.value || 80);
-        applyWorkMusicVolume();
-        await window.cloudSaveWorkMusic?.();
+        await setWorkMusicVolume(Number(e.target.value || 0));
+      });
+      workMusicVolumeRange?.addEventListener('keydown', async (e)=>{
+        if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const delta = e.key === 'ArrowRight' ? 5 : -5;
+        const base = window.workMusicIsMuted ? 0 : Number(window.workMusicVolume || 0);
+        await setWorkMusicVolume(base + delta);
       });
       workMusicSaveTitleBtn?.addEventListener('click', saveWorkMusicTitle);
       workMusicDeleteBtn?.addEventListener('click', deleteCurrentWorkMusic);
@@ -3403,6 +3458,8 @@ function initBookmarks(){
         workMusicMode: window.workMusicMode || 'sequential',
         workMusicCurrentIndex: Number(window.workMusicCurrentIndex || 0),
         workMusicVolume: Number(window.workMusicVolume ?? 80),
+        workMusicLastVolume: Number(window.workMusicLastVolume ?? 80),
+        workMusicIsMuted: !!window.workMusicIsMuted,
         workMusicTabList: window.__workMusicTabList || [{id:'default',name:'기본',order:0}],
         workMusicActiveTabId: window.__workMusicActiveTabId || 'default'
       },{ merge:true });
@@ -3645,6 +3702,8 @@ function initBookmarks(){
         window.workMusicMode = data.workMusicMode || 'sequential';
         window.workMusicCurrentIndex = Number(data.workMusicCurrentIndex || 0);
         window.workMusicVolume = Number(data.workMusicVolume ?? window.workMusicVolume ?? 80);
+        window.workMusicLastVolume = Number(data.workMusicLastVolume ?? window.workMusicLastVolume ?? (window.workMusicVolume || 80));
+        window.workMusicIsMuted = !!data.workMusicIsMuted || Number(window.workMusicVolume || 0) === 0;
         if(typeof renderWorkMusicAll==='function') renderWorkMusicAll();
         if(typeof window.renderNotesUI==='function') window.renderNotesUI();
         if(typeof window.renderBookmarkTabsUI==='function') window.renderBookmarkTabsUI();
@@ -3671,7 +3730,7 @@ function initBookmarks(){
       }else{
         userInfoEl.textContent=''; signOutBtn.classList.add('hidden'); signInBtn.classList.remove('hidden');
         window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
-        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={}; window.__notesTabList=[{id:'memo',name:'메모',order:0}]; window.__notesActiveTabId='memo'; window.__bookmarkTabList=[{id:'default',name:'기본',order:0}]; window.__bookmarkActiveTabId='default'; window.__workMusicTabList=[{id:'default',name:'기본',order:0}]; window.__workMusicActiveTabId='default'; window.workMusicSongs=[]; window.workMusicMode='sequential'; window.workMusicCurrentIndex=0; window.workMusicVolume=80;
+        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={}; window.__notesTabList=[{id:'memo',name:'메모',order:0}]; window.__notesActiveTabId='memo'; window.__bookmarkTabList=[{id:'default',name:'기본',order:0}]; window.__bookmarkActiveTabId='default'; window.__workMusicTabList=[{id:'default',name:'기본',order:0}]; window.__workMusicActiveTabId='default'; window.workMusicSongs=[]; window.workMusicMode='sequential'; window.workMusicCurrentIndex=0; window.workMusicVolume=80; window.workMusicLastVolume=80; window.workMusicIsMuted=false;
         if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); if(typeof renderWorkMusicAll==='function') renderWorkMusicAll(); const na=document.getElementById('notesArea'); if(na) na.value='';
       }
       loadingOverlay.classList.add('hidden'); window.isAuthReady=true;
