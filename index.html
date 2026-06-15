@@ -351,6 +351,29 @@
         text-align: left;
     }
 
+
+/* 노동요 플레이어 */
+.workmusic-panel{display:flex;flex-direction:column;gap:14px}
+.workmusic-input-row{display:flex;gap:8px;align-items:center}
+.workmusic-input-row input{flex:1;min-width:0}
+.workmusic-player-wrap{background:#111;border-radius:12px;overflow:hidden;border:1px solid #444}
+#workMusicPlayer{width:100%;aspect-ratio:16/9;background:#000}
+.workmusic-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+.workmusic-btn{background:#3a3a3a;border-radius:10px;padding:9px 12px;color:#fff;font-weight:700;cursor:pointer;border:none;transition:.2s}
+.workmusic-btn:hover{background:#4a4a4a}
+.workmusic-btn.primary{background:#6d28d9}.workmusic-btn.primary:hover{background:#7c3aed}
+.workmusic-list{display:flex;flex-direction:column;gap:8px;text-align:left}
+.workmusic-item{display:flex;align-items:center;gap:10px;background:#1f1f1f;border:1px solid #3a3a3a;border-radius:10px;padding:10px}
+.workmusic-item.active{border-color:#a78bfa;background:#2f2448}
+.workmusic-thumb{width:86px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:#000;flex:0 0 auto}
+.workmusic-meta{flex:1;min-width:0}
+.workmusic-title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workmusic-url{font-size:.75rem;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workmusic-actions{display:flex;gap:6px;flex:0 0 auto}
+.workmusic-small-btn{background:#333;border-radius:8px;padding:6px 8px;color:#fff;border:none;cursor:pointer;font-size:.8rem}
+.workmusic-small-btn:hover{background:#444}
+@media (max-width:768px){.workmusic-input-row{flex-direction:column;align-items:stretch}.workmusic-item{align-items:flex-start}.workmusic-thumb{width:72px}.workmusic-actions{flex-direction:column}}
+
     @media (max-width:768px){
       body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
       .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
@@ -417,6 +440,7 @@
     <button class="notepad-tab active" data-tab="calendar">달력</button>
     <button class="notepad-tab" data-tab="notes">메모</button>
     <button class="notepad-tab" data-tab="bookmarks">북마크</button>
+    <button class="notepad-tab" data-tab="workmusic">노동요</button>
   </div>
 
   <div id="calendar-section" class="section-card tab-content active">
@@ -472,6 +496,35 @@
       <div class="text-4xl font-bold select-none">+</div>
     </section>
     <section id="image-grid"></section>
+  </div>
+
+
+
+  <div id="workmusic-section" class="section-card tab-content text-left">
+    <div class="workmusic-panel">
+      <div>
+        <h2 class="text-xl font-bold mb-1">노동요</h2>
+        <p class="text-sm opacity-70">유튜브 링크를 추가하면 순서대로 또는 랜덤으로 이어 재생됩니다.</p>
+      </div>
+      <div class="workmusic-input-row">
+        <input type="url" id="workMusicUrlInput" placeholder="유튜브 링크 붙여넣기" class="p-3 rounded-lg bg-black text-white border border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500">
+        <button id="addWorkMusicBtn" class="workmusic-btn primary">추가</button>
+      </div>
+      <div class="workmusic-player-wrap">
+        <div id="workMusicPlayer"></div>
+      </div>
+      <div class="workmusic-controls">
+        <button id="workMusicPrevBtn" class="workmusic-btn">이전</button>
+        <button id="workMusicPlayBtn" class="workmusic-btn primary">재생</button>
+        <button id="workMusicNextBtn" class="workmusic-btn">다음</button>
+        <select id="workMusicModeSelect" class="p-2 rounded-lg bg-gray-800 border border-gray-700 text-white">
+          <option value="sequential">순서대로</option>
+          <option value="random">랜덤</option>
+        </select>
+      </div>
+      <div id="workMusicNowPlaying" class="text-center text-sm opacity-80">추가된 노동요가 없습니다.</div>
+      <div id="workMusicList" class="workmusic-list"></div>
+    </div>
   </div>
 
   <div id="taskModal" class="modal">
@@ -589,6 +642,9 @@
     window.__bookmarkActiveTabId = window.__bookmarkActiveTabId || "default";
     window.currentTask = null;
     window.currentEditingBookmark = null; // 현재 편집 중인 북마크 항목
+    window.workMusicSongs = window.workMusicSongs || [];
+    window.workMusicMode = window.workMusicMode || 'sequential';
+    window.workMusicCurrentIndex = window.workMusicCurrentIndex || 0;
     let currentDate = new Date();
     window.isAuthReady = false;
     // 북마크는 최신순 고정(정렬 UI 제거)
@@ -617,6 +673,17 @@
     const currentUrlDisplay = document.getElementById('currentUrlDisplay');
     // 정렬 선택 요소(현재는 UI 제거됨)
     const bookmarkSortSelect = document.getElementById('bookmarkSortSelect');
+    const workMusicUrlInput = document.getElementById('workMusicUrlInput');
+    const addWorkMusicBtn = document.getElementById('addWorkMusicBtn');
+    const workMusicPrevBtn = document.getElementById('workMusicPrevBtn');
+    const workMusicPlayBtn = document.getElementById('workMusicPlayBtn');
+    const workMusicNextBtn = document.getElementById('workMusicNextBtn');
+    const workMusicModeSelect = document.getElementById('workMusicModeSelect');
+    const workMusicList = document.getElementById('workMusicList');
+    const workMusicNowPlaying = document.getElementById('workMusicNowPlaying');
+    let workMusicPlayer = null;
+    let workMusicApiReady = false;
+    let workMusicPendingVideoId = null;
 
     // 링크 미리보기(붙여넣기) 모달
     const previewUploadModal = document.getElementById('previewUploadModal');
@@ -1263,6 +1330,176 @@
       initializeInstagramEmbeds();
     };
 
+
+
+    // ===== 노동요(YouTube) =====
+    function extractYoutubeVideoId(url){
+      if(!url) return null;
+      try{
+        const u = new URL(String(url).trim());
+        const host = u.hostname.replace(/^www\./,'');
+        if(host === 'youtu.be') return u.pathname.split('/').filter(Boolean)[0] || null;
+        if(host.endsWith('youtube.com')){
+          if(u.searchParams.get('v')) return u.searchParams.get('v');
+          const parts = u.pathname.split('/').filter(Boolean);
+          const keys = ['embed','shorts','live'];
+          if(keys.includes(parts[0]) && parts[1]) return parts[1];
+        }
+      }catch(_){
+        const m = String(url).match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
+        return m ? m[1] : null;
+      }
+      return null;
+    }
+
+    function normalizeYoutubeUrl(url){
+      const id = extractYoutubeVideoId(url);
+      return id ? `https://www.youtube.com/watch?v=${id}` : String(url || '').trim();
+    }
+
+    function getWorkMusicNextIndex(step=1){
+      const songs = window.workMusicSongs || [];
+      if(!songs.length) return -1;
+      if(window.workMusicMode === 'random' && songs.length > 1){
+        let next = window.workMusicCurrentIndex;
+        while(next === window.workMusicCurrentIndex) next = Math.floor(Math.random()*songs.length);
+        return next;
+      }
+      return (Number(window.workMusicCurrentIndex || 0) + step + songs.length) % songs.length;
+    }
+
+    function ensureWorkMusicPlayer(){
+      if(workMusicPlayer || !window.YT || !window.YT.Player) return;
+      workMusicPlayer = new window.YT.Player('workMusicPlayer', {
+        width:'100%', height:'100%', videoId: workMusicPendingVideoId || undefined,
+        playerVars:{ autoplay:0, playsinline:1, rel:0 },
+        events:{
+          onReady:()=>{
+            workMusicApiReady = true;
+            if(workMusicPendingVideoId){ workMusicPlayer.loadVideoById(workMusicPendingVideoId); workMusicPendingVideoId=null; }
+          },
+          onStateChange:(event)=>{
+            if(event.data === window.YT.PlayerState.ENDED) playWorkMusicAt(getWorkMusicNextIndex(1));
+          }
+        }
+      });
+    }
+
+    window.onYouTubeIframeAPIReady = function(){
+      workMusicApiReady = true;
+      ensureWorkMusicPlayer();
+    };
+
+    function loadYoutubeIframeApi(){
+      if(window.YT && window.YT.Player){ ensureWorkMusicPlayer(); return; }
+      if(document.getElementById('youtube-iframe-api')) return;
+      const tag=document.createElement('script');
+      tag.id='youtube-iframe-api';
+      tag.src='https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+
+    function playWorkMusicAt(index){
+      const songs = window.workMusicSongs || [];
+      if(!songs.length){ renderWorkMusic(); return; }
+      if(index < 0 || index >= songs.length) index = 0;
+      window.workMusicCurrentIndex = index;
+      const song = songs[index];
+      renderWorkMusic();
+      if(!song?.videoId){ showAlert('유튜브 링크를 확인해주세요.'); return; }
+      if(workMusicPlayer && workMusicPlayer.loadVideoById){
+        workMusicPlayer.loadVideoById(song.videoId);
+      }else{
+        workMusicPendingVideoId = song.videoId;
+        loadYoutubeIframeApi();
+      }
+    }
+
+    function renderWorkMusic(){
+      const songs = window.workMusicSongs || [];
+      if(workMusicModeSelect) workMusicModeSelect.value = window.workMusicMode || 'sequential';
+      const current = songs[window.workMusicCurrentIndex || 0];
+      if(workMusicNowPlaying){
+        workMusicNowPlaying.textContent = current ? `재생 대기: ${current.title || current.url}` : '추가된 노동요가 없습니다.';
+      }
+      if(!workMusicList) return;
+      workMusicList.innerHTML = '';
+      songs.forEach((song, idx)=>{
+        const row=document.createElement('div');
+        row.className='workmusic-item' + (idx === (window.workMusicCurrentIndex || 0) ? ' active' : '');
+        row.innerHTML=`
+          <img class="workmusic-thumb" src="https://img.youtube.com/vi/${song.videoId}/mqdefault.jpg" alt="썸네일" onerror="this.style.display='none'">
+          <div class="workmusic-meta">
+            <div class="workmusic-title">${song.title || `노동요 ${idx+1}`}</div>
+            <div class="workmusic-url">${song.url || ''}</div>
+          </div>
+          <div class="workmusic-actions">
+            <button class="workmusic-small-btn" data-action="play" data-index="${idx}">재생</button>
+            <button class="workmusic-small-btn" data-action="up" data-index="${idx}">▲</button>
+            <button class="workmusic-small-btn" data-action="down" data-index="${idx}">▼</button>
+            <button class="workmusic-small-btn" data-action="delete" data-index="${idx}">삭제</button>
+          </div>`;
+        workMusicList.appendChild(row);
+      });
+      workMusicList.querySelectorAll('button[data-action]').forEach(btn=>{
+        btn.onclick=async(e)=>{
+          e.stopPropagation();
+          const action=e.currentTarget.dataset.action;
+          const idx=Number(e.currentTarget.dataset.index);
+          const songs=window.workMusicSongs || [];
+          if(action==='play') playWorkMusicAt(idx);
+          if(action==='delete'){
+            songs.splice(idx,1);
+            if(window.workMusicCurrentIndex >= songs.length) window.workMusicCurrentIndex = Math.max(0, songs.length-1);
+            await window.cloudSaveWorkMusic?.();
+            renderWorkMusic();
+          }
+          if(action==='up' && idx>0){
+            [songs[idx-1],songs[idx]]=[songs[idx],songs[idx-1]];
+            window.workMusicCurrentIndex = idx-1;
+            await window.cloudSaveWorkMusic?.();
+            renderWorkMusic();
+          }
+          if(action==='down' && idx<songs.length-1){
+            [songs[idx+1],songs[idx]]=[songs[idx],songs[idx+1]];
+            window.workMusicCurrentIndex = idx+1;
+            await window.cloudSaveWorkMusic?.();
+            renderWorkMusic();
+          }
+        };
+      });
+    }
+
+    async function addWorkMusicFromInput(){
+      if(!window.ensureLogin || !window.ensureLogin()) return;
+      const raw = (workMusicUrlInput?.value || '').trim();
+      const videoId = extractYoutubeVideoId(raw);
+      if(!videoId){ showAlert('유튜브 링크만 추가할 수 있습니다.'); return; }
+      window.workMusicSongs = window.workMusicSongs || [];
+      const url = normalizeYoutubeUrl(raw);
+      if(window.workMusicSongs.some(s=>s.videoId===videoId)){ showFeedbackMessage('이미 추가된 영상입니다.'); return; }
+      window.workMusicSongs.push({ id: Date.now(), url, videoId, title:`YouTube ${videoId}`, addedAt: Date.now() });
+      if(workMusicUrlInput) workMusicUrlInput.value='';
+      await window.cloudSaveWorkMusic?.();
+      renderWorkMusic();
+      showFeedbackMessage('노동요가 추가되었습니다.');
+    }
+
+    function initWorkMusic(){
+      loadYoutubeIframeApi();
+      renderWorkMusic();
+      addWorkMusicBtn?.addEventListener('click', addWorkMusicFromInput);
+      workMusicUrlInput?.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); addWorkMusicFromInput(); } });
+      workMusicPlayBtn?.addEventListener('click', ()=>playWorkMusicAt(window.workMusicCurrentIndex || 0));
+      workMusicPrevBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(-1)));
+      workMusicNextBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(1)));
+      workMusicModeSelect?.addEventListener('change', async ()=>{
+        window.workMusicMode = workMusicModeSelect.value || 'sequential';
+        await window.cloudSaveWorkMusic?.();
+        renderWorkMusic();
+      });
+    }
+
     // 작업 모달
     const openModal=(task=null)=>{
       window.currentTask=task;
@@ -1380,6 +1617,7 @@
     (function init(){ 
         attachEventListeners(); 
         renderCalendar(); 
+        initWorkMusic();
     })();
 
     // main.js(모듈)에서도 호출할 수 있도록 노출
@@ -2179,6 +2417,17 @@ function initBookmarks(){
       await updateDoc(doc(imagesCol, bookmarkId), { bookmarkTabId: tabId || 'default' });
     };
 
+
+    window.cloudSaveWorkMusic = async ()=>{
+      if(!ensureLogin()) return;
+      const { stateDoc } = await cloudRefs();
+      await setDoc(stateDoc,{
+        workMusicSongs: window.workMusicSongs || [],
+        workMusicMode: window.workMusicMode || 'sequential',
+        workMusicCurrentIndex: Number(window.workMusicCurrentIndex || 0)
+      },{ merge:true });
+    };
+
     window.deleteTask=async ()=>{
       if(!ensureLogin() || !window.currentTask?.id){ if(typeof closeModal==='function') closeModal(); return; }
       const { tasksCol } = await cloudRefs();
@@ -2388,7 +2637,10 @@ function initBookmarks(){
             notesTabs: { memo: '' },
             notesActiveTabId: 'memo',
             bookmarkTabList: prev.bookmarkTabList || [{id:'default',name:'기본',order:0}],
-            bookmarkActiveTabId: prev.bookmarkActiveTabId || 'default'
+            bookmarkActiveTabId: prev.bookmarkActiveTabId || 'default',
+            workMusicSongs: prev.workMusicSongs || [],
+            workMusicMode: prev.workMusicMode || 'sequential',
+            workMusicCurrentIndex: prev.workMusicCurrentIndex || 0
           },{ merge:true });
         }
       }catch(_){}
@@ -2406,6 +2658,10 @@ function initBookmarks(){
         window.__notesActiveTabId = data.notesActiveTabId || window.__notesActiveTabId || 'memo';
         window.__bookmarkTabList = Array.isArray(data.bookmarkTabList) && data.bookmarkTabList.length ? data.bookmarkTabList : [{id:'default',name:'기본',order:0}];
         window.__bookmarkActiveTabId = data.bookmarkActiveTabId || window.__bookmarkActiveTabId || 'default';
+        window.workMusicSongs = Array.isArray(data.workMusicSongs) ? data.workMusicSongs : [];
+        window.workMusicMode = data.workMusicMode || 'sequential';
+        window.workMusicCurrentIndex = Number(data.workMusicCurrentIndex || 0);
+        if(typeof renderWorkMusic==='function') renderWorkMusic();
         if(typeof window.renderNotesUI==='function') window.renderNotesUI();
         if(typeof window.renderBookmarkTabsUI==='function') window.renderBookmarkTabsUI();
         if(typeof renderCalendar==='function') renderCalendar();
@@ -2431,8 +2687,8 @@ function initBookmarks(){
       }else{
         userInfoEl.textContent=''; signOutBtn.classList.add('hidden'); signInBtn.classList.remove('hidden');
         window.__unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); window.__unsubs=[];
-        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={}; window.__notesTabList=[{id:'memo',name:'메모',order:0}]; window.__notesActiveTabId='memo'; window.__bookmarkTabList=[{id:'default',name:'기본',order:0}]; window.__bookmarkActiveTabId='default';
-        if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); const na=document.getElementById('notesArea'); if(na) na.value='';
+        window.customTasks=[]; window.taskStatus={}; window.imageBookmarks=[]; window.__notesTabs={}; window.__notesTabList=[{id:'memo',name:'메모',order:0}]; window.__notesActiveTabId='memo'; window.__bookmarkTabList=[{id:'default',name:'기본',order:0}]; window.__bookmarkActiveTabId='default'; window.workMusicSongs=[]; window.workMusicMode='sequential'; window.workMusicCurrentIndex=0;
+        if(typeof renderCalendar==='function') renderCalendar(); if(typeof renderImageBookmarks==='function') renderImageBookmarks(); if(typeof renderWorkMusic==='function') renderWorkMusic(); const na=document.getElementById('notesArea'); if(na) na.value='';
       }
       loadingOverlay.classList.add('hidden'); window.isAuthReady=true;
     });
