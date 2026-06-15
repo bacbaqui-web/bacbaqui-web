@@ -445,6 +445,37 @@
 .workmusic-tab-modal-icons{display:flex;justify-content:center;gap:12px;margin-top:14px}
 @media (max-width:768px){.workmusic-list{column-count:2}.workmusic-actions{opacity:1}#workMusicVolumeRange{width:90px}}
 
+/* 하단 노동요 리모컨: 다른 탭에서도 재생 정보/조작 */
+body{padding-bottom:92px}
+.workmusic-remote{
+  position:fixed;left:50%;bottom:14px;transform:translateX(-50%);
+  width:min(920px,calc(100vw - 24px));min-height:64px;
+  background:rgba(28,28,28,.94);border:1px solid #4a4a4a;border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.45);backdrop-filter:blur(10px);
+  z-index:900;display:none;align-items:center;gap:12px;padding:10px 12px;color:#fff;
+}
+.workmusic-remote.show{display:flex}
+.workmusic-remote-info{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto;cursor:pointer}
+.workmusic-remote-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;background:#111;flex:0 0 44px}
+.workmusic-remote-text{min-width:0;flex:1 1 auto;text-align:left}
+.workmusic-remote-title{font-size:.92rem;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.workmusic-remote-artist{font-size:.74rem;font-weight:600;line-height:1.2;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#bdbdbd}
+.workmusic-remote-controls{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.workmusic-remote-btn{width:38px;height:38px;border-radius:999px;background:#333;border:1px solid #505050;color:#f5f5f5;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s,transform .15s,border-color .2s}
+.workmusic-remote-btn:hover{background:#414141;border-color:#666;transform:scale(1.04)}
+.workmusic-remote-btn svg{width:20px;height:20px;display:block}
+.workmusic-remote-volume{display:flex;align-items:center;gap:7px;background:#303030;border:1px solid #4a4a4a;border-radius:999px;padding:6px 9px;flex:0 0 auto}
+.workmusic-remote-volume input{width:96px;accent-color:#fff;cursor:pointer}
+.workmusic-remote-percent{min-width:34px;text-align:right;font-size:.75rem;font-weight:800;color:#e5e5e5;font-variant-numeric:tabular-nums}
+@media (max-width:640px){
+  body{padding-bottom:110px}
+  .workmusic-remote{bottom:10px;align-items:stretch;flex-wrap:wrap;padding:10px}
+  .workmusic-remote-info{width:100%;flex-basis:100%}
+  .workmusic-remote-controls{flex:1;justify-content:center}
+  .workmusic-remote-volume input{width:82px}
+}
+
+
     @media (max-width:768px){
       body{padding:12px;gap:0}.section-card{padding:12px;border-radius:0}
       .notepad-tabs{gap:.5rem}.notepad-tab{padding:6px 12px;font-size:.8rem}
@@ -745,6 +776,35 @@
     </div>
   </div>
 
+  <div id="workMusicRemote" class="workmusic-remote" aria-label="노동요 리모컨">
+    <div id="workMusicRemoteInfo" class="workmusic-remote-info" title="노동요 탭으로 이동">
+      <img id="workMusicRemoteThumb" class="workmusic-remote-thumb" src="" alt="현재 곡 썸네일">
+      <div class="workmusic-remote-text">
+        <div id="workMusicRemoteTitle" class="workmusic-remote-title">재생 중인 노동요 없음</div>
+        <div id="workMusicRemoteArtist" class="workmusic-remote-artist"></div>
+      </div>
+    </div>
+    <div class="workmusic-remote-controls">
+      <button id="workMusicRemotePrevBtn" class="workmusic-remote-btn" title="이전 재생" aria-label="이전 재생">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM19 6.2v11.6c0 .8-.9 1.3-1.6.8L9.2 12l8.2-6.6c.7-.5 1.6 0 1.6.8z"/></svg>
+      </button>
+      <button id="workMusicRemotePlayBtn" class="workmusic-remote-btn" title="재생" aria-label="재생">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button id="workMusicRemoteNextBtn" class="workmusic-remote-btn" title="다음 재생" aria-label="다음 재생">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM5 6.2v11.6c0 .8.9 1.3 1.6.8l8.2-6.6-8.2-6.6c-.7-.5-1.6 0-1.6.8z"/></svg>
+      </button>
+    </div>
+    <div class="workmusic-remote-volume" title="볼륨">
+      <button id="workMusicRemoteMuteBtn" class="workmusic-volume-btn" type="button" title="음소거" aria-label="음소거">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+      </button>
+      <input id="workMusicRemoteVolumeRange" type="range" min="0" max="100" step="5" value="80">
+      <span id="workMusicRemoteVolumePercent" class="workmusic-remote-percent">80%</span>
+    </div>
+  </div>
+
+
   <div id="alert-modal" class="fixed inset-0 bg-[#1a1a1a] bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-[#242424] rounded-lg p-6 shadow-xl max-w-sm mx-auto">
       <p id="modal-message" class="text-white text-lg text-center font-medium"></p>
@@ -835,6 +895,17 @@
     const workMusicOpenYoutubeBtn = document.getElementById('workMusicOpenYoutubeBtn');
     const workMusicDeleteBtn = document.getElementById('workMusicDeleteBtn');
     const workMusicCloseSettingsBtn = document.getElementById('workMusicCloseSettingsBtn');
+    const workMusicRemote = document.getElementById('workMusicRemote');
+    const workMusicRemoteInfo = document.getElementById('workMusicRemoteInfo');
+    const workMusicRemoteThumb = document.getElementById('workMusicRemoteThumb');
+    const workMusicRemoteTitle = document.getElementById('workMusicRemoteTitle');
+    const workMusicRemoteArtist = document.getElementById('workMusicRemoteArtist');
+    const workMusicRemotePrevBtn = document.getElementById('workMusicRemotePrevBtn');
+    const workMusicRemotePlayBtn = document.getElementById('workMusicRemotePlayBtn');
+    const workMusicRemoteNextBtn = document.getElementById('workMusicRemoteNextBtn');
+    const workMusicRemoteMuteBtn = document.getElementById('workMusicRemoteMuteBtn');
+    const workMusicRemoteVolumeRange = document.getElementById('workMusicRemoteVolumeRange');
+    const workMusicRemoteVolumePercent = document.getElementById('workMusicRemoteVolumePercent');
     const workMusicTabSettingsModal = document.getElementById('workMusicTabSettingsModal');
     const workMusicTabNameInput = document.getElementById('workMusicTabNameInput');
     const workMusicTabRefreshBtn = document.getElementById('workMusicTabRefreshBtn');
@@ -1552,10 +1623,37 @@
     }
 
     function renderWorkMusicPlayButton(){
-      if(!workMusicPlayBtn) return;
-      workMusicPlayBtn.innerHTML = window.workMusicIsPlaying ? workMusicPauseSvg : workMusicPlaySvg;
-      workMusicPlayBtn.title = window.workMusicIsPlaying ? '일시정지' : '재생';
-      workMusicPlayBtn.setAttribute('aria-label', window.workMusicIsPlaying ? '일시정지' : '재생');
+      if(workMusicPlayBtn){
+        workMusicPlayBtn.innerHTML = window.workMusicIsPlaying ? workMusicPauseSvg : workMusicPlaySvg;
+        workMusicPlayBtn.title = window.workMusicIsPlaying ? '일시정지' : '재생';
+        workMusicPlayBtn.setAttribute('aria-label', window.workMusicIsPlaying ? '일시정지' : '재생');
+      }
+      if(workMusicRemotePlayBtn){
+        workMusicRemotePlayBtn.innerHTML = window.workMusicIsPlaying ? workMusicPauseSvg : workMusicPlaySvg;
+        workMusicRemotePlayBtn.title = window.workMusicIsPlaying ? '일시정지' : '재생';
+        workMusicRemotePlayBtn.setAttribute('aria-label', window.workMusicIsPlaying ? '일시정지' : '재생');
+      }
+    }
+
+    function updateWorkMusicRemoteUI(){
+      if(!workMusicRemote) return;
+      const songs = getActiveWorkMusicSongs();
+      if(!songs.length){
+        workMusicRemote.classList.remove('show');
+        return;
+      }
+      normalizeWorkMusicCurrentIndex(songs);
+      const song = songs[Number(window.workMusicCurrentIndex || 0)] || songs[0];
+      if(!song){ workMusicRemote.classList.remove('show'); return; }
+      const title = song.title || `YouTube ${song.videoId || ''}`;
+      const artist = getSongArtist(song) || song.channelTitle || '';
+      const thumb = song.thumbnail || (song.videoId ? `https://img.youtube.com/vi/${song.videoId}/mqdefault.jpg` : '');
+      workMusicRemote.classList.add('show');
+      if(workMusicRemoteTitle) workMusicRemoteTitle.textContent = title;
+      if(workMusicRemoteArtist) workMusicRemoteArtist.textContent = artist || (window.workMusicIsPlaying ? '재생 중' : '일시정지');
+      if(workMusicRemoteThumb && thumb && workMusicRemoteThumb.src !== thumb) workMusicRemoteThumb.src = thumb;
+      renderWorkMusicPlayButton();
+      renderWorkMusicVolumeUI();
     }
 
     function extractYoutubeVideoId(url){
@@ -1865,10 +1963,17 @@
       const display = muted ? 0 : raw;
       if(workMusicVolumeRange) workMusicVolumeRange.value = String(display);
       if(workMusicVolumePercent) workMusicVolumePercent.textContent = `${display}%`;
+      if(workMusicRemoteVolumeRange) workMusicRemoteVolumeRange.value = String(display);
+      if(workMusicRemoteVolumePercent) workMusicRemoteVolumePercent.textContent = `${display}%`;
       if(workMusicMuteBtn){
         workMusicMuteBtn.innerHTML = muted ? workMusicMutedSvg : workMusicVolumeSvg;
         workMusicMuteBtn.title = muted ? '음소거 해제' : '음소거';
         workMusicMuteBtn.setAttribute('aria-label', muted ? '음소거 해제' : '음소거');
+      }
+      if(workMusicRemoteMuteBtn){
+        workMusicRemoteMuteBtn.innerHTML = muted ? workMusicMutedSvg : workMusicVolumeSvg;
+        workMusicRemoteMuteBtn.title = muted ? '음소거 해제' : '음소거';
+        workMusicRemoteMuteBtn.setAttribute('aria-label', muted ? '음소거 해제' : '음소거');
       }
     }
 
@@ -1985,6 +2090,7 @@
         window.workMusicIsPlaying = false;
         window.workMusicCurrentPlayOrder = [];
         renderWorkMusicPlayButton();
+        updateWorkMusicRemoteUI();
         return;
       }
       if(index < 0 || index >= songs.length) index = 0;
@@ -1994,6 +2100,7 @@
         window.workMusicIsPlaying = false;
         window.workMusicCurrentPlayOrder = [];
         renderWorkMusicPlayButton();
+        updateWorkMusicRemoteUI();
         return;
       }
       const order = getWorkMusicPlayOrder(index);
@@ -2035,6 +2142,7 @@
       window.workMusicCurrentIndex = index;
       window.workMusicIsPlaying = true;
       renderWorkMusic();
+      updateWorkMusicRemoteUI();
       renderWorkMusicIframe(index, true);
       window.cloudSaveWorkMusic?.();
     }
@@ -2053,6 +2161,7 @@
         window.workMusicIsPlaying = true;
       }
       renderWorkMusicPlayButton();
+      updateWorkMusicRemoteUI();
       renderWorkMusic();
     }
 
@@ -2065,6 +2174,7 @@
       }
       renderWorkMusicPlayButton();
       renderWorkMusicVolumeUI();
+      updateWorkMusicRemoteUI();
       if(!songs.length) renderWorkMusicIframe(getWorkMusicInitialDisplayIndex(), false);
       if(!workMusicList) return;
       workMusicList.innerHTML = '';
@@ -2807,6 +2917,10 @@
       workMusicPlayBtn?.addEventListener('click', toggleWorkMusicPlay);
       workMusicPrevBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(-1)));
       workMusicNextBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(1)));
+      workMusicRemotePlayBtn?.addEventListener('click', toggleWorkMusicPlay);
+      workMusicRemotePrevBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(-1)));
+      workMusicRemoteNextBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(1)));
+      workMusicRemoteInfo?.addEventListener('click', ()=>showTab('workmusic'));
       workMusicModeBtn?.addEventListener('click', async ()=>{
         window.workMusicMode = window.workMusicMode === 'random' ? 'sequential' : 'random';
         await window.cloudSaveWorkMusic?.();
@@ -2814,16 +2928,22 @@
         if(getActiveWorkMusicSongs().length) renderWorkMusicIframe(window.workMusicCurrentIndex || 0, window.workMusicIsPlaying);
       });
       workMusicMuteBtn?.addEventListener('click', toggleWorkMusicMute);
+      workMusicRemoteMuteBtn?.addEventListener('click', toggleWorkMusicMute);
       workMusicVolumeRange?.addEventListener('input', async (e)=>{
         await setWorkMusicVolume(Number(e.target.value || 0));
       });
-      workMusicVolumeRange?.addEventListener('keydown', async (e)=>{
+      workMusicRemoteVolumeRange?.addEventListener('input', async (e)=>{
+        await setWorkMusicVolume(Number(e.target.value || 0));
+      });
+      const handleWorkMusicVolumeKey = async (e)=>{
         if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
         e.preventDefault();
         const delta = e.key === 'ArrowRight' ? 5 : -5;
         const base = window.workMusicIsMuted ? 0 : Number(window.workMusicVolume || 0);
         await setWorkMusicVolume(base + delta);
-      });
+      };
+      workMusicVolumeRange?.addEventListener('keydown', handleWorkMusicVolumeKey);
+      workMusicRemoteVolumeRange?.addEventListener('keydown', handleWorkMusicVolumeKey);
       workMusicSaveTitleBtn?.addEventListener('click', saveWorkMusicTitle);
       workMusicDeleteBtn?.addEventListener('click', deleteCurrentWorkMusic);
       workMusicOpenYoutubeBtn?.addEventListener('click', openCurrentWorkMusicOnYoutube);
