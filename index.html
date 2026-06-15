@@ -405,12 +405,9 @@
 .workmusic-list{column-count:2;column-gap:1rem;margin-top:.5rem;display:block;text-align:left}
 @media (min-width:640px){.workmusic-list{column-count:3}}
 @media (min-width:1024px){.workmusic-list{column-count:4}}
-/* 유튜브뮤직 compact 카드도 일반 영상 배너와 같은 열 너비를 사용 */
-.workmusic-list.music-compact-list{column-count:2;column-gap:1rem;display:block;margin-top:.5rem}
-@media (min-width:640px){.workmusic-list.music-compact-list{column-count:3}}
-@media (min-width:1024px){.workmusic-list.music-compact-list{column-count:4}}
-@media (max-width:768px){.workmusic-list.music-compact-list{column-count:2}}
-.workmusic-list.music-compact-list .workmusic-item{margin-bottom:1rem}
+.workmusic-list.music-compact-list{column-count:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:.5rem}
+.workmusic-list.music-compact-list .workmusic-item{margin-bottom:0}
+@media (max-width:640px){.workmusic-list.music-compact-list{grid-template-columns:1fr}}
 .workmusic-item{position:relative;background:#2f2f2f;border:1px solid #3f3f3f;border-radius:8px;overflow:hidden;margin-bottom:1rem;break-inside:avoid;width:100%;display:block;cursor:pointer;transition:transform .2s ease-in-out,border-color .2s,background .2s}
 .workmusic-item:hover{transform:translateY(-5px);background:#363636}
 .workmusic-item.active{border-color:#d4d4d4;background:#3a3a3a}
@@ -1838,6 +1835,14 @@
       return order;
     }
 
+
+    function getWorkMusicInitialDisplayIndex(songs=getActiveWorkMusicSongs()){
+      if(!songs.length) return 0;
+      if(window.workMusicMode !== 'random') return 0;
+      const order = getWorkMusicDisplayOrder(songs);
+      return Number.isInteger(order[0]) ? order[0] : 0;
+    }
+
     function resetWorkMusicDisplayShuffle(tabId=getActiveWorkMusicTabId()){
       window.__workMusicDisplayShuffle = window.__workMusicDisplayShuffle || {};
       delete window.__workMusicDisplayShuffle[tabId];
@@ -2060,7 +2065,7 @@
       }
       renderWorkMusicPlayButton();
       renderWorkMusicVolumeUI();
-      if(!songs.length) renderWorkMusicIframe(0, false);
+      if(!songs.length) renderWorkMusicIframe(getWorkMusicInitialDisplayIndex(), false);
       if(!workMusicList) return;
       workMusicList.innerHTML = '';
       const activeTabForList = getWorkMusicTabs().find(t=>t.id===getActiveWorkMusicTabId());
@@ -2075,6 +2080,11 @@
       const allAudioCards = songs.length > 0 && songs.every(isWorkMusicAudioCard);
       workMusicList.classList.toggle('music-compact-list', allAudioCards);
       const displayOrder = getWorkMusicDisplayOrder(songs);
+      if(window.workMusicMode === 'random' && !window.workMusicIsPlaying && Number.isInteger(displayOrder[0]) && displayOrder[0] !== Number(window.workMusicCurrentIndex || 0)){
+        // 랜덤 모드에서는 화면에 보이는 첫 번째 카드가 선택된 곡이 되도록 맞춥니다.
+        // 단, 재생 중에는 사용자가 듣는 곡이 갑자기 바뀌지 않게 건드리지 않습니다.
+        window.workMusicCurrentIndex = displayOrder[0];
+      }
       displayOrder.forEach((idx)=>{
         const song = songs[idx];
         if(!song) return;
@@ -2518,7 +2528,7 @@
       window.workMusicCurrentIndex = 0;
       window.workMusicIsPlaying = false;
       renderWorkMusicAll();
-      renderWorkMusicIframe(0, false);
+      renderWorkMusicIframe(getWorkMusicInitialDisplayIndex(), false);
       await window.cloudSaveWorkMusic?.();
       showFeedbackMessage(`${tabName} 탭에 ${newSongs.length}개를 추가했습니다.`);
     }
@@ -2600,7 +2610,7 @@
       window.workMusicIsPlaying = false;
       await window.cloudSetActiveWorkMusicTab?.(window.__workMusicActiveTabId);
       renderWorkMusicAll();
-      renderWorkMusicIframe(0, false);
+      renderWorkMusicIframe(getWorkMusicInitialDisplayIndex(), false);
     }
 
     function openWorkMusicTabSettings(tabId){
@@ -2674,7 +2684,7 @@
       window.workMusicCurrentIndex = 0;
       window.workMusicIsPlaying = false;
       renderWorkMusicAll();
-      renderWorkMusicIframe(0, false);
+      renderWorkMusicIframe(getWorkMusicInitialDisplayIndex(), false);
       await window.cloudSaveWorkMusic?.();
       showFeedbackMessage(`${tab?.name || data.title || '재생목록'} 새로고침 완료: ${nextSongsForTab.length}개`);
     }
@@ -2799,7 +2809,6 @@
       workMusicNextBtn?.addEventListener('click', ()=>playWorkMusicAt(getWorkMusicNextIndex(1)));
       workMusicModeBtn?.addEventListener('click', async ()=>{
         window.workMusicMode = window.workMusicMode === 'random' ? 'sequential' : 'random';
-        resetWorkMusicDisplayShuffle();
         await window.cloudSaveWorkMusic?.();
         renderWorkMusic();
         if(getActiveWorkMusicSongs().length) renderWorkMusicIframe(window.workMusicCurrentIndex || 0, window.workMusicIsPlaying);
