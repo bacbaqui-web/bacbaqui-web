@@ -747,6 +747,8 @@
     window.workMusicVolume = window.workMusicVolume ?? 80;
     window.workMusicLastVolume = window.workMusicLastVolume ?? (Number(window.workMusicVolume) > 0 ? Number(window.workMusicVolume) : 80);
     window.workMusicIsMuted = window.workMusicIsMuted || Number(window.workMusicVolume) === 0;
+    // YouTube Data API v3 키: 재생목록/영상 제목/길이 조회용
+    const YOUTUBE_API_KEY = "AIzaSyCiwzde40jsz17CEz-rrMmmBrn-S6brdlE";
     window.workMusicIsPlaying = window.workMusicIsPlaying || false;
     window.currentWorkMusicSettingIndex = null;
     let currentDate = new Date();
@@ -1544,6 +1546,52 @@
     }
 
 
+    function parseYoutubeISODuration(iso){
+      const m = String(iso || '').match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+      if(!m) return 0;
+      return (Number(m[1]||0)*86400) + (Number(m[2]||0)*3600) + (Number(m[3]||0)*60) + Number(m[4]||0);
+    }
+
+    async function youtubeApiGet(path, params={}){
+      if(!YOUTUBE_API_KEY) throw new Error('YouTube API 키가 없습니다.');
+      const url = new URL(`https://www.googleapis.com/youtube/v3/${path}`);
+      url.searchParams.set('key', YOUTUBE_API_KEY);
+      Object.entries(params).forEach(([k,v])=>{
+        if(v !== undefined && v !== null && String(v) !== '') url.searchParams.set(k, String(v));
+      });
+      const res = await fetch(url.toString(), {cache:'no-store'});
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok){
+        const msg = data?.error?.message || `${res.status} ${res.statusText}`;
+        throw new Error(msg);
+      }
+      return data;
+    }
+
+    async function fetchYoutubeVideosMeta(videoIds){
+      const ids = [...new Set((videoIds || []).filter(Boolean))];
+      const meta = {};
+      for(let i=0; i<ids.length; i+=50){
+        const chunk = ids.slice(i, i+50);
+        const data = await youtubeApiGet('videos', {
+          part:'snippet,contentDetails',
+          id:chunk.join(','),
+          maxResults:50
+        });
+        (data.items || []).forEach(item=>{
+          const seconds = parseYoutubeISODuration(item?.contentDetails?.duration);
+          meta[item.id] = {
+            videoId:item.id,
+            title: cleanYoutubeTitle(item?.snippet?.title || `YouTube ${item.id}`),
+            durationSeconds: seconds,
+            durationText: formatWorkMusicDuration(seconds),
+            thumbnail: item?.snippet?.thumbnails?.medium?.url || item?.snippet?.thumbnails?.default?.url || ''
+          };
+        });
+      }
+      return meta;
+    }
+
     function formatWorkMusicDuration(seconds){
       const n = Math.floor(Number(seconds || 0));
       if(!Number.isFinite(n) || n <= 0) return '';
@@ -1574,6 +1622,10 @@
     async function fetchYoutubeDuration(videoIdOrUrl){
       const videoId = extractYoutubeVideoId(videoIdOrUrl) || String(videoIdOrUrl || '').trim();
       if(!videoId) return 0;
+      try{
+        const meta = await fetchYoutubeVideosMeta([videoId]);
+        if(meta[videoId]?.durationSeconds) return meta[videoId].durationSeconds;
+      }catch(err){ console.warn('YouTube API duration failed', err); }
       const cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const endpoints = [
         { type:'json', url:`https://api.allorigins.win/get?url=${encodeURIComponent(cleanUrl)}` },
@@ -1610,6 +1662,13 @@
 
     async function fetchYoutubeTitle(url){
       const cleanUrl = normalizeYoutubeUrl(url);
+      const videoId = extractYoutubeVideoId(cleanUrl);
+      if(videoId){
+        try{
+          const meta = await fetchYoutubeVideosMeta([videoId]);
+          if(meta[videoId]?.title) return meta[videoId].title;
+        }catch(err){ console.warn('YouTube API title failed', err); }
+      }
       const endpoints = [
         { type:'json', url:`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(cleanUrl)}` },
         { type:'json', url:`https://noembed.com/embed?url=${encodeURIComponent(cleanUrl)}` },
@@ -2068,6 +2127,33 @@
       return '';
     }
 
+    function parsePlaylistFeedXml(xmlText, playlistId){
+      const items = [];
+      const seen = new Set();
+      let playlistTitle = '';
+      try{
+        const xml = new DOMParser().parseFromString(String(xmlText || ''), 'text/xml');
+        const feedTitle = xml.querySelector('feed > title');
+        playlistTitle = cleanYoutubeTitle(feedTitle?.textContent || '새 재생목록');
+        xml.querySelectorAll('entry').forEach(entry=>{
+          const videoId = entry.querySelector('videoId, yt\\:videoId')?.textContent?.trim();
+          const title = cleanYoutubeTitle(entry.querySelector('title')?.textContent || '');
+          const thumb = entry.querySelector('thumbnail, media\\:thumbnail')?.getAttribute('url') || '';
+          if(videoId && !seen.has(videoId)){
+            seen.add(videoId);
+            items.push({
+              videoId,
+              title: title || `YouTube ${videoId}`,
+              thumbnail: thumb,
+              durationText: '',
+              durationSeconds: 0
+            });
+          }
+        });
+      }catch(err){ console.warn('playlist feed parse failed', err); }
+      return { title: playlistTitle || '새 재생목록', items, playlistId };
+    }
+
     function parsePlaylistFromHtml(html, playlistId){
       const items = [];
       const seen = new Set();
@@ -2081,9 +2167,18 @@
           const title = cleanYoutubeTitle(ytText(r.title));
           const durationText = ytText(r.lengthText) || ytText(r.thumbnailOverlays?.find?.(o=>o.thumbnailOverlayTimeStatusRenderer)?.thumbnailOverlayTimeStatusRenderer?.text);
           const durationSeconds = parseDurationTextToSeconds(durationText);
+          const thumb = r.thumbnail?.thumbnails?.slice?.(-1)?.[0]?.url || '';
           if(videoId && !seen.has(videoId)){
             seen.add(videoId);
-            items.push({videoId, title: title || `YouTube ${videoId}`, durationText: durationText || '', durationSeconds: durationSeconds || 0});
+            items.push({videoId, title: title || `YouTube ${videoId}`, thumbnail: thumb, durationText: durationText || '', durationSeconds: durationSeconds || 0});
+          }
+        }
+        if(node.videoId && node.title && !node.playlistVideoRenderer){
+          const videoId = node.videoId;
+          const title = cleanYoutubeTitle(ytText(node.title));
+          if(/^[A-Za-z0-9_-]{11}$/.test(videoId) && !seen.has(videoId)){
+            seen.add(videoId);
+            items.push({videoId, title: title || `YouTube ${videoId}`, durationText:'', durationSeconds:0});
           }
         }
         if(node.playlistMetadataRenderer?.title && !playlistTitle){
@@ -2104,13 +2199,25 @@
       if(data) visit(data);
 
       if(!items.length){
+        const htmlText = String(html || '');
         const re = /"playlistVideoRenderer"\s*:\s*\{[\s\S]*?"videoId"\s*:\s*"([A-Za-z0-9_-]{11})"[\s\S]*?"title"\s*:\s*\{\s*"runs"\s*:\s*\[\s*\{\s*"text"\s*:\s*"([\s\S]*?)"/g;
         let m;
-        while((m = re.exec(html))){
+        while((m = re.exec(htmlText))){
           const videoId = m[1];
           if(seen.has(videoId)) continue;
           seen.add(videoId);
-          items.push({videoId, title: cleanYoutubeTitle(decodeHtmlEntities(m[2].replace(/\\u0026/g, '&'))) || `YouTube ${videoId}`});
+          items.push({videoId, title: cleanYoutubeTitle(decodeHtmlEntities(m[2].replace(/\\u0026/g, '&'))) || `YouTube ${videoId}`, durationText:'', durationSeconds:0});
+        }
+      }
+      if(!items.length){
+        const htmlText = String(html || '');
+        const re = /"videoId"\s*:\s*"([A-Za-z0-9_-]{11})"/g;
+        let m;
+        while((m = re.exec(htmlText))){
+          const videoId = m[1];
+          if(seen.has(videoId)) continue;
+          seen.add(videoId);
+          items.push({videoId, title:`YouTube ${videoId}`, durationText:'', durationSeconds:0});
         }
       }
       if(!playlistTitle){
@@ -2121,29 +2228,110 @@
       return { title: playlistTitle || '새 재생목록', items, playlistId };
     }
 
-    async function fetchYoutubePlaylistData(playlistId){
-      const cleanId = String(playlistId || '').trim();
-      const playlistUrl = `https://www.youtube.com/playlist?list=${encodeURIComponent(cleanId)}`;
+    async function fetchTextThroughProxies(targetUrl){
       const endpoints = [
-        `https://api.allorigins.win/get?url=${encodeURIComponent(playlistUrl)}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(playlistUrl)}`
+        {type:'text', url:`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`},
+        {type:'json', url:`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`},
+        {type:'text', url:`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`},
+        {type:'text', url:`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`}
       ];
+      let lastError = '';
       for(const endpoint of endpoints){
         try{
-          const res = await fetch(endpoint, {cache:'no-store'});
-          if(!res.ok) continue;
-          const type = res.headers.get('content-type') || '';
-          let html = '';
-          if(type.includes('application/json')){
+          const res = await fetch(endpoint.url, {cache:'no-store'});
+          if(!res.ok){ lastError = `${res.status} ${res.statusText}`; continue; }
+          if(endpoint.type === 'json'){
             const data = await res.json();
-            html = data.contents || data.data || '';
+            const text = data.contents || data.data || '';
+            if(text) return text;
           }else{
-            html = await res.text();
+            const text = await res.text();
+            if(text) return text;
           }
-          const parsed = parsePlaylistFromHtml(html, cleanId);
-          if(parsed.items.length) return parsed;
-        }catch(err){ console.warn('playlist fetch failed', endpoint, err); }
+        }catch(err){ lastError = err?.message || String(err); console.warn('playlist proxy failed', endpoint.url, err); }
       }
+      console.warn('playlist all proxies failed', targetUrl, lastError);
+      return '';
+    }
+
+    async function fetchYoutubePlaylistData(playlistId){
+      const cleanId = String(playlistId || '').trim();
+      if(!cleanId) return { title:'새 재생목록', items:[], playlistId:cleanId };
+
+      // 1차: YouTube Data API v3. 공개/일부공개 재생목록은 이 방식이 가장 안정적입니다.
+      try{
+        let playlistTitle = '새 재생목록';
+        try{
+          const plist = await youtubeApiGet('playlists', {part:'snippet', id:cleanId, maxResults:1});
+          playlistTitle = cleanYoutubeTitle(plist?.items?.[0]?.snippet?.title || playlistTitle);
+        }catch(err){ console.warn('YouTube API playlist title failed', err); }
+
+        const rawItems = [];
+        let pageToken = '';
+        do{
+          const data = await youtubeApiGet('playlistItems', {
+            part:'snippet,contentDetails',
+            playlistId:cleanId,
+            maxResults:50,
+            pageToken
+          });
+          (data.items || []).forEach(item=>{
+            const videoId = item?.contentDetails?.videoId || item?.snippet?.resourceId?.videoId;
+            const title = cleanYoutubeTitle(item?.snippet?.title || '');
+            // 삭제/비공개 영상은 제목이 이런 식으로 내려올 수 있으므로 제외
+            if(!videoId || /^Deleted video$/i.test(title) || /^Private video$/i.test(title)) return;
+            rawItems.push({videoId, title: title || `YouTube ${videoId}`});
+          });
+          pageToken = data.nextPageToken || '';
+        }while(pageToken);
+
+        if(rawItems.length){
+          const meta = await fetchYoutubeVideosMeta(rawItems.map(v=>v.videoId)).catch(err=>{
+            console.warn('YouTube API videos meta failed', err);
+            return {};
+          });
+          const seen = new Set();
+          const items = rawItems.filter(v=>{
+            if(seen.has(v.videoId)) return false;
+            seen.add(v.videoId);
+            return true;
+          }).map(v=>({
+            videoId: v.videoId,
+            title: meta[v.videoId]?.title || v.title || `YouTube ${v.videoId}`,
+            durationSeconds: meta[v.videoId]?.durationSeconds || 0,
+            durationText: meta[v.videoId]?.durationText || ''
+          }));
+          return { title: playlistTitle || '새 재생목록', items, playlistId:cleanId };
+        }
+      }catch(err){
+        console.warn('YouTube API playlist failed. fallback start:', err);
+      }
+
+      const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(cleanId)}`;
+      const playlistUrl = `https://www.youtube.com/playlist?list=${encodeURIComponent(cleanId)}`;
+      const musicPlaylistUrl = `https://music.youtube.com/playlist?list=${encodeURIComponent(cleanId)}`;
+
+      // 2차: YouTube 공식 RSS 피드.
+      const feedText = await fetchTextThroughProxies(feedUrl);
+      if(feedText){
+        const parsedFeed = parsePlaylistFeedXml(feedText, cleanId);
+        if(parsedFeed.items.length) return parsedFeed;
+      }
+
+      // 3차: 일반 YouTube 재생목록 페이지 HTML 파싱.
+      const html = await fetchTextThroughProxies(playlistUrl);
+      if(html){
+        const parsed = parsePlaylistFromHtml(html, cleanId);
+        if(parsed.items.length) return parsed;
+      }
+
+      // 4차: YouTube Music 재생목록 페이지 HTML 파싱.
+      const musicHtml = await fetchTextThroughProxies(musicPlaylistUrl);
+      if(musicHtml){
+        const parsedMusic = parsePlaylistFromHtml(musicHtml, cleanId);
+        if(parsedMusic.items.length) return parsedMusic;
+      }
+
       return { title:'새 재생목록', items:[], playlistId:cleanId };
     }
 
