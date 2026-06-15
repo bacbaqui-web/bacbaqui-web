@@ -413,6 +413,18 @@
 .workmusic-play-overlay svg{width:46px;height:46px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
 .workmusic-title-overlay{position:absolute;left:0;right:0;bottom:0;z-index:4;background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,.35),rgba(0,0,0,0));color:#fff;font-size:.78rem;font-weight:700;line-height:1.25;padding:28px 62px 8px 10px;text-shadow:0 1px 3px rgba(0,0,0,.8);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .workmusic-duration-badge{position:absolute;right:8px;bottom:8px;z-index:6;background:rgba(0,0,0,.82);color:#fff;border-radius:4px;padding:2px 5px;font-size:.72rem;font-weight:800;line-height:1;letter-spacing:.01em}
+/* 유튜브뮤직에서 불러온 곡은 작은 앨범형 카드로 표시 */
+.workmusic-item.music-track{display:flex;align-items:center;min-height:68px;padding:8px 44px 8px 8px;background:#303030;border-color:#444}
+.workmusic-item.music-track:hover{background:#383838}
+.workmusic-item.music-track .workmusic-thumb{width:54px;height:54px;aspect-ratio:auto;border-radius:6px;object-fit:cover;flex:0 0 54px}
+.workmusic-item.music-track .workmusic-music-info{min-width:0;flex:1 1 auto;padding-left:10px;padding-right:4px}
+.workmusic-item.music-track .workmusic-music-title{color:#fff;font-size:.84rem;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workmusic-item.music-track .workmusic-music-artist{color:#bdbdbd;font-size:.72rem;font-weight:600;line-height:1.25;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workmusic-item.music-track .workmusic-play-overlay{left:8px;top:8px;right:auto;bottom:auto;width:54px;height:54px;border-radius:6px;background:rgba(0,0,0,.22)}
+.workmusic-item.music-track .workmusic-play-overlay svg{width:24px;height:24px}
+.workmusic-item.music-track .workmusic-duration-badge{right:44px;bottom:7px;font-size:.64rem;padding:2px 4px;background:rgba(0,0,0,.72)}
+.workmusic-item.music-track .workmusic-actions{top:50%;right:8px;transform:translateY(-50%);opacity:1}
+.workmusic-item.music-track .workmusic-small-btn{width:30px;height:30px}
 .workmusic-actions{position:absolute;top:8px;right:8px;display:flex;gap:5px;opacity:0;transition:opacity .2s;z-index:5}
 .workmusic-item:hover .workmusic-actions{opacity:1}
 .workmusic-small-btn{width:32px;height:32px;background:rgba(32,32,32,.88);border:1px solid #555;border-radius:999px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.4)}
@@ -1613,12 +1625,15 @@
         });
         (data.items || []).forEach(item=>{
           const seconds = parseYoutubeISODuration(item?.contentDetails?.duration);
+          const channelTitle = cleanYoutubeArtistName(item?.snippet?.channelTitle || '');
           meta[item.id] = {
             videoId:item.id,
             title: cleanYoutubeTitle(item?.snippet?.title || `YouTube ${item.id}`),
             durationSeconds: seconds,
             durationText: formatWorkMusicDuration(seconds),
-            thumbnail: item?.snippet?.thumbnails?.medium?.url || item?.snippet?.thumbnails?.default?.url || ''
+            thumbnail: item?.snippet?.thumbnails?.medium?.url || item?.snippet?.thumbnails?.default?.url || '',
+            channelTitle,
+            artist: channelTitle
           };
         });
       }
@@ -2020,22 +2035,44 @@
       songs.forEach((song, idx)=>{
         const row=document.createElement('div');
         const isActive = idx === (window.workMusicCurrentIndex || 0);
-        row.className='workmusic-item' + (isActive ? ' active' : '');
+        const activeTab = getWorkMusicTabs().find(t=>t.id===getActiveWorkMusicTabId());
+        const isMusicTrack = String(song.sourceType || activeTab?.sourceType || '').includes('music');
+        row.className='workmusic-item' + (isMusicTrack ? ' music-track' : '') + (isActive ? ' active' : '');
         const title = song.title || `YouTube ${song.videoId}`;
+        const artist = getSongArtist(song);
         const durationText = song.durationText || formatWorkMusicDuration(song.durationSeconds);
-        row.setAttribute('title', title);
-        row.innerHTML=`
-          <img class="workmusic-thumb" src="https://img.youtube.com/vi/${escapeHtml(song.videoId)}/mqdefault.jpg" alt="썸네일" onerror="this.onerror=null;this.src='https://placehold.co/320x180/333/fff?text=YouTube'">
-          <div class="workmusic-play-overlay">
-            ${isActive && window.workMusicIsPlaying ? workMusicPauseSvg : workMusicPlaySvg}
-          </div>
-          <div class="workmusic-title-overlay">${escapeHtml(title)}</div>
-          ${durationText ? `<div class="workmusic-duration-badge">${escapeHtml(durationText)}</div>` : ''}
-          <div class="workmusic-actions">
-            <button class="workmusic-small-btn" data-action="settings" data-index="${idx}" title="설정" aria-label="설정">
-              ${workMusicSettingsSvg}
-            </button>
-          </div>`;
+        const thumbSrc = song.thumbnail || `https://img.youtube.com/vi/${escapeHtml(song.videoId)}/mqdefault.jpg`;
+        row.setAttribute('title', artist ? `${title} - ${artist}` : title);
+        if(isMusicTrack){
+          row.innerHTML=`
+            <img class="workmusic-thumb" src="${escapeHtml(thumbSrc)}" alt="앨범커버" onerror="this.onerror=null;this.src='https://placehold.co/100x100/333/fff?text=♪'">
+            <div class="workmusic-play-overlay">
+              ${isActive && window.workMusicIsPlaying ? workMusicPauseSvg : workMusicPlaySvg}
+            </div>
+            <div class="workmusic-music-info">
+              <div class="workmusic-music-title">${escapeHtml(title)}</div>
+              <div class="workmusic-music-artist">${escapeHtml(artist || 'YouTube Music')}</div>
+            </div>
+            ${durationText ? `<div class="workmusic-duration-badge">${escapeHtml(durationText)}</div>` : ''}
+            <div class="workmusic-actions">
+              <button class="workmusic-small-btn" data-action="settings" data-index="${idx}" title="설정" aria-label="설정">
+                ${workMusicSettingsSvg}
+              </button>
+            </div>`;
+        }else{
+          row.innerHTML=`
+            <img class="workmusic-thumb" src="${escapeHtml(thumbSrc)}" alt="썸네일" onerror="this.onerror=null;this.src='https://placehold.co/320x180/333/fff?text=YouTube'">
+            <div class="workmusic-play-overlay">
+              ${isActive && window.workMusicIsPlaying ? workMusicPauseSvg : workMusicPlaySvg}
+            </div>
+            <div class="workmusic-title-overlay">${escapeHtml(title)}</div>
+            ${durationText ? `<div class="workmusic-duration-badge">${escapeHtml(durationText)}</div>` : ''}
+            <div class="workmusic-actions">
+              <button class="workmusic-small-btn" data-action="settings" data-index="${idx}" title="설정" aria-label="설정">
+                ${workMusicSettingsSvg}
+              </button>
+            </div>`;
+        }
         row.addEventListener('click',()=>{
           if(isActive) toggleWorkMusicPlay();
           else playWorkMusicAt(idx);
@@ -2116,6 +2153,30 @@
       }catch(_){/* regex fallback */}
       const m = text.match(/[?&]list=([A-Za-z0-9_-]+)/) || text.match(/(?:playlist\?list=)([A-Za-z0-9_-]+)/);
       return m ? m[1] : null;
+    }
+
+    function isYoutubeMusicUrl(raw){
+      try{
+        const u = new URL(String(raw || '').includes('://') ? String(raw || '') : 'https://' + String(raw || ''));
+        return u.hostname.replace(/^www\./,'').toLowerCase().includes('music.youtube.com');
+      }catch(_){ return /music\.youtube\.com/i.test(String(raw || '')); }
+    }
+
+    function cleanYoutubeArtistName(name){
+      return String(name || '').trim()
+        .replace(/\s*-\s*Topic$/i, '')
+        .replace(/\s*-\s*Official$/i, '')
+        .replace(/\s*VEVO$/i, '')
+        .trim();
+    }
+
+    function getSongArtist(song){
+      const explicit = cleanYoutubeArtistName(song?.artist || song?.channelTitle || song?.ownerChannelTitle || '');
+      if(explicit) return explicit;
+      const title = String(song?.title || '');
+      const parts = title.split(/\s[-–—]\s/);
+      if(parts.length >= 2) return cleanYoutubeArtistName(parts[0]);
+      return '';
     }
 
     function decodeHtmlEntities(str){
@@ -2313,7 +2374,7 @@
             const title = cleanYoutubeTitle(item?.snippet?.title || '');
             // 삭제/비공개 영상은 제목이 이런 식으로 내려올 수 있으므로 제외
             if(!videoId || /^Deleted video$/i.test(title) || /^Private video$/i.test(title)) return;
-            rawItems.push({videoId, title: title || `YouTube ${videoId}`});
+            rawItems.push({videoId, title: title || `YouTube ${videoId}`, ownerChannelTitle: cleanYoutubeArtistName(item?.snippet?.videoOwnerChannelTitle || item?.snippet?.channelTitle || '')});
           });
           pageToken = data.nextPageToken || '';
         }while(pageToken);
@@ -2332,7 +2393,10 @@
             videoId: v.videoId,
             title: meta[v.videoId]?.title || v.title || `YouTube ${v.videoId}`,
             durationSeconds: meta[v.videoId]?.durationSeconds || 0,
-            durationText: meta[v.videoId]?.durationText || ''
+            durationText: meta[v.videoId]?.durationText || '',
+            thumbnail: meta[v.videoId]?.thumbnail || '',
+            artist: meta[v.videoId]?.artist || v.ownerChannelTitle || '',
+            channelTitle: meta[v.videoId]?.channelTitle || v.ownerChannelTitle || ''
           }));
           return { title: playlistTitle || '새 재생목록', items, playlistId:cleanId };
         }
@@ -2374,6 +2438,7 @@
       if(!playlistId){ showAlert('유튜브/유튜브뮤직 재생목록 링크를 넣어주세요.'); return; }
       showFeedbackMessage('재생목록을 불러오는 중입니다...');
       const data = await fetchYoutubePlaylistData(playlistId);
+      const playlistSourceType = isYoutubeMusicUrl(raw) ? 'youtube-music-playlist' : 'youtube-playlist';
       if(!data.items.length){
         showAlert('재생목록을 읽지 못했습니다. 공개 재생목록인지 확인해주세요.');
         return;
@@ -2383,7 +2448,7 @@
       const id = 'wtab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
       const order = tabs.length ? Math.max(...tabs.map(t=>Number(t.order||0))) + 10 : 0;
       const tabName = (data.title || '새 재생목록').trim().slice(0, 20) || '새 재생목록';
-      window.__workMusicTabList = [...tabs, {id, name: tabName, order, sourcePlaylistId: data.playlistId, sourceType:'youtube-playlist'}];
+      window.__workMusicTabList = [...tabs, {id, name: tabName, order, sourcePlaylistId: data.playlistId, sourceType: playlistSourceType}];
       window.__workMusicActiveTabId = id;
       const existingIds = new Set((window.workMusicSongs || []).map(s=>`${s.workMusicTabId || 'default'}:${s.videoId}`));
       const now = Date.now();
@@ -2394,12 +2459,16 @@
           url: `https://www.youtube.com/watch?v=${item.videoId}`,
           videoId: item.videoId,
           title: item.title || `YouTube ${item.videoId}`,
+          artist: item.artist || item.channelTitle || '',
+          channelTitle: item.channelTitle || item.artist || '',
+          thumbnail: item.thumbnail || '',
           autoTitle: false,
           durationText: item.durationText || formatWorkMusicDuration(item.durationSeconds),
           durationSeconds: item.durationSeconds || 0,
           addedAt: now + idx,
           workMusicTabId: id,
-          sourcePlaylistId: data.playlistId
+          sourcePlaylistId: data.playlistId,
+          sourceType: playlistSourceType
         }));
       window.workMusicSongs = [...(window.workMusicSongs || []), ...newSongs];
       window.workMusicCurrentIndex = 0;
@@ -2428,8 +2497,13 @@
       const url = normalizeYoutubeUrl(raw);
       const activeTabId = getActiveWorkMusicTabId();
       if(getActiveWorkMusicSongs().some(s=>s.videoId===videoId)){ showFeedbackMessage('현재 탭에 이미 추가된 영상입니다.'); return false; }
-      const [fetchedTitle, durationSeconds] = await Promise.all([fetchYoutubeTitle(url), fetchYoutubeDuration(videoId)]);
-      window.workMusicSongs.push({ id: Date.now(), url, videoId, title:fetchedTitle || `제목 불러오기 실패`, autoTitle: !fetchedTitle, durationSeconds: durationSeconds || 0, durationText: formatWorkMusicDuration(durationSeconds), addedAt: Date.now(), workMusicTabId: activeTabId });
+      let meta = {};
+      try{ meta = await fetchYoutubeVideosMeta([videoId]); }catch(_){ meta = {}; }
+      const fetchedTitle = meta[videoId]?.title || await fetchYoutubeTitle(url);
+      const durationSeconds = meta[videoId]?.durationSeconds || await fetchYoutubeDuration(videoId);
+      const activeTab = getWorkMusicTabs().find(t=>t.id===activeTabId);
+      const sourceType = isYoutubeMusicUrl(raw) || String(activeTab?.sourceType || '').includes('music') ? 'youtube-music' : 'youtube';
+      window.workMusicSongs.push({ id: Date.now(), url, videoId, title:fetchedTitle || `제목 불러오기 실패`, artist:meta[videoId]?.artist || '', channelTitle:meta[videoId]?.channelTitle || '', thumbnail:meta[videoId]?.thumbnail || '', autoTitle: !fetchedTitle, durationSeconds: durationSeconds || 0, durationText: formatWorkMusicDuration(durationSeconds), addedAt: Date.now(), workMusicTabId: activeTabId, sourceType });
       await window.cloudSaveWorkMusic?.();
       renderWorkMusic();
       return true;
@@ -2519,6 +2593,7 @@
       const playlistId = getWorkMusicTabPlaylistId(tabId);
       if(!playlistId){ showFeedbackMessage('재생목록으로 만든 탭만 새로고침할 수 있습니다.'); return; }
       const tab = getWorkMusicTabs().find(t=>t.id===tabId);
+      const playlistSourceType = tab?.sourceType || 'youtube-playlist';
       showFeedbackMessage('재생목록을 새로고침 중입니다...');
       const data = await fetchYoutubePlaylistData(playlistId);
       if(!data.items.length){ showAlert('재생목록을 다시 읽지 못했습니다.'); return; }
@@ -2534,19 +2609,23 @@
           url: `https://www.youtube.com/watch?v=${item.videoId}`,
           videoId: item.videoId,
           title: keepManualTitle ? old.title : (item.title || old?.title || `YouTube ${item.videoId}`),
+          artist: item.artist || item.channelTitle || old?.artist || old?.channelTitle || '',
+          channelTitle: item.channelTitle || item.artist || old?.channelTitle || old?.artist || '',
+          thumbnail: item.thumbnail || old?.thumbnail || '',
           autoTitle: keepManualTitle ? false : false,
           durationText: item.durationText || formatWorkMusicDuration(item.durationSeconds) || old?.durationText || '',
           durationSeconds: item.durationSeconds || old?.durationSeconds || 0,
           addedAt: old?.addedAt || (now + idx),
           workMusicTabId: tabId,
-          sourcePlaylistId: data.playlistId || playlistId
+          sourcePlaylistId: data.playlistId || playlistId,
+          sourceType: playlistSourceType
         };
       });
       window.workMusicSongs = [
         ...(window.workMusicSongs || []).filter(s => (s.workMusicTabId || 'default') !== tabId),
         ...nextSongsForTab
       ];
-      window.__workMusicTabList = getWorkMusicTabs().map(t=>t.id===tabId ? {...t, sourcePlaylistId: data.playlistId || playlistId, sourceType:'youtube-playlist'} : t);
+      window.__workMusicTabList = getWorkMusicTabs().map(t=>t.id===tabId ? {...t, sourcePlaylistId: data.playlistId || playlistId, sourceType: playlistSourceType} : t);
       if(window.__workMusicActiveTabId !== tabId) window.__workMusicActiveTabId = tabId;
       window.workMusicCurrentIndex = 0;
       window.workMusicIsPlaying = false;
